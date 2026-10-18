@@ -128,7 +128,10 @@ public final class MainActivity extends Activity {
         send=icon("send","Nachricht senden",v -> {
             if(app.busy) { app.cancel(); return; }
             String value=input.getText().toString().trim();
-            if(!value.isEmpty() && app.loaded) { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); input.setText(""); autoScroll=true; app.send(value); }
+            if(!value.isEmpty() && app.loaded) {
+                v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                if(app.send(value)) { input.setText(""); autoScroll=true; }
+            }
             else if(!app.loaded) settings();
         }); composer.addView(send);
         input.addTextChangedListener(new TextWatcher() {

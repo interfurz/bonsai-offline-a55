@@ -11,7 +11,7 @@ final class BackendGuard {
     static boolean matches(JSONObject reference,JSONObject candidate) throws Exception {
         JSONArray expected=reference.getJSONArray("signature"), actual=candidate.getJSONArray("signature");
         JSONArray expectedTop=reference.getJSONArray("top_tokens"), actualTop=candidate.getJSONArray("top_tokens");
-        if(expected.length()==0 || actual.length()<expected.length() || actualTop.length()<expectedTop.length())return false;
+        if(expected.length()==0 || expectedTop.length()==0 || actual.length()<expected.length() || actualTop.length()<expectedTop.length())return false;
         double squaredError=0, squaredReference=0;int sameTop=0;
         for(int i=0;i<expected.length();i++) {
             double x=expected.getDouble(i),y=actual.getDouble(i);
