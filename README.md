@@ -16,6 +16,7 @@ Implementiert:
 - CPU als Ausgangspunkt, 4 Threads, 4.096 Tokens Kontext, maximal 512 Antworttokens. Thinking deaktiviert.
 - Modell laden/entladen, Kontext-/Thread-Einstellungen und Anzeige des Prozess-RAM.
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
+- Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
 Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Der Chatverlauf ist kein semantisches Langzeitgedächtnis. Generierung stoppt beim Verlassen der App; ein Hintergrunddienst ist noch nicht enthalten.
 

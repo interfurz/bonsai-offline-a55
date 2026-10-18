@@ -63,6 +63,18 @@ public class KernelTemperatureTest {
         NativeFixture.heatOnProbe=KernelOptimizer.profiles(KernelOptimizer.current(app),false).size()*3+1;
         runAndAssertCompleted(PowerManager.THERMAL_STATUS_NONE,PowerManager.THERMAL_STATUS_SEVERE);
     }
+    @Test public void explicitCancellationStillPreservesTheProfileAtHighThermalStatus() throws Exception {
+        setThermal(PowerManager.THERMAL_STATUS_SEVERE);
+        String original=app.profileIdentity();
+        app.prefs.edit().putString("optimizedFor",original).commit();
+        app.cancelled=true;
+        KernelOptimizer.run(app,1,false);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertFalse(app.readReport("optimizer-attempt.json").getBoolean("completed"));
+        assertEquals(original,app.profileIdentity());assertTrue(app.optimized());
+        assertTrue(app.loaded);assertFalse(app.busy);assertFalse(app.optimizing);
+        assertFalse(app.prefs.getBoolean("optimizerRunning",true));
+    }
 
     @Implements(value=NativeEngine.class,isInAndroidSdk=false)
     public static class NativeFixture {
@@ -78,6 +90,10 @@ public class KernelTemperatureTest {
         @Implementation protected static byte[] probe(long handle,int steps) {
             if(++probes==heatOnProbe)setThermal(PowerManager.THERMAL_STATUS_SEVERE);
             return BonsaiApp.utf8(PROBE);
+        }
+        @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback) {
+            callback.onBytes(BonsaiApp.utf8("Synthetic test reply"));
+            return BonsaiApp.utf8("{\"tokens_per_second\":1,\"output_tokens\":1,\"first_token_ms\":1,\"stopped\":false,\"limit_reached\":false}");
         }
     }
 }

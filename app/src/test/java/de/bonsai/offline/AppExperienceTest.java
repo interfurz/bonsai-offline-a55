@@ -95,6 +95,20 @@ public class AppExperienceTest {
             assertTrue(app.store.chats().isEmpty());
         }
     }
+    @Test @Config(shadows=KernelTemperatureTest.NativeFixture.class)
+    public void acceptedMessageClearsItsDraftAndPersistsTheTurn() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");input.setText("  Hallo Bonsai  ");
+            assertTrue(((View)field(a,"send")).performClick());
+            assertEquals("",input.getText().toString());
+            app.worker.shutdown();assertTrue(app.worker.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            List<ChatStore.Message> saved=app.store.messages(app.currentChat);
+            assertEquals(2,saved.size());assertEquals("Hallo Bonsai",saved.get(0).text);
+            assertEquals("Synthetic test reply",saved.get(1).text);assertEquals("",app.error);
+        }
+    }
     @Test public void conversationAndDraftSurviveRecreation() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
