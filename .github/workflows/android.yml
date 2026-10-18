@@ -1,0 +1,47 @@
+name: Android APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'app/**'
+      - 'scripts/**'
+      - '*.gradle'
+      - 'gradle/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Fetch pinned Bonsai runtime
+        run: python3 scripts/fetch_runtime.py
+      - name: Host checks
+        run: python3 scripts/check_project.py
+      - name: Build and lint the real native app
+        run: ./gradlew --no-daemon :app:assembleDebug :app:lintDebug
+      - name: Upload installable test APK and lint results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-offline-cpu-debug
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/reports/lint-results-debug.*
+          if-no-files-found: error

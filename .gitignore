@@ -1,0 +1,16 @@
+.gradle/
+**/build/
+**/.cxx/
+local.properties
+.idea/
+vendor/
+*.gguf
+*.jks
+dist/
+__pycache__/
+*.pyc
+*.keystore
+*.apk
+*.aab
+.env
+.env.*
