@@ -65,6 +65,26 @@ public class AppExperienceTest {
         assertFalse(BackendGuard.matches(ref,new org.json.JSONObject("{\"signature\":[1],\"top_tokens\":[1]}")));
         assertFalse(BackendGuard.matches(ref,new org.json.JSONObject("{\"signature\":[\"NaN\",2,3,4],\"top_tokens\":[1,2,3,4]}")));
     }
+    @Test public void oversizedMessageKeepsItsDraftWhenRejected() throws Exception {
+        assertRejectedSendKeepsDraft("  " + "x".repeat(32001) + "  ", "Die Nachricht ist zu lang.");
+    }
+    @Test public void unavailableRuntimeKeepsItsDraftWhenRejected() throws Exception {
+        assertRejectedSendKeepsDraft("  Bitte diesen Entwurf behalten.  ", "Native Runtime konnte nicht geladen werden");
+    }
+    private void assertRejectedSendKeepsDraft(String draft,String expectedError) throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.loaded=true; // Reach send validation without loading a model on the host.
+            assertEquals(0L,((Long)field(app,"handle")).longValue());
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");
+            input.setText(draft);
+            assertTrue(((View)field(a,"send")).performClick());
+            assertTrue(app.error,app.error.contains(expectedError));
+            assertEquals("A synchronously rejected send must preserve the exact draft",draft,input.getText().toString());
+            assertFalse(app.busy);assertEquals(0,app.currentChat);assertTrue(app.messages.isEmpty());
+            assertTrue(app.store.chats().isEmpty());
+        }
+    }
     @Test public void conversationAndDraftSurviveRecreation() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
