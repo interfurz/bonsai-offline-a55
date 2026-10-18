@@ -1,12 +1,12 @@
-# Bonsai Offline — Android-Prototyp
+# Bonsai Offline — Android-App
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[APK und Projektarchive herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0)
+[CPU/Vulkan-Update herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.1)
 
 ## Stand
 
-Version **0.3.0** enthält CPU/Vulkan-Auswahl, Animationen, Leistungsbereich, Kernel-Autotuner und eine differentielle Rechenprüfung gegen einen konservativen CPU-Pfad. Details: [UPDATE-0.3.0.md](UPDATE-0.3.0.md). Die App bleibt vollständig offline. Das zuvor gemeldete Zeichensalat-Problem auf dem A55 ist auf der x86-Build-CPU mit der offiziellen PQ2_0-Datei bisher nicht reproduziert; eine erfolgreiche Desktop-Prüfung ist kein A55-Nachweis. Über **Modelltest ohne Chatverlauf** lassen sich unabhängige Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren.
+Version **0.3.1** führt CPU/Vulkan-Auswahl, Animationen, Leistungsbereich, Kernel-Autotuner und die differentielle Rechenprüfung gegen einen konservativen CPU-Pfad fort. Neu sind Optimierung ohne app-eigene Temperatursperren sowie Korrekturen beim Erhalt abgewiesener Nachrichten und bei unvollständigen Kernel-Referenzen. Details und Update-Voraussetzungen: [UPDATE-0.3.1.md](UPDATE-0.3.1.md). Die App bleibt vollständig offline. Das zuvor gemeldete Zeichensalat-Problem auf dem A55 ist auf der x86-Build-CPU mit der offiziellen PQ2_0-Datei bisher nicht reproduziert; eine erfolgreiche Desktop-Prüfung ist kein A55-Nachweis. Über **Modelltest ohne Chatverlauf** lassen sich unabhängige Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren.
 
 Implementiert:
 
