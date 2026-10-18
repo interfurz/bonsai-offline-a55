@@ -65,6 +65,16 @@ public class AppExperienceTest {
         assertFalse(BackendGuard.matches(ref,new org.json.JSONObject("{\"signature\":[1],\"top_tokens\":[1]}")));
         assertFalse(BackendGuard.matches(ref,new org.json.JSONObject("{\"signature\":[\"NaN\",2,3,4],\"top_tokens\":[1,2,3,4]}")));
     }
+    @Test public void kernelReferenceWithoutTopTokensIsRejected() throws Exception {
+        org.json.JSONObject incomplete=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[]}");
+        org.json.JSONObject candidate=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[99,98,97,96]}");
+        assertFalse("An empty top-token reference cannot validate a kernel",BackendGuard.matches(incomplete,candidate));
+    }
+    @Test public void longerKernelProbesCanMatchTheReferencePrefix() throws Exception {
+        org.json.JSONObject reference=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[1,2]}");
+        org.json.JSONObject longer=new org.json.JSONObject("{\"signature\":[1,2,3,4,5,6],\"top_tokens\":[1,2,3]}");
+        assertTrue(BackendGuard.matches(reference,longer));
+    }
     @Test public void oversizedMessageKeepsItsDraftWhenRejected() throws Exception {
         assertRejectedSendKeepsDraft("  " + "x".repeat(32001) + "  ", "Die Nachricht ist zu lang.");
     }
