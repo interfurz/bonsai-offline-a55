@@ -2,6 +2,8 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
+[APK und Projektarchive herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0)
+
 ## Stand
 
 Version **0.3.0** enthält CPU/Vulkan-Auswahl, Animationen, Leistungsbereich, Kernel-Autotuner und eine differentielle Rechenprüfung gegen einen konservativen CPU-Pfad. Details: [UPDATE-0.3.0.md](UPDATE-0.3.0.md). Die App bleibt vollständig offline. Das zuvor gemeldete Zeichensalat-Problem auf dem A55 ist auf der x86-Build-CPU mit der offiziellen PQ2_0-Datei bisher nicht reproduziert; eine erfolgreiche Desktop-Prüfung ist kein A55-Nachweis. Über **Modelltest ohne Chatverlauf** lassen sich unabhängige Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren.
@@ -20,7 +22,7 @@ Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch 
 ## Quellcode aus GitHub
 
 ```bash
-git clone --recurse-submodules <REPOSITORY-URL>
+git clone --recurse-submodules https://github.com/interfurz/bonsai-offline-a55.git
 ```
 
 Die PrismML-Runtime ist als Submodul auf den exakten Release-Commit gebunden. Alternativ lädt `python3 scripts/fetch_runtime.py` den fehlenden Quellcode nach. Die APK gehört zu den Release-Dateien; Modellgewichte, SDK/NDK, Build-Caches und Signierschlüssel werden nicht im Repository gespeichert.
