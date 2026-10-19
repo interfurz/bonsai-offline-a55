@@ -58,6 +58,15 @@ public final class NativeSmoke {
             String second=new String(follow.toByteArray(),StandardCharsets.UTF_8);
             System.out.println("Follow-up: "+second);
             if(!second.trim().equals("7")) throw new AssertionError("Unexpected follow-up: "+second);
+            NativeEngine.referenceCpu(true);
+            NativeEngine.configure(handle,2,2,1);
+            String scalarProbe=new String(NativeEngine.probe(handle,4),StandardCharsets.UTF_8);
+            if(!fingerprintA.equals(value(scalarProbe,"fingerprint"))) throw new AssertionError("Scalar reference differs: "+scalarProbe);
+            ByteArrayOutputStream scalar=new ByteArrayOutputStream();
+            NativeEngine.generate(handle,roles,texts,32,42,c->scalar.write(c,0,c.length));
+            String scalarAnswer=new String(scalar.toByteArray(),StandardCharsets.UTF_8);
+            if(!scalarAnswer.trim().equals("4")) throw new AssertionError("Scalar math failed: "+scalarAnswer);
+            System.out.println("Scalar compatibility mode: math 4, probe fingerprint "+value(scalarProbe,"fingerprint"));
             System.out.println("Real PQ2_0 JNI smoke passed (host CPU, not A55)");
         } finally { NativeEngine.unload(handle); }
     }

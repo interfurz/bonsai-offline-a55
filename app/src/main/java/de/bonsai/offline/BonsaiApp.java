@@ -47,22 +47,30 @@ public final class BonsaiApp extends Application {
     long currentChat;
     final List<ChatStore.Message> messages = new ArrayList<>();
     Runnable listener;
+    InferenceService inferenceService;
     volatile boolean cancelled;
     boolean busy, loaded;
     String status = "Modell auswählen", error = "", backend = "CPU", benchmarkProgress = "";
     JSONObject benchmark, optimizerReport, cpuReference;
     String backendNotice="";
+    volatile boolean cpuCompatibility;
     boolean modelCheckFinished;
     boolean optimizing;
     float optimizingFraction;
     String optimizingProgress="";
     double liveTokensPerSecond;
     String nativeError = "";
+    String backgroundError = "";
     private long handle;
 
     @Override public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        if(!prefs.contains("cpuCompatibility")) {
+            prefs.edit().putBoolean("cpuCompatibility",true).putBoolean("gpu",false)
+                .putInt("microBatch",1).remove("optimizedFor").apply();
+        }
+        cpuCompatibility=prefs.getBoolean("cpuCompatibility",true);
         store = new ChatStore(this);
         store.recoverInterruptedTurns();
         if(prefs.getBoolean("optimizerRunning",false)) {
@@ -85,7 +93,7 @@ public final class BonsaiApp extends Application {
     int microBatch() { return prefs.getInt("microBatch",gpu()?1:32); }
     String profileIdentity() { return profileIdentity(gpu(),threads(),batchThreads(),microBatch()); }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+Build.FINGERPRINT+":"+BuildConfig.RUNTIME_REVISION;
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {
@@ -119,7 +127,12 @@ public final class BonsaiApp extends Application {
         if (busy) return false;
         if (handle == 0) { error = "Native Runtime konnte nicht geladen werden: " + nativeError; notifyUi(); return false; }
         NativeEngine.resetStop(handle);
-        cancelled=false; busy=true; status=label; error=""; notifyUi(); return true;
+        cancelled=false; busy=true; status=label; error=""; backgroundError="";
+        try { startForegroundService(new Intent(this,InferenceService.class)); }
+        catch(RuntimeException e) {
+            busy=false; error="Hintergrundverarbeitung konnte nicht gestartet werden: "+reason(e); notifyUi(); return false;
+        }
+        notifyUi(); return true;
     }
     void cancel() {
         if (!busy) return;
@@ -128,7 +141,8 @@ public final class BonsaiApp extends Application {
     private String reason(Throwable e) { return e.getMessage() == null ? e.toString() : e.getMessage(); }
     private void complete(String issue) {
         busy=false;
-        error = cancelled ? "" : issue;
+        if(inferenceService!=null) inferenceService.finishIfIdle();
+        error = !backgroundError.isEmpty() ? backgroundError : cancelled ? "" : issue;
         status = loaded ? "Bereit · " + backend : modelFile().isFile() ? "Modell nicht geladen" : "Modell auswählen";
         notifyUi();
     }
@@ -149,8 +163,10 @@ public final class BonsaiApp extends Application {
     void unloadModel() {
         if (!begin("Modell wird entladen …")) return;
         worker.execute(() -> {
-            NativeEngine.unload(handle);
-            main.post(() -> { loaded=false; complete(""); });
+            String issue="";
+            try { NativeEngine.unload(handle); } catch(Exception | LinkageError e) { issue=reason(e); }
+            String result=issue;
+            main.post(() -> { loaded=false; complete(result); });
         });
     }
     void importModel(Uri uri) {
@@ -231,10 +247,19 @@ public final class BonsaiApp extends Application {
                     stats.getBoolean("stopped") ? " · abgebrochen" : stats.getBoolean("limit_reached") ? " · Antwortlimit erreicht" : "");
             } catch(Exception | LinkageError e) { issue=reason(e); detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort"; }
             String text=new String(output.toByteArray(),StandardCharsets.UTF_8);
-            if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
-            else store.removeMessage(userId);  // Do not leave an unanswered user turn in model history.
+            try {
+                if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
+                else store.removeMessage(userId);  // Do not leave an unanswered user turn in model history.
+            } catch(RuntimeException e) { issue="Antwort konnte nicht gespeichert werden: "+reason(e); }
             String result=issue;
-            main.post(() -> { messages.clear(); messages.addAll(store.messages(chat)); complete(result); });
+            main.post(() -> {
+                String finalIssue=result;
+                try {
+                    List<ChatStore.Message> saved=store.messages(chat);
+                    messages.clear(); messages.addAll(saved);
+                } catch(RuntimeException e) { finalIssue="Chat konnte nicht gelesen werden: "+reason(e); }
+                complete(finalIssue);
+            });
         });
     }
     static byte[] utf8(String text) { return text.getBytes(StandardCharsets.UTF_8); }
@@ -260,6 +285,7 @@ public final class BonsaiApp extends Application {
             JSONObject report=new JSONObject();String issue="";
             try {
                 report.put("model",modelName()).put("model_bytes",modelFile().length()).put("backend",actualBackend)
+                    .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("app_version",BuildConfig.VERSION_NAME).put("device",Build.MANUFACTURER+" "+Build.MODEL)
                     .put("context",context()).put("threads",threads()).put("batch_threads",batchThreads()).put("micro_batch",microBatch())
                     .put("timestamp",java.time.Instant.now().toString()).put("metadata",readReport("model-metadata.json"));
@@ -309,6 +335,7 @@ public final class BonsaiApp extends Application {
                     .put("device",Build.MANUFACTURER+" "+Build.MODEL).put("hardware",Build.HARDWARE).put("android_api",Build.VERSION.SDK_INT)
                     .put("app_version",BuildConfig.VERSION_NAME).put("runtime_commit",BuildConfig.RUNTIME_REVISION)
                     .put("model",name).put("model_bytes",modelFile().length()).put("backend",actualBackend)
+                    .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("context_tokens",selectedContext).put("threads",selectedThreads).put("max_output_tokens",128)
                     .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention",false)
                     .put("thinking",false).put("seed",42).put("prompt",prompt).put("runs",runs)

@@ -38,6 +38,11 @@ jobs:
         run: python3 scripts/fetch_runtime.py
       - name: Host checks
         run: python3 scripts/check_project.py
+      - name: Compare Bonsai CPU kernels against dense arithmetic
+        run: |
+          cmake -S app/src/main/cpp -B build/kernel-check -DBONSAI_KERNEL_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kernel-check --target bonsai-reference-test --parallel 2
+          ./build/kernel-check/bonsai-reference-test
       - name: Build and lint the real native app
         run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
       - name: Upload installable test APK and lint results

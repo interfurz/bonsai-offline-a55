@@ -2,11 +2,13 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[APK und Projektarchive herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0)
+[Bisherigen Release 0.3.0 herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0). Die nachfolgend beschriebenen Änderungen aus 0.4.0 sind im neuen Quellstand enthalten.
 
 ## Stand
 
-Version **0.3.0** enthält CPU/Vulkan-Auswahl, Animationen, Leistungsbereich, Kernel-Autotuner und eine differentielle Rechenprüfung gegen einen konservativen CPU-Pfad. Details: [UPDATE-0.3.0.md](UPDATE-0.3.0.md). Die App bleibt vollständig offline. Das zuvor gemeldete Zeichensalat-Problem auf dem A55 ist auf der x86-Build-CPU mit der offiziellen PQ2_0-Datei bisher nicht reproduziert; eine erfolgreiche Desktop-Prüfung ist kein A55-Nachweis. Über **Modelltest ohne Chatverlauf** lassen sich unabhängige Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren.
+Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Für Bonsai 4B ist ein CPU-Kompatibilitätsmodus mit skalaren Quantisierungskerneln und Microbatch 1 voreingestellt. Optimierte CPU-/Vulkan-Profile werden gegen diese Referenz geprüft. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
+
+Die App bleibt vollständig offline. Der auf dem A55 gemeldete Zeichensalat ist noch nicht auf einem physischen A55 nachgeprüft; der Kompatibilitätsmodus ist ein gezielter Reparaturpfad, kein Nachweis einer vollständigen Gerätefehlerbehebung. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
 
 Implementiert:
 
@@ -17,7 +19,7 @@ Implementiert:
 - Modell laden/entladen, Kontext-/Thread-Einstellungen und Anzeige des Prozess-RAM.
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 
-Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Der Chatverlauf ist kein semantisches Langzeitgedächtnis. Generierung stoppt beim Verlassen der App; ein Hintergrunddienst ist noch nicht enthalten.
+Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Der Chatverlauf ist kein semantisches Langzeitgedächtnis. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
 
 ## Quellcode aus GitHub
 
@@ -107,7 +109,7 @@ Der Standardbuild enthält nur CPU-Inferenz. Die Codeanbindung für einen experi
 ./gradlew -PbonsaiVulkan=true :app:assembleDebug
 ```
 
-**Der ausgelieferte Build enthält Vulkan.** Zum eigenen Bauen benötigt dieser Pfad zusätzlich eine zum PrismML-Fork passende Host-Vulkan-Toolchain mit `glslc`, Vulkan-Headers und SPIRV-Headers/CMake-Paket. Gradle installiert diese nicht automatisch. Ohne diese Pakete schlägt die CMake-Konfiguration absichtlich fehl. Für CPU-Builds ist diese zusätzliche Toolchain nicht erforderlich.
+**Der bisherige Release 0.3.0 enthält Vulkan; Standardbuild und GitHub Actions bauen CPU.** Zum eigenen Bauen mit Vulkan benötigt dieser Pfad zusätzlich eine zum PrismML-Fork passende Host-Vulkan-Toolchain mit `glslc`, Vulkan-Headers und SPIRV-Headers/CMake-Paket. Gradle installiert diese nicht automatisch. Ohne diese Pakete schlägt die CMake-Konfiguration absichtlich fehl. Für CPU-Builds ist diese zusätzliche Toolchain nicht erforderlich.
 
 In einem erfolgreich gebauten Vulkan-Build erscheint die Backend-Auswahl. Eine erkannte GPU oder unterstützte PQ2_0-Kernel garantieren keine korrekte und stabile Ausführung auf der Xclipse 530. Der CPU-Pfad kann danach mit demselben Benchmark verglichen werden. Ein Vulkan-Abbruch kann erst nach dem laufenden GPU-Aufruf wirksam werden.
 

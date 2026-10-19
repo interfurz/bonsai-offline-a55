@@ -29,11 +29,12 @@ final class KernelOptimizer {
     static Profile current(BonsaiApp a) { return new Profile(a.gpu(),a.threads(),a.batchThreads(),a.microBatch()); }
     static void configure(long handle, Profile p) { NativeEngine.configure(handle,p.threads,p.batchThreads,p.microBatch); }
     static String load(BonsaiApp a,long handle,Profile p) throws Exception {
+        NativeEngine.referenceCpu(!p.gpu && a.cpuCompatibility);
         JSONObject r=new JSONObject(new String(NativeEngine.load(handle,BonsaiApp.utf8(a.modelFile().getAbsolutePath()),a.context(),p.threads,p.gpu),StandardCharsets.UTF_8));
         configure(handle,p);
         JSONObject metadata=r.optJSONObject("metadata");
         if(metadata!=null)write(a,"model-metadata.json",metadata);
-        return r.getString("backend");
+        return r.getString("backend")+(!p.gpu && a.cpuCompatibility ? " · kompatibel" : "");
     }
     static JSONObject probe(long handle,int n) throws Exception {
         return new JSONObject(new String(NativeEngine.probe(handle,n),StandardCharsets.UTF_8));

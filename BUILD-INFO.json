@@ -1,22 +1,31 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "package": "de.bonsai.offline.debug",
-  "version_code": 4,
+  "version_code": 5,
   "abi": "arm64-v8a",
   "backends": [
-    "CPU",
-    "Vulkan"
+    "CPU"
   ],
   "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
-  "apk_bytes": 46695343,
-  "apk_sha256": "f3c53f1c3f801b6fa2b4fbb431a971950e424c707e222db8a33230f73a2bd9a9",
-  "signing_certificate_sha256": "ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db",
-  "compatible_update_signature": true,
+  "apk_bytes": 9194480,
+  "apk_sha256": "de38938b5e05cf3b99eda4b4f6d35f7171ae51a600d9d17319745bbf81b39ce7",
+  "signing_certificate_sha256": "5e4539a95f5f03b79cbca73e5cc4adc66940bc53aad8c33f52d33032979e2865",
+  "compatible_update_signature": false,
+  "signing_note": "Local test build uses a new debug key. Updating an existing installation requires its original signing key.",
   "zipalign_16k_verified": true,
-  "unit_tests_passed": 4,
+  "unit_tests_passed": 10,
+  "lint_errors": 0,
   "host_real_pq2_jni_smoke_passed": true,
-  "host_long_german_response_passed": true,
+  "host_scalar_pq2_math_passed": true,
+  "host_dense_kernel_checks_passed": true,
+  "arm_emulated_dense_kernel_checks_passed": true,
   "a55_tested": false,
   "a55_gibberish_reproduced": false,
-  "permissions": []
+  "exynos_1480_npu_supported": false,
+  "permissions": [
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+    "android.permission.WAKE_LOCK",
+    "android.permission.POST_NOTIFICATIONS"
+  ]
 }

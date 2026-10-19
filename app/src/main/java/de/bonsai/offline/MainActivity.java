@@ -9,6 +9,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.Window;
 import android.widget.ProgressBar;
+import android.widget.CheckBox;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Canvas;
@@ -149,14 +150,23 @@ public final class MainActivity extends Activity {
         if(app.listener==uiListener) app.listener=null;
         super.onDestroy();
     }
+    @Override protected void onStart() {
+        super.onStart();
+        app.listener=uiListener;
+        render();
+    }
     @Override protected void onStop() {
+        if(app.listener==uiListener) app.listener=null;
         super.onStop();
-        // No foreground service in v0.1: stop heavy work when the app leaves the foreground.
-        if(!isChangingConfigurations() && app.busy) app.cancel();
     }
     @Override public void onBackPressed() { if(drawer!=null) closeDrawer(); else super.onBackPressed(); }
 
     private void render() {
+        if(app.busy && android.os.Build.VERSION.SDK_INT>=33 && !app.prefs.getBoolean("notificationsAsked",false)) {
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();
+            if(checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},20);
+        }
         if(app.busy)getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         subtitle.setText(app.loaded ? app.backend+(app.optimized()?" · OPTIMIERT":" · LOKAL") : app.busy ? "WIRD VORBEREITET" : "DEIN RAUM. DEIN GERÄT.");
@@ -318,6 +328,10 @@ public final class MainActivity extends Activity {
         Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2); content.addView(length);
         content.addView(settingLabel("Inferenz"));
         Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0); content.addView(engine);
+        CheckBox compatible=new CheckBox(this); compatible.setText("CPU-Kompatibilitätsmodus für Bonsai 4B");
+        compatible.setTextColor(TEXT); compatible.setChecked(app.prefs.getBoolean("cpuCompatibility",false)); compatible.setEnabled(!app.busy); content.addView(compatible);
+        content.addView(settingLabel("Bei Zeichensalat: CPU und Kompatibilitätsmodus wählen, übernehmen und einen neuen Chat starten. Die skalaren Bonsai-Kernel können langsamer sein."));
+        content.addView(settingLabel("NPU: Für Bonsai-GGUF auf dem Exynos 1480 derzeit nicht verfügbar."));
         for(Spinner s:new Spinner[]{context,threads,length,engine}) s.setEnabled(!app.busy);
         TextView nativeInfo=settingLabel("Bonsai "+BuildConfig.VERSION_NAME+" · Runtime prism-b10777-e3de715\n"+(BuildConfig.VULKAN_BUILD?"CPU/Vulkan-Wechsel lädt das Modell neu.\nKernel Optimizer misst das schnellste geprüfte Profil auf deinem Gerät.":"Vulkan ist in diesem Build nicht enthalten.")+"\nThinking ist für kurze Antworten deaktiviert."); content.addView(nativeInfo);
         TextView load=menuItem(app.loaded?"Modell entladen · RAM freigeben":"Modell laden"); load.setEnabled(!app.busy&&app.modelFile().isFile()); content.addView(load);
@@ -330,10 +344,11 @@ public final class MainActivity extends Activity {
                 if(app.busy) return;
                 int c=new int[]{2048,4096,8192}[context.getSelectedItemPosition()], t=new int[]{2,4,6,8}[threads.getSelectedItemPosition()], l=new int[]{128,256,512,1024,2048}[length.getSelectedItemPosition()];
                 boolean gpu=engine.getSelectedItemPosition()==1;
-                boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu();
+                boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu()||compatible.isChecked()!=app.prefs.getBoolean("cpuCompatibility",false);
                 boolean reload=app.modelFile().isFile()&&changed;
                 if(changed)app.prefs.edit().remove("optimizedFor").remove("batchThreads").remove("microBatch").apply();
-                app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).apply();
+                app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).putBoolean("cpuCompatibility",compatible.isChecked()).apply();
+                if(compatible.isChecked() && !gpu) app.prefs.edit().putInt("microBatch",1).apply();
                 if(reload) app.loadModel();
             }).create();
         check.setOnClickListener(v->{dialog.dismiss();showModelCheck();});

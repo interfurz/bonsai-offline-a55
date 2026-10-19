@@ -14,7 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
-    assert not manifest.findall("uses-permission"), "Offline MVP must request no permissions"
+    android = "{http://schemas.android.com/apk/res/android}"
+    permissions = {node.get(android + "name") for node in manifest.findall("uses-permission")}
+    assert permissions == {"android.permission." + name for name in (
+        "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_SPECIAL_USE", "WAKE_LOCK", "POST_NOTIFICATIONS")}, permissions
+    service = manifest.find("application/service")
+    assert service.get(android + "foregroundServiceType") == "specialUse"
+    assert service.get(android + "exported") == "false"
     for xml in (ROOT / "app/src/main/res").rglob("*.xml"):
         ET.parse(xml)
     assert manifest.find("application").get("{http://schemas.android.com/apk/res/android}allowBackup") == "false"

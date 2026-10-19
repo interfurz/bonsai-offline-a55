@@ -3,15 +3,15 @@ package de.bonsai.offline;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Differential kernel checks against single-token-microbatch CPU execution of the same model. */
+/** Differential checks against scalar ternary CPU dot products of the same model. */
 final class BackendGuard {
     static String identity(BonsaiApp a) {
-        return a.modelFile().length()+":"+a.modelFile().lastModified()+":"+a.context()+":"+BuildConfig.RUNTIME_REVISION+":"+android.os.Build.FINGERPRINT;
+        return a.modelFile().length()+":"+a.modelFile().lastModified()+":"+a.context()+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":"+android.os.Build.FINGERPRINT;
     }
     static boolean matches(JSONObject reference,JSONObject candidate) throws Exception {
         JSONArray expected=reference.getJSONArray("signature"), actual=candidate.getJSONArray("signature");
         JSONArray expectedTop=reference.getJSONArray("top_tokens"), actualTop=candidate.getJSONArray("top_tokens");
-        if(expected.length()==0 || actual.length()<expected.length() || actualTop.length()<expectedTop.length())return false;
+        if(expected.length()==0 || expectedTop.length()==0 || actual.length()<expected.length() || actualTop.length()<expectedTop.length())return false;
         double squaredError=0, squaredReference=0;int sameTop=0;
         for(int i=0;i<expected.length();i++) {
             double x=expected.getDouble(i),y=actual.getDouble(i);
@@ -31,28 +31,37 @@ final class BackendGuard {
         KernelOptimizer.Profile requested=KernelOptimizer.current(a);
         JSONObject reference=reference(a);
         String backend="CPU";
+        a.cpuCompatibility=true;
+        backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
         if(reference==null) {
-            a.main.post(()->{a.status="CPU-Referenz wird geprüft …";a.notifyUi();});
-            backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
+            a.main.post(()->{a.status="Unabhängige CPU-Referenz wird geprüft …";a.notifyUi();});
             reference=KernelOptimizer.probe(handle,8);
             reference.put("identity",identity(a));
             KernelOptimizer.write(a,"cpu-reference.json",reference);a.cpuReference=reference;
-        } else if(!requested.gpu) backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
+        }
         String notice="";
         try {
             if(a.cancelled)throw new IllegalStateException("Abgebrochen.");
+            if(a.prefs.getBoolean("cpuCompatibility",false) && !requested.gpu) {
+                KernelOptimizer.configure(handle,requested);
+                a.main.post(()->a.backendNotice="CPU-Kompatibilitätsmodus: skalare Bonsai-Kernel sind aktiv.");
+                return backend;
+            }
+            a.cpuCompatibility=false;
+            NativeEngine.referenceCpu(false);
             if(requested.gpu) backend=KernelOptimizer.load(a,handle,requested);
-            else KernelOptimizer.configure(handle,requested);
+            else { KernelOptimizer.configure(handle,requested); backend="CPU"; }
             JSONObject candidate=KernelOptimizer.probe(handle,8);
             if(!matches(reference,candidate))throw new IllegalStateException("Testlogits weichen von der CPU-Referenz ab.");
         } catch(Exception e) {
             if(a.cancelled)throw e;
-            notice=(requested.gpu?"Vulkan":"Das Batchprofil")+" hat die Rechenprüfung nicht bestanden. Sicheres CPU-Profil aktiviert. Ursache: "+e.getMessage();
+            notice=(requested.gpu?"Vulkan":"Der optimierte CPU-Pfad")+" hat die unabhängige Rechenprüfung nicht bestanden. Skalare Bonsai-Kernel aktiviert. Ursache: "+e.getMessage();
             NativeEngine.resetStop(handle);
+            a.cpuCompatibility=true;
             backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
             if(!matches(reference,KernelOptimizer.probe(handle,8)))
                 throw new IllegalStateException("Auch die CPU-Referenz ist nicht reproduzierbar. Modell bitte neu importieren.");
-            a.prefs.edit().putBoolean("gpu",false).putInt("microBatch",1).remove("optimizedFor").apply();
+            a.prefs.edit().putBoolean("gpu",false).putBoolean("cpuCompatibility",true).putInt("microBatch",1).remove("optimizedFor").apply();
         }
         String note=notice;
         a.main.post(()->{a.backendNotice=note;});
