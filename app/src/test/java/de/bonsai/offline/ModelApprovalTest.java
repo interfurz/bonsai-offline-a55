@@ -99,7 +99,7 @@ public class ModelApprovalTest {
         }
     }
     @Test public void loadingExistingFileCanBeApprovedButChangedBytesAskAgain() throws Exception {
-        Files.write(app.modelFile().toPath(),GGUF);
+        Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F',0});
         app.prefs.edit().putString("modelName",ModelIntegrity.Q2_NAME).apply();
         app.loadModel();awaitCompletion();assertNotNull(app.modelApproval);
         String oldSha=app.modelApproval.mismatch.sha;

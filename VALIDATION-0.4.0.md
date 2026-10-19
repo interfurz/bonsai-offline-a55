@@ -1,10 +1,10 @@
 # Prüfnachweis 0.4.0
 
-19. Oktober 2026. Android SDK 35, NDK 28.2.13676358, CMake 3.22.1, JDK 17. ARM64-CPU-Testbuild, versionCode 7. Details und APK-Prüfsumme: [BUILD-INFO.json](BUILD-INFO.json); historische Release-Metadaten: [BUILD-INFO-0.3.0.json](BUILD-INFO-0.3.0.json).
+19. Oktober 2026. Android SDK 35, NDK 28.2.13676358, CMake 3.22.1, JDK 17. ARM64-CPU-Testbuild, versionCode 7. Details und APK-Prüfsumme: [BUILD-INFO-0.4.0-tests.json](BUILD-INFO-0.4.0-tests.json); historische Release-Metadaten: [BUILD-INFO-0.3.0.json](BUILD-INFO-0.3.0.json).
 
 ## Android
 
-Alle 26 Unit-/Robolectric-Tests, `assembleDebug` und `lintDebug` bestehen. Die Prüfungen umfassen die übernommenen UI-/Profil-/Temperaturtests aus 0.3.1, Hintergrundverarbeitung und Referenzrückfall sowie Dateiintegrität und den erweiterten Benchmarkexport. Der Teststand und APK-Hash stehen in `BUILD-INFO.json`.
+Alle 26 Unit-/Robolectric-Tests, `assembleDebug` und `lintDebug` bestehen. Die Prüfungen umfassen die übernommenen UI-/Profil-/Temperaturtests aus 0.3.1, Hintergrundverarbeitung und Referenzrückfall sowie Dateiintegrität und den erweiterten Benchmarkexport. Der Teststand und APK-Hash stehen in `BUILD-INFO-0.4.0-tests.json`.
 
 Neue Prüffälle:
 

@@ -2,7 +2,7 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[Bisherigen CPU/Vulkan-Release 0.3.1 herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.1). Die nachfolgend beschriebenen Änderungen aus 0.4.0 sind im neuen Quellstand enthalten.
+[CPU/Vulkan-Release 0.4.1 herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.4.1). Direktes Update von 0.4.0 mit demselben Signierschlüssel; 0.3.x verwendet ein anderes Zertifikat.
 
 ## Stand
 
@@ -10,7 +10,7 @@ Version **0.4.1** ergänzt eine dateigebundene Option **Trotzdem fortfahren** be
 
 Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Bekannte Bonsai-2-4B-Dateien werden beim Import und Laden per SHA256 verglichen. Bei einer Abweichung kann die genaue Datei ausdrücklich freigegeben werden. Optimierte CPU-/Vulkan-Profile werden gegen skalare Quantisierungskernel geprüft; ein CPU-Kompatibilitätsmodus mit Microbatch 1 steht als Rückfall zur Verfügung. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
 
-Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die fehlerhafte Q2_0-Kopie eine andere SHA256 als die getestete offizielle Datei, obwohl die Dateigröße stimmt. Die geprüfte Datei antwortet im Host-Test korrekt. Unter **Modell und Einstellungen → Beispielmodell: Bonsai 2 4B herunterladen** lässt sie sich über den Browser beziehen. Die App ist nicht auf dieses Modell beschränkt. Danach neu importieren und einen neuen Chat starten. Ein physischer A55-Nachtest bleibt erforderlich. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
+Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die Q2_0-Kopie mit unverständlichen Antworten eine andere SHA256 als die getestete offizielle Datei, obwohl die Dateigröße stimmt. Die geprüfte Datei antwortet im Host-Test korrekt. Unter **Modell und Einstellungen → Beispielmodell: Bonsai 2 4B herunterladen** lässt sie sich über den Browser beziehen. Die App ist nicht auf dieses Modell beschränkt. Danach neu importieren und einen neuen Chat starten. Ein physischer A55-Nachtest bleibt erforderlich. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
 
 Implementiert:
 

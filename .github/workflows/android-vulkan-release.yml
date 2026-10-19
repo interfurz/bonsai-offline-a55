@@ -346,13 +346,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Verify source build and release draft
         run: |
           set -euo pipefail
           gh run view "$RELEASE_BUILD_RUN_ID" --json conclusion,headSha > verified-run.json
           gh release view "v$RELEASE_VERSION" --json isDraft,targetCommitish > verified-draft.json
           python3 - <<'PY'
-          import json, os, re
+          import json, os, re, subprocess
           from pathlib import Path
           version = os.environ['RELEASE_VERSION']
           assert re.fullmatch(r'\d+\.\d+\.\d+', version)
@@ -363,7 +364,12 @@ jobs:
           draft = json.loads(Path('verified-draft.json').read_text())
           assert run['conclusion'] == 'success'
           assert run['headSha'] == info['source_commit']
-          assert draft['isDraft'] is True and draft['targetCommitish'] == run['headSha']
+          release_commit = info.get('release_commit', run['headSha'])
+          assert draft['isDraft'] is True and draft['targetCommitish'] == release_commit
+          subprocess.run(['git','diff','--exit-code',run['headSha'],release_commit,'--',
+                          'app/src/main','app/build.gradle','build.gradle','settings.gradle',
+                          'gradle.properties','gradle','.gitmodules','vendor',
+                          'scripts/fetch_runtime.py'],check=True)
           PY
       - name: Download verified unsigned build
         run: |

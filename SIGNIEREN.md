@@ -1,6 +1,6 @@
 # Bonsai-Release signieren
 
-Version 0.4.0 verwendet auf ausdrücklichen Wunsch einen **neuen dauerhaften Schlüssel**. Sie ist deshalb kein direktes Update der mit dem früheren Zertifikat signierten 0.3.0/0.3.1-Installation. Eine Deinstallation löscht private Chats, Einstellungen und die Modellkopie.
+Seit Version 0.4.0 verwendet die App auf ausdrücklichen Wunsch einen **neuen dauerhaften Schlüssel**; 0.4.1 verwendet denselben Schlüssel. Die App ist deshalb kein direktes Update der mit dem früheren Zertifikat signierten 0.3.0/0.3.1-Installation. Eine Deinstallation löscht private Chats, Einstellungen und die Modellkopie.
 
 Aktuelles Zertifikat, SHA256:
 
