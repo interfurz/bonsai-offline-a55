@@ -1,10 +1,10 @@
 # Prüfnachweis 0.4.0
 
-19. Oktober 2026. Android SDK 35, NDK 28.2.13676358, CMake 3.22.1, JDK 17. ARM64-CPU-Testbuild, versionCode 5. Details und APK-Prüfsumme: [BUILD-INFO.json](BUILD-INFO.json); historische Release-Metadaten: [BUILD-INFO-0.3.0.json](BUILD-INFO-0.3.0.json).
+19. Oktober 2026. Android SDK 35, NDK 28.2.13676358, CMake 3.22.1, JDK 17. ARM64-CPU-Testbuild, versionCode 7. Details und APK-Prüfsumme: [BUILD-INFO.json](BUILD-INFO.json); historische Release-Metadaten: [BUILD-INFO-0.3.0.json](BUILD-INFO-0.3.0.json).
 
 ## Android
 
-`./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:lintDebug` bestanden. Zehn Tests unter Robolectric API 35 bestehen: vier vorhandene UI-/Profiltests und sechs neue Tests für Hintergrundverarbeitung und Referenzrückfall.
+Die Prüfungen umfassen die übernommenen UI-/Profil-/Temperaturtests aus 0.3.1, Hintergrundverarbeitung und Referenzrückfall sowie Dateiintegrität und den erweiterten Benchmarkexport. Der endgültige Teststand und APK-Hash stehen in `BUILD-INFO.json`.
 
 Neue Prüffälle:
 
@@ -14,6 +14,9 @@ Neue Prüffälle:
 - Ein Inferenzfehler gibt die Wachhaltung frei und entfernt die unbeantwortete Nutzernachricht.
 - Ein verspäteter Dienststart nach Aufgabenende hält die CPU nicht wach.
 - Abweichender optimierter CPU-Pfad fällt auf skalare Kernel zurück; ein übereinstimmender Pfad bleibt verfügbar.
+- Der Benchmarkexport enthält den tatsächlichen Dateihash und alle drei generierten Antworten.
+- Die vom A55 gemeldete abweichende SHA256 wird trotz gleicher Dateigröße zurückgewiesen. Die beiden geprüften offiziellen Dateien werden akzeptiert, eine unvollständige Kopie wird abgewiesen, andere Modellnamen werden nicht falsch zugeordnet.
+- Ein abgewiesener Import erhält die bisherige Modellkopie und die geladene Engine; ein schon importiertes abweichendes Modell gelangt beim Laden nicht zur nativen Engine.
 
 Lint meldet keine Fehler und vier Warnungen (API-Attribut, ChromeOS-ABI, Touch-Accessibility und Stringressourcen). APK-Signaturprüfung und `zipalign -c -P 16 4` bestehen. Der neue lokale Debug-Schlüssel stimmt **nicht** mit dem früheren Release überein. Das APK ist deshalb kein direktes Update einer mit dem alten Schlüssel signierten Installation.
 
@@ -41,8 +44,16 @@ Offizielle `Ternary-Bonsai-2-4B-PQ2_0.gguf`, 1.146.465.120 Bytes, SHA256 `d406b1
 
 Der vollständige Rechentest mit derselben Modelldatei besteht außerdem als statisch gelinktes Android-ARM64-Programm unter QEMU `cortex-a55`: optimierte ARM-Kernel, 2 Threads, Microbatch 32, Kontext 512, 54 Prompttokens inklusive Systemnachricht und deaktiviertem Thinking. Greedy-Ausgabe exakt `4`. Auch hier wurde das gemeldete Wirrwarr nicht reproduziert. Das ist ein emulierter ARM-Test, kein Nachweis auf einem Samsung-Gerät.
 
+## Gemeldete Q2_0-Datei
+
+Die offizielle Datei auf Hugging-Face-Revision `8d6557168168f91ea6697a4a49ed2ef622b53adb` hat 1.212.103.520 Bytes und SHA256 `64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4`. Hash und Größe stimmen mit dem offiziellen LFS-Pointer überein; die Datei bleibt auch nach dem Laden unverändert. Stichproben ihrer entpackten Gewichte stimmen mit der PQ2_0-Datei überein.
+
+`tests/ModelResponseSmoke.java` prüft die App-JNI samt tatsächlichem Sampler mit 4 Threads, Kontext 4096, Microbatch 32, Seed 42 und der App-Systemnachricht. Die offizielle Q2_0-Datei antwortet auf „1+1“ mit `1+1 = 2` und auf „Was ist 2 + 2? Antworte nur mit der Zahl.“ exakt mit `4`.
+
+Der bereitgestellte A55-Modelltest nennt dieselbe Dateigröße, aber SHA256 `4e157769ecbdbdc9f555c58a0834d00bce09430a99efd53a8f3beca642042eff`, und dokumentiert falsche Antworten auch ohne Chatverlauf. Die konkrete private Kopie liegt nicht vor. Eine abweichende oder beschädigte Datei ist damit eingegrenzt; der genaue Ursprung der Byteabweichung und das Verhalten nach Neuimport sind noch nicht auf dem Gerät geprüft.
+
 ## Grenzen
 
-Kein physisches Galaxy A55 ist angeschlossen. Robolectric prüft keine reale Samsung-Energieverwaltung, und QEMU bildet den Samsung-Treiber-/Gerätezustand nicht ab. Das vom Nutzer gezeigte inhaltliche Wirrwarr auf „1+1“ ist bisher nicht mit seiner konkreten Gerätedatei reproduziert. Die genaue Dateibezeichnung und ein Modelltestprotokoll mit SHA256 wurden angefragt. Die skalare Referenz teilt weiterhin andere Runtime-Operationen mit dem optimierten Pfad. Deshalb wird keine vollständige Behebung des A55-Fehlers behauptet.
+Kein physisches Galaxy A55 ist angeschlossen. Robolectric prüft keine reale Samsung-Energieverwaltung, und QEMU bildet den Samsung-Treiber-/Gerätezustand nicht ab. Das vorgelegte Gerätelog identifiziert inzwischen die abweichende Q2_0-Datei. Die skalare Referenz teilt weiterhin andere Runtime-Operationen mit dem optimierten Pfad. Eine vollständige Behebung nach Austausch der Datei muss auf dem A55 bestätigt werden.
 
 Exynos-1480-NPU-Inferenz ist nicht implementiert; Begründung und Primärquellen stehen in [NPU-STATUS.md](NPU-STATUS.md).

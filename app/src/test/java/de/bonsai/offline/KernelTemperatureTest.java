@@ -83,6 +83,7 @@ public class KernelTemperatureTest {
         @Implementation protected static void __staticInitializer__() { }
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { }
+        @Implementation protected static void referenceCpu(boolean enabled) { }
         @Implementation protected static void configure(long handle,int threads,int batchThreads,int microBatch) { }
         @Implementation protected static byte[] load(long handle,byte[] path,int context,int threads,boolean gpu) {
             return BonsaiApp.utf8("{\"backend\":\"CPU\"}");

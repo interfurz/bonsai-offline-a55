@@ -323,6 +323,8 @@ public final class MainActivity extends Activity {
         TextView model=text(app.modelFile().isFile()?app.modelName():"Kein Modell importiert",15,TEXT); model.setTextIsSelectable(true); content.addView(model);
         content.addView(settingLabel((app.loaded?"Geladen · "+app.backend:"Nicht geladen")+"\nProzess-RAM: "+ram(BonsaiApp.rssKb())+" · Native Heap: "+ram(Debug.getNativeHeapAllocatedSize()/1024)));
         TextView choose=menuItem("GGUF-Datei auswählen …"); choose.setEnabled(!app.busy); content.addView(choose);
+        TextView download=menuItem("Geprüfte Bonsai-2-4B-Datei herunterladen ↗");
+        download.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(ModelIntegrity.downloadUrl())))); content.addView(download);
         TextView ctx=settingLabel("Kontext"); content.addView(ctx);
         Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1); content.addView(context);
         content.addView(settingLabel("CPU-Threads"));

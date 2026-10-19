@@ -6,9 +6,9 @@ Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu ges
 
 ## Stand
 
-Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Für Bonsai 4B ist ein CPU-Kompatibilitätsmodus mit skalaren Quantisierungskerneln und Microbatch 1 voreingestellt. Optimierte CPU-/Vulkan-Profile werden gegen diese Referenz geprüft. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
+Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Die geprüften offiziellen Bonsai-2-4B-Dateien werden beim Import und Laden per SHA256 kontrolliert. Optimierte CPU-/Vulkan-Profile werden gegen skalare Quantisierungskernel geprüft; ein CPU-Kompatibilitätsmodus mit Microbatch 1 steht als Rückfall zur Verfügung. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
 
-Die App bleibt vollständig offline. Der auf dem A55 gemeldete Zeichensalat ist noch nicht auf einem physischen A55 nachgeprüft; der Kompatibilitätsmodus ist ein gezielter Reparaturpfad, kein Nachweis einer vollständigen Gerätefehlerbehebung. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
+Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die fehlerhafte Q2_0-Kopie eine andere SHA256 als die getestete offizielle Datei, obwohl die Dateigröße stimmt. Die geprüfte Datei antwortet im Host-Test korrekt. Unter **Modell und Einstellungen → Geprüfte Bonsai-2-4B-Datei herunterladen** lässt sie sich über den Browser beziehen. Danach neu importieren und einen neuen Chat starten. Ein physischer A55-Nachtest bleibt erforderlich. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
 
 Implementiert:
 
@@ -97,7 +97,7 @@ Falls der Ladevorgang scheitert: andere Apps schließen und **Modell und Einstel
 - Gemessen werden Prompt-Verarbeitung, Zeit bis zum ersten Token, Ausgabetokens und Tokens/s. Vorzeitiges EOS ist erlaubt; tatsächliche Tokenzahlen stehen pro Lauf im Export.
 - Die Übersicht zeigt die Mediane der vollständigen Messläufe. Abgebrochene oder fehlgeschlagene Messungen sind ausdrücklich unvollständig.
 - `VmRSS` aus `/proc/self/status` wird alle 250 ms abgetastet. Das ist Prozess-RAM, kein exakter Modell-RAM und kein vollständiger GPU-Speicherwert. Kurze Spitzen können fehlen. Der Ausgangswert liegt nach dem Laden des Modells.
-- Der Export enthält Modellname/-größe, Gerätemodell, Android-Version, Backend, Runtime-Commit, Kontext, Threads, Prompt, Einzelmessungen und Akkutemperatur-/Thermalstatus vor und nach der Messung. Dateiname und Bytezahl ersetzen keine Modell-Prüfsumme.
+- Der Export enthält Modellname/-größe, SHA256, Modellmetadaten, Gerätemodell, Android-Version, Backend, Runtime-Commit, Kontext, Threads, Prompt, Einzelmessungen einschließlich erzeugter Antwort und Akkutemperatur-/Thermalstatus vor und nach der Messung. Die Prüfsumme wird vor dem Aufwärmen außerhalb der Zeitmessung berechnet. Ein abgeschlossener Geschwindigkeitsbenchmark beweist keine korrekten Antworten.
 - Die letzte Messung bleibt lokal als `benchmark.json` gespeichert. Über **JSON exportieren** kann sie in eine eigene Datei geschrieben werden.
 
 Für vergleichbare Messungen dieselbe Modelldatei und dieselben Einstellungen verwenden, das Gerät abkühlen lassen und den Energiesparmodus ausschalten. Der Benchmark erzeugt erst beim Ausführen auf dem Handy echte Werte. Es sind keine erfundenen Beispielresultate hinterlegt.

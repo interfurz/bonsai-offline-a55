@@ -67,10 +67,9 @@ public final class BonsaiApp extends Application {
         super.onCreate();
         prefs = getSharedPreferences("settings", MODE_PRIVATE);
         if(!prefs.contains("cpuCompatibility")) {
-            prefs.edit().putBoolean("cpuCompatibility",true).putBoolean("gpu",false)
-                .putInt("microBatch",1).remove("optimizedFor").apply();
+            prefs.edit().putBoolean("cpuCompatibility",false).remove("optimizedFor").apply();
         }
-        cpuCompatibility=prefs.getBoolean("cpuCompatibility",true);
+        cpuCompatibility=prefs.getBoolean("cpuCompatibility",false);
         store = new ChatStore(this);
         store.recoverInterruptedTurns();
         if(prefs.getBoolean("optimizerRunning",false)) {
@@ -147,6 +146,13 @@ public final class BonsaiApp extends Application {
         notifyUi();
     }
     private void loadOnWorker() throws Exception {
+        loadOnWorker(null);
+    }
+    private void loadOnWorker(String checkedSha) throws Exception {
+        if(ModelIntegrity.expectedSha(modelName())!=null) {
+            main.post(()->{status="Modellprüfsumme wird geprüft …";notifyUi();});
+            ModelIntegrity.verify(modelName(),modelFile().length(),checkedSha==null?modelSha256():checkedSha);
+        }
         String actualBackend=BackendGuard.load(this,handle);
         main.post(() -> { loaded=true; backend=actualBackend; });
     }
@@ -156,7 +162,10 @@ public final class BonsaiApp extends Application {
         loaded=false;
         worker.execute(() -> {
             String issue="";
-            try { loadOnWorker(); } catch (Exception | LinkageError e) { issue=reason(e); }
+            try { loadOnWorker(); } catch (Exception | LinkageError e) {
+                issue=reason(e);
+                try { NativeEngine.unload(handle); } catch(Exception | LinkageError ignored) { }
+            }
             String result=issue; main.post(() -> complete(result));
         });
     }
@@ -176,6 +185,7 @@ public final class BonsaiApp extends Application {
             File partial=new File(getFilesDir(),"model.gguf.part");
             try {
                 String name="Bonsai.gguf"; long size=-1;
+                java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
                 try(Cursor c=getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE},null,null,null)) {
                     if(c != null && c.moveToFirst()) {
                         int nameIndex=c.getColumnIndex(OpenableColumns.DISPLAY_NAME), sizeIndex=c.getColumnIndex(OpenableColumns.SIZE);
@@ -190,9 +200,9 @@ public final class BonsaiApp extends Application {
                     byte[] magic=new byte[4]; int got=0;
                     while(got<4) { int n=in.read(magic,got,4-got); if(n<0) break; got+=n; }
                     if(got!=4 || !Arrays.equals(magic,new byte[]{'G','G','U','F'})) throw new IllegalStateException("Diese Datei ist kein GGUF-Modell.");
-                    out.write(magic); byte[] buffer=new byte[1024*1024]; long copied=4, lastUpdate=0; int n;
+                    out.write(magic); digest.update(magic); byte[] buffer=new byte[1024*1024]; long copied=4, lastUpdate=0; int n;
                     while(!cancelled && (n=in.read(buffer))!=-1) {
-                        out.write(buffer,0,n); copied+=n;
+                        out.write(buffer,0,n); digest.update(buffer,0,n); copied+=n;
                         if(System.currentTimeMillis()-lastUpdate>250) {
                             lastUpdate=System.currentTimeMillis();
                             String label=String.format(Locale.GERMAN,"Import: %.0f MB%s",copied/1048576.0,size>0 ? String.format(Locale.GERMAN," / %.0f MB",size/1048576.0) : "");
@@ -204,12 +214,14 @@ public final class BonsaiApp extends Application {
                     out.getFD().sync();
                 }
                 if(cancelled) throw new IllegalStateException("Abgebrochen.");
+                String sha=ModelIntegrity.hex(digest.digest());
+                ModelIntegrity.verify(name,partial.length(),sha);
                 NativeEngine.unload(handle);
                 main.post(() -> { loaded=false; cpuReference=null; });
                 Files.move(partial.toPath(),modelFile().toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
                 prefs.edit().putString("modelName",name==null ? "Bonsai.gguf" : name).remove("optimizedFor").apply();
                 main.post(() -> { status="Modell wird geladen …"; notifyUi(); });
-                loadOnWorker();
+                loadOnWorker(sha);
             } catch(Exception | LinkageError e) { issue=reason(e); }
             finally { partial.delete(); }
             String result=issue; main.post(() -> complete(result));
@@ -278,6 +290,17 @@ public final class BonsaiApp extends Application {
         Intent battery=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         return battery==null ? -1 : battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,-10)/10.0;
     }
+    private String modelSha256() throws Exception {
+        java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+        try(InputStream file=new FileInputStream(modelFile())) {
+            byte[] buffer=new byte[1024*1024]; int count;
+            while((count=file.read(buffer))!=-1) {
+                if(cancelled) throw new IllegalStateException("Abgebrochen.");
+                digest.update(buffer,0,count);
+            }
+        }
+        return ModelIntegrity.hex(digest.digest());
+    }
     void runModelCheck() {
         if(!loaded) { error="Bitte zuerst ein Modell laden.";notifyUi();return; }
         if(!begin("Modelltest ohne Chatverlauf …"))return;
@@ -290,13 +313,7 @@ public final class BonsaiApp extends Application {
                     .put("app_version",BuildConfig.VERSION_NAME).put("device",Build.MANUFACTURER+" "+Build.MODEL)
                     .put("context",context()).put("threads",threads()).put("batch_threads",batchThreads()).put("micro_batch",microBatch())
                     .put("timestamp",java.time.Instant.now().toString()).put("metadata",readReport("model-metadata.json"));
-                java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
-                try(InputStream file=new FileInputStream(modelFile())) {
-                    byte[] buffer=new byte[1024*1024];int count;
-                    while((count=file.read(buffer))!=-1) { if(cancelled)throw new IllegalStateException("Abgebrochen.");digest.update(buffer,0,count); }
-                }
-                StringBuilder hash=new StringBuilder();for(byte value:digest.digest())hash.append(String.format(Locale.ROOT,"%02x",value&255));
-                report.put("model_sha256",hash.toString());
+                report.put("model_sha256",modelSha256());
                 String[] questions={"Was ist 2 + 2? Antworte nur mit der Zahl.","Erkläre in drei kurzen Sätzen, warum Bäume Wasser brauchen."};
                 JSONArray answers=new JSONArray();report.put("answers",answers);
                 for(int i=0;i<questions.length;i++) {
@@ -321,8 +338,8 @@ public final class BonsaiApp extends Application {
 
     void runBenchmark() {
         if(!loaded) { error="Für den Benchmark bitte zuerst ein Modell laden."; notifyUi(); return; }
-        if(!begin("Benchmark startet …")) return;
-        benchmark=null; benchmarkProgress="Aufwärmdurchlauf …";
+        if(!begin("Modellprüfsumme wird berechnet …")) return;
+        benchmark=null; benchmarkProgress="Modellprüfsumme wird berechnet …";
         String name=modelName(), actualBackend=backend;
         final int selectedContext=context(), selectedThreads=threads();
         worker.execute(() -> {
@@ -332,25 +349,29 @@ public final class BonsaiApp extends Application {
             ScheduledFuture<?> sampling=monitor.scheduleWithFixedDelay(() -> peak.accumulateAndGet(rssKb(),Math::max),0,250,TimeUnit.MILLISECONDS);
             try {
                 String prompt=BENCHMARK_PROMPT+BENCHMARK_CONTEXT+BENCHMARK_CONTEXT+BENCHMARK_CONTEXT+BENCHMARK_CONTEXT+BENCHMARK_CONTEXT;
-                report.put("schema",1).put("benchmark","bonsai-offline-v1").put("timestamp_utc",java.time.Instant.now().toString())
+                report.put("schema",2).put("benchmark","bonsai-offline-v1").put("timestamp_utc",java.time.Instant.now().toString())
                     .put("device",Build.MANUFACTURER+" "+Build.MODEL).put("hardware",Build.HARDWARE).put("android_api",Build.VERSION.SDK_INT)
                     .put("app_version",BuildConfig.VERSION_NAME).put("runtime_commit",BuildConfig.RUNTIME_REVISION)
                     .put("model",name).put("model_bytes",modelFile().length()).put("backend",actualBackend)
+                    .put("model_metadata",readReport("model-metadata.json"))
                     .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("context_tokens",selectedContext).put("threads",selectedThreads).put("max_output_tokens",128)
                     .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention",false)
                     .put("thinking",false).put("seed",42).put("prompt",prompt).put("runs",runs)
                     .put("thermal_before",thermalStatus()).put("battery_celsius_before",batteryTemperature())
                     .put("rss_baseline_kb",baseline).put("rss_sample_interval_ms",250)
-                    .put("notes","1 warm-up (32 tokens), then 3 measured runs (up to 128 tokens, EOS allowed). Every run clears context and processes the full prompt. RSS is sampled process RAM; GPU memory and very short peaks may be missing. Tokens/s includes sampling and native loop overhead, excludes prefill. No model SHA computed; model name and byte size are identifiers only.");
+                    .put("notes","1 warm-up (32 tokens), then 3 measured runs (up to 128 tokens, EOS allowed). Every run clears context and processes the full prompt. RSS is sampled process RAM; GPU memory and very short peaks may be missing. Tokens/s includes sampling and native loop overhead, excludes prefill. Model SHA256 is computed before warm-up, outside timed runs. Each measured run includes its generated answer; speed alone does not establish answer correctness.");
+                report.put("model_sha256",modelSha256());
+                main.post(()->{benchmarkProgress="Aufwärmdurchlauf …";if(!cancelled)status=benchmarkProgress;notifyUi();});
                 byte[][] roles={utf8("user")}, texts={utf8(prompt)};
                 // Warm-up is deliberately excluded from reported timing statistics.
                 NativeEngine.generate(handle,roles,texts,32,42,chunk -> {});
                 for(int i=0;i<3 && !cancelled;i++) {
                     String progress="Messlauf "+(i+1)+" von 3 …";
                     main.post(() -> { benchmarkProgress=progress; if(!cancelled) status=progress; notifyUi(); });
-                    JSONObject run=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,128,42,chunk -> {}),StandardCharsets.UTF_8));
-                    run.put("run",i+1); runs.put(run);
+                    ByteArrayOutputStream answer=new ByteArrayOutputStream();
+                    JSONObject run=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,128,42,chunk -> answer.write(chunk,0,chunk.length)),StandardCharsets.UTF_8));
+                    run.put("run",i+1).put("answer",new String(answer.toByteArray(),StandardCharsets.UTF_8)); runs.put(run);
                 }
                 List<Double> speeds=new ArrayList<>(), first=new ArrayList<>(), prefill=new ArrayList<>();
                 for(int i=0;i<runs.length();i++) {

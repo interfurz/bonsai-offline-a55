@@ -29,13 +29,16 @@ public class BackgroundInferenceTest {
         static CountDownLatch started, finish;
         static volatile boolean stopped, fail;
         static volatile boolean referenceMode, divergent;
+        static int loads,unloads;
         @Implementation protected static void __staticInitializer__() {}
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { stopped=false; }
         @Implementation protected static void stop(long handle) { stopped=true; finish.countDown(); }
         @Implementation protected static void referenceCpu(boolean enabled) { referenceMode=enabled; }
+        @Implementation protected static void unload(long handle) { unloads++; }
         @Implementation protected static void configure(long handle, int threads, int batchThreads, int microBatch) {}
         @Implementation protected static byte[] load(long handle, byte[] path, int context, int threads, boolean gpu) {
+            loads++;
             return ("{\"backend\":\""+(gpu?"Vulkan":"CPU")+"\"}").getBytes(StandardCharsets.UTF_8);
         }
         @Implementation protected static byte[] probe(long handle, int steps) {
@@ -46,12 +49,13 @@ public class BackgroundInferenceTest {
             if(!finish.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("Test worker timed out");
             if(fail) throw new IllegalStateException("Test inference failure");
             stream.onBytes("Hallo aus dem Hintergrund".getBytes(StandardCharsets.UTF_8));
-            return ("{\"tokens_per_second\":2,\"output_tokens\":4,\"first_token_ms\":10,\"stopped\":"+stopped+",\"limit_reached\":false}").getBytes(StandardCharsets.UTF_8);
+            return ("{\"tokens_per_second\":2,\"output_tokens\":4,\"first_token_ms\":10,\"prefill_ms\":9,\"stopped\":"+stopped+",\"limit_reached\":false}").getBytes(StandardCharsets.UTF_8);
         }
     }
     private BonsaiApp app;
     @Before public void prepare() {
         Engine.started=new CountDownLatch(1); Engine.finish=new CountDownLatch(1); Engine.stopped=false; Engine.fail=false; Engine.divergent=false; Engine.referenceMode=false;
+        Engine.loads=0; Engine.unloads=0;
         app=(BonsaiApp)RuntimeEnvironment.getApplication();
         app.prefs.edit().putBoolean("notificationsAsked",true).apply();
         app.loaded=true;
@@ -114,5 +118,51 @@ public class BackgroundInferenceTest {
         app.prefs.edit().putBoolean("cpuCompatibility",false).apply();
         assertEquals("CPU",BackendGuard.load(app,1));
         assertFalse(app.cpuCompatibility); assertFalse(Engine.referenceMode);
+    }
+    @Test public void benchmarkIncludesFileChecksumAndActualAnswers() throws Exception {
+        java.nio.file.Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F'});
+        Engine.finish.countDown();
+        app.runBenchmark(); awaitCompletion();
+        org.json.JSONObject report=app.lastBenchmark();
+        assertTrue(report.getBoolean("completed"));
+        assertEquals(2,report.getInt("schema"));
+        assertEquals("b83633aa785344791618f2fddf131b010ea04912a60430760b070bad293f65bd",report.getString("model_sha256"));
+        assertEquals(3,report.getJSONArray("runs").length());
+        for(int i=0;i<3;i++) assertEquals("Hallo aus dem Hintergrund",report.getJSONArray("runs").getJSONObject(i).getString("answer"));
+    }
+    @Test public void failedIntegrityCheckKeepsPreviousModelDuringImport() throws Exception {
+        byte[] old="previous model".getBytes(StandardCharsets.UTF_8);
+        java.nio.file.Files.write(app.modelFile().toPath(),old);
+        app.prefs.edit().putString("modelName","previous.gguf").apply();
+        android.net.Uri uri=android.net.Uri.parse("content://integrity-test/model");
+        android.content.ContentProvider provider=new android.content.ContentProvider() {
+            @Override public boolean onCreate() { return true; }
+            @Override public android.database.Cursor query(android.net.Uri u,String[] projection,String selection,String[] args,String order) {
+                android.database.MatrixCursor cursor=new android.database.MatrixCursor(new String[]{android.provider.OpenableColumns.DISPLAY_NAME,android.provider.OpenableColumns.SIZE});
+                cursor.addRow(new Object[]{ModelIntegrity.Q2_NAME,4}); return cursor;
+            }
+            @Override public String getType(android.net.Uri u) { return "application/octet-stream"; }
+            @Override public android.net.Uri insert(android.net.Uri u,android.content.ContentValues v) { throw new UnsupportedOperationException(); }
+            @Override public int delete(android.net.Uri u,String selection,String[] args) { throw new UnsupportedOperationException(); }
+            @Override public int update(android.net.Uri u,android.content.ContentValues v,String selection,String[] args) { throw new UnsupportedOperationException(); }
+        };
+        android.content.pm.ProviderInfo info=new android.content.pm.ProviderInfo();info.authority="integrity-test";
+        provider.attachInfo(app,info);
+        org.robolectric.shadows.ShadowStatFs.registerStats(app.getFilesDir().getAbsolutePath(),1000000,1000000,1000000);
+        org.robolectric.shadows.ShadowContentResolver.registerProviderInternal("integrity-test",provider);
+        Shadows.shadowOf(app.getContentResolver()).registerInputStream(uri,new java.io.ByteArrayInputStream(new byte[]{'G','G','U','F'}));
+        app.importModel(uri); awaitCompletion();
+        assertTrue(app.error,app.error.contains("Modellprüfung fehlgeschlagen"));
+        assertArrayEquals(old,java.nio.file.Files.readAllBytes(app.modelFile().toPath()));
+        assertEquals("previous.gguf",app.modelName()); assertTrue(app.loaded);
+        assertEquals(0,Engine.unloads); assertEquals(0,Engine.loads);
+        assertFalse(new java.io.File(app.getFilesDir(),"model.gguf.part").exists());
+    }
+    @Test public void previouslyImportedMismatchedModelCannotBeLoaded() throws Exception {
+        java.nio.file.Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F'});
+        app.prefs.edit().putString("modelName",ModelIntegrity.Q2_NAME).apply();
+        app.loadModel(); awaitCompletion();
+        assertTrue(app.error.contains("Modellprüfung fehlgeschlagen"));
+        assertFalse(app.loaded); assertEquals(0,Engine.loads); assertEquals(1,Engine.unloads);
     }
 }
