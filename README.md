@@ -6,9 +6,11 @@ Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu ges
 
 ## Stand
 
-Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Die geprüften offiziellen Bonsai-2-4B-Dateien werden beim Import und Laden per SHA256 kontrolliert. Optimierte CPU-/Vulkan-Profile werden gegen skalare Quantisierungskernel geprüft; ein CPU-Kompatibilitätsmodus mit Microbatch 1 steht als Rückfall zur Verfügung. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
+Version **0.4.1** ergänzt eine dateigebundene Option **Trotzdem fortfahren** bei abweichender Prüfsumme und einen allgemein formulierten GGUF-Import. Andere von der Runtime unterstützte GGUF-Modelle benötigen keine Bonsai-Prüfsumme. Details: [UPDATE-0.4.1.md](UPDATE-0.4.1.md).
 
-Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die fehlerhafte Q2_0-Kopie eine andere SHA256 als die getestete offizielle Datei, obwohl die Dateigröße stimmt. Die geprüfte Datei antwortet im Host-Test korrekt. Unter **Modell und Einstellungen → Geprüfte Bonsai-2-4B-Datei herunterladen** lässt sie sich über den Browser beziehen. Danach neu importieren und einen neuen Chat starten. Ein physischer A55-Nachtest bleibt erforderlich. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
+Version **0.4.0** ergänzt Hintergrundverarbeitung mit Android-Vordergrunddienst, Abbrechen-Benachrichtigung und CPU-Wachhaltung bei ausgeschaltetem Bildschirm. Bekannte Bonsai-2-4B-Dateien werden beim Import und Laden per SHA256 verglichen. Bei einer Abweichung kann die genaue Datei ausdrücklich freigegeben werden. Optimierte CPU-/Vulkan-Profile werden gegen skalare Quantisierungskernel geprüft; ein CPU-Kompatibilitätsmodus mit Microbatch 1 steht als Rückfall zur Verfügung. Details: [UPDATE-0.4.0.md](UPDATE-0.4.0.md).
+
+Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die fehlerhafte Q2_0-Kopie eine andere SHA256 als die getestete offizielle Datei, obwohl die Dateigröße stimmt. Die geprüfte Datei antwortet im Host-Test korrekt. Unter **Modell und Einstellungen → Beispielmodell: Bonsai 2 4B herunterladen** lässt sie sich über den Browser beziehen. Die App ist nicht auf dieses Modell beschränkt. Danach neu importieren und einen neuen Chat starten. Ein physischer A55-Nachtest bleibt erforderlich. Über **Modelltest ohne Chatverlauf** lassen sich Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren. Zur NPU auf dem A55: [NPU-STATUS.md](NPU-STATUS.md).
 
 Implementiert:
 
@@ -73,9 +75,11 @@ Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3. Die Download
 
 GitHub Actions bietet **Android APK** für CPU-Debug-Builds und **Android CPU + Vulkan unsigned release** für vollständige CPU/Vulkan-Release-Builds. Beide lassen sich unter **Actions → Run workflow** starten. Der Release-Workflow installiert die festgelegte Vulkan-Toolchain und stellt ein unsigniertes APK für die lokale Signierung bereit. Ein Update einer vorhandenen Installation benötigt deren bisherigen Signierschlüssel; ein neuer Debug-Schlüssel ist dafür nicht geeignet. Nur der Build benötigt Internet; die App läuft weiterhin lokal.
 
-## Erstes Modell
+## GGUF-Modell auswählen
 
-Aus dem [geprüften Stand des offiziellen Bonsai-2-4B-Repositorys](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/8d6557168168f91ea6697a4a49ed2ef622b53adb) zunächst nur diese Datei herunterladen:
+Andere GGUF-Textmodelle können über die Dateiauswahl importiert werden. Architektur und Quantisierung müssen von der eingebauten Runtime unterstützt werden; der RAM muss für das Modell und seinen Kontext ausreichen. Es gibt keine Bonsai-Namenspflicht oder Liste ausschließlich erlaubter Modelle.
+
+Als bereits geprüftes Beispiel kann aus dem [geprüften Stand des offiziellen Bonsai-2-4B-Repositorys](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/8d6557168168f91ea6697a4a49ed2ef622b53adb) zunächst nur diese Datei herunterladen:
 
 ```text
 Ternary-Bonsai-2-4B-PQ2_0.gguf
@@ -83,7 +87,7 @@ Ternary-Bonsai-2-4B-PQ2_0.gguf
 
 Die Model Card nennt etwa 1,15 GB. **Nicht** mit dem älteren `Ternary-Bonsai-4B` ohne `-2-` verwechseln. Vision-Projektor, MTP- und DFlash-Dateien werden für diesen ersten Textchat nicht benötigt.
 
-In der App **Bonsai-Modell auswählen** oder **+ → GGUF-Modell importieren** benutzen. Während des Imports werden Modell- und App-Speicher zeitweise beide benötigt. Die Originaldatei kann nach erfolgreichem Import außerhalb der App gelöscht werden. Eine Deinstallation löscht die private Modellkopie und die Chats.
+In der App **Dein Modell verbinden** oder **+ → GGUF-Modell importieren** benutzen. Während des Imports werden Modell- und App-Speicher zeitweise beide benötigt. Die Originaldatei kann nach erfolgreichem Import außerhalb der App gelöscht werden. Eine Deinstallation löscht die private Modellkopie und die Chats.
 
 Falls der Ladevorgang scheitert: andere Apps schließen und **Modell und Einstellungen → 2.048 Tokens → Übernehmen**, danach erneut laden. Die Größe der GGUF-Datei ist nicht der gesamte RAM-Bedarf. Android kann die App bei Speichermangel ohne auffangbare Fehlermeldung beenden.
 

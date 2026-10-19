@@ -56,6 +56,8 @@ public final class MainActivity extends Activity {
     private TextView subtitle, title, state, liveAnswer, liveDetail;
     private IconButton send, newChat;
     private Dialog performanceDialog;
+    private AlertDialog errorDialog;
+    private BonsaiApp.ModelApproval shownModelApproval;
     private TextView performanceStatus, performanceResult, performanceStart, performanceCompare;
     private ProgressBar performanceProgress;
     private View drawerPanel;
@@ -111,7 +113,7 @@ public final class MainActivity extends Activity {
         page.addView(dock);
         state=text("",12,MUTED); state.setPadding(dp(24),dp(4),dp(24),dp(8)); state.setGravity(Gravity.CENTER);
         state.setOnClickListener(v -> {
-            if(!app.error.isEmpty()) new AlertDialog.Builder(this).setTitle("Bonsai").setMessage(app.error).setPositiveButton("OK",null).show();
+            if(!app.error.isEmpty()) showError();
             else if(!app.backendNotice.isEmpty())new AlertDialog.Builder(this).setTitle("Rechenprüfung").setMessage(app.backendNotice).setPositiveButton("OK",null).show();
             else if(app.optimizing) showPerformance();
             else if(!app.benchmarkProgress.isEmpty()) showBenchmark();
@@ -149,6 +151,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putString("draft",input.getText().toString()); }
     @Override protected void onDestroy() {
+        if(errorDialog!=null) errorDialog.dismiss();
         if(performanceDialog!=null) performanceDialog.dismiss();
         if(app.listener==uiListener) app.listener=null;
         super.onDestroy();
@@ -195,10 +198,28 @@ public final class MainActivity extends Activity {
         if(autoScroll && !app.messages.isEmpty()) scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
         if(!app.error.isEmpty() && !app.error.equals(shownError)) {
             shownError=app.error;
-            new AlertDialog.Builder(this).setTitle("Bonsai").setMessage(app.error).setPositiveButton("OK",(d,w)->{}).show();
+            showError();
         }
         if(app.error.isEmpty()) shownError="";
         if(app.modelCheckFinished && !app.busy) { app.modelCheckFinished=false;showModelCheck(); }
+    }
+    private void showError() {
+        BonsaiApp.ModelApproval request=app.modelApproval;
+        if(errorDialog!=null && errorDialog.isShowing()) {
+            if(shownModelApproval==request) return;
+            errorDialog.dismiss();
+        }
+        shownModelApproval=request;
+        AlertDialog.Builder builder=new AlertDialog.Builder(this);
+        if(request!=null) {
+            builder.setTitle("Abweichende Prüfsumme").setMessage(request.mismatch.getMessage())
+                .setPositiveButton("Trotzdem fortfahren",(d,w)->app.acceptModel(request))
+                .setNegativeButton("Abbrechen",(d,w)->app.declineModel(request))
+                .setOnCancelListener(d->app.declineModel(request));
+        } else builder.setTitle("Bonsai").setMessage(app.error).setPositiveButton("OK",null);
+        errorDialog=builder.create();
+        errorDialog.setOnDismissListener(d->{if(errorDialog==d) errorDialog=null;});
+        errorDialog.show();
     }
     private void updateSend() {
         if(send==null || input==null) return;
@@ -261,8 +282,8 @@ public final class MainActivity extends Activity {
     }
     private void pickModel() {
         if(app.busy) return;
-        new AlertDialog.Builder(this).setTitle("Bonsai-Modell importieren")
-            .setMessage("Wähle die lokale Datei Ternary-Bonsai-2-4B-PQ2_0.gguf. Die App kopiert sie in ihren privaten Speicher. Dafür werden zusätzlich etwa 1,15 GB benötigt.\n\nEin bestehendes Modell wird erst nach vollständigem Import ersetzt.")
+        new AlertDialog.Builder(this).setTitle("GGUF-Modell importieren")
+            .setMessage("Wähle eine lokale GGUF-Datei. Die Inferenz-Engine muss Architektur und Quantisierung des Modells unterstützen; außerdem muss genügend RAM frei sein.\n\nDie App legt eine private Kopie an und benötigt dafür zusätzlichen Speicher in Größe der Datei. Ein bestehendes Modell wird erst nach vollständigem Import und gegebenenfalls deiner Bestätigung ersetzt.")
             .setNegativeButton("Abbrechen",null).setPositiveButton("Datei auswählen",(d,w)-> {
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
                 startActivityForResult(intent,IMPORT);
@@ -323,8 +344,9 @@ public final class MainActivity extends Activity {
         TextView model=text(app.modelFile().isFile()?app.modelName():"Kein Modell importiert",15,TEXT); model.setTextIsSelectable(true); content.addView(model);
         content.addView(settingLabel((app.loaded?"Geladen · "+app.backend:"Nicht geladen")+"\nProzess-RAM: "+ram(BonsaiApp.rssKb())+" · Native Heap: "+ram(Debug.getNativeHeapAllocatedSize()/1024)));
         TextView choose=menuItem("GGUF-Datei auswählen …"); choose.setEnabled(!app.busy); content.addView(choose);
-        TextView download=menuItem("Geprüfte Bonsai-2-4B-Datei herunterladen ↗");
+        TextView download=menuItem("Beispielmodell: Bonsai 2 4B herunterladen ↗");
         download.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(ModelIntegrity.downloadUrl())))); content.addView(download);
+        content.addView(settingLabel("Du kannst auch andere GGUF-Modelle über die Dateiauswahl importieren. Unterstützte Architektur, Quantisierung und verfügbarer RAM bestimmen, ob ein Modell geladen werden kann."));
         TextView ctx=settingLabel("Kontext"); content.addView(ctx);
         Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1); content.addView(context);
         content.addView(settingLabel("CPU-Threads"));
@@ -333,9 +355,9 @@ public final class MainActivity extends Activity {
         Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2); content.addView(length);
         content.addView(settingLabel("Inferenz"));
         Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0); content.addView(engine);
-        CheckBox compatible=new CheckBox(this); compatible.setText("CPU-Kompatibilitätsmodus für Bonsai 4B");
+        CheckBox compatible=new CheckBox(this); compatible.setText("CPU-Kompatibilitätsmodus");
         compatible.setTextColor(TEXT); compatible.setChecked(app.prefs.getBoolean("cpuCompatibility",false)); compatible.setEnabled(!app.busy); content.addView(compatible);
-        content.addView(settingLabel("Bei Zeichensalat: CPU und Kompatibilitätsmodus wählen, übernehmen und einen neuen Chat starten. Die skalaren Bonsai-Kernel können langsamer sein."));
+        content.addView(settingLabel("Bei Zeichensalat: CPU und Kompatibilitätsmodus wählen, übernehmen und einen neuen Chat starten. Der Modus nutzt skalare Bonsai-Quantisierungskernel und kann langsamer sein."));
         content.addView(settingLabel("NPU: Für Bonsai-GGUF auf dem Exynos 1480 derzeit nicht verfügbar."));
         for(Spinner s:new Spinner[]{context,threads,length,engine}) s.setEnabled(!app.busy);
         TextView nativeInfo=settingLabel("Bonsai "+BuildConfig.VERSION_NAME+" · Runtime prism-b10777-e3de715\n"+(BuildConfig.VULKAN_BUILD?"CPU/Vulkan-Wechsel lädt das Modell neu.\nKernel Optimizer misst das schnellste geprüfte Profil auf deinem Gerät.":"Vulkan ist in diesem Build nicht enthalten.")+"\nThinking ist für kurze Antworten deaktiviert."); content.addView(nativeInfo);

@@ -61,6 +61,14 @@ public final class BonsaiApp extends Application {
     double liveTokensPerSecond;
     String nativeError = "";
     String backgroundError = "";
+    static final class ModelApproval {
+        final ModelIntegrity.Mismatch mismatch;
+        final boolean importing;
+        ModelApproval(ModelIntegrity.Mismatch mismatch,boolean importing) {
+            this.mismatch=mismatch;this.importing=importing;
+        }
+    }
+    ModelApproval modelApproval;
     private long handle;
 
     @Override public void onCreate() {
@@ -85,7 +93,7 @@ public final class BonsaiApp extends Application {
     }
     void notifyUi() { if (listener != null) listener.run(); }
     File modelFile() { return new File(getFilesDir(), "model.gguf"); }
-    String modelName() { return prefs.getString("modelName", "Bonsai 2 4B"); }
+    String modelName() { return prefs.getString("modelName", "GGUF-Modell"); }
     int context() { return prefs.getInt("context", 4096); }
     int threads() { return prefs.getInt("threads", 4); }
     int batchThreads() { return prefs.getInt("batchThreads",threads()); }
@@ -125,6 +133,7 @@ public final class BonsaiApp extends Application {
     private boolean begin(String label) {
         if (busy) return false;
         if (handle == 0) { error = "Native Runtime konnte nicht geladen werden: " + nativeError; notifyUi(); return false; }
+        discardModelApproval();
         NativeEngine.resetStop(handle);
         cancelled=false; busy=true; status=label; error=""; backgroundError="";
         try { startForegroundService(new Intent(this,InferenceService.class)); }
@@ -151,10 +160,49 @@ public final class BonsaiApp extends Application {
     private void loadOnWorker(String checkedSha) throws Exception {
         if(ModelIntegrity.expectedSha(modelName())!=null) {
             main.post(()->{status="Modellprüfsumme wird geprüft …";notifyUi();});
-            ModelIntegrity.verify(modelName(),modelFile().length(),checkedSha==null?modelSha256():checkedSha);
+            verifyModel(modelName(),modelFile().length(),checkedSha==null?modelSha256():checkedSha);
         }
         String actualBackend=BackendGuard.load(this,handle);
         main.post(() -> { loaded=true; backend=actualBackend; });
+    }
+    private void verifyModel(String name,long bytes,String sha) {
+        if(!ModelIntegrity.approval(name,bytes,sha).equals(prefs.getString("approvedModelIntegrity","")))
+            ModelIntegrity.verify(name,bytes,sha);
+    }
+    private void discardModelApproval() {
+        if(modelApproval!=null && modelApproval.importing) new File(getFilesDir(),"model.gguf.part").delete();
+        modelApproval=null;
+    }
+    void declineModel(ModelApproval request) {
+        if(busy || modelApproval!=request) return;
+        discardModelApproval();error="";notifyUi();
+    }
+    void acceptModel(ModelApproval request) {
+        if(busy || modelApproval!=request) return;
+        modelApproval=null;
+        if(!begin("Modell wird geladen …")) { modelApproval=request;notifyUi();return; }
+        worker.execute(()->{
+            String issue="";
+            try {
+                File file=request.importing?new File(getFilesDir(),"model.gguf.part"):modelFile();
+                String sha=fileSha256(file);
+                if(file.length()!=request.mismatch.bytes || !sha.equals(request.mismatch.sha))
+                    throw new IllegalStateException("Die Datei hat sich geändert. Bitte erneut importieren oder laden.");
+                prefs.edit().putString("approvedModelIntegrity",ModelIntegrity.approval(request.mismatch.name,file.length(),sha)).apply();
+                if(request.importing) installModelOnWorker(request.mismatch.name,sha);
+                else loadOnWorker(sha);
+            } catch(Exception | LinkageError e) { issue=reason(e); }
+            finally { if(request.importing) new File(getFilesDir(),"model.gguf.part").delete(); }
+            String result=issue;main.post(()->complete(result));
+        });
+    }
+    private void installModelOnWorker(String name,String sha) throws Exception {
+        NativeEngine.unload(handle);
+        main.post(() -> { loaded=false; cpuReference=null; });
+        Files.move(new File(getFilesDir(),"model.gguf.part").toPath(),modelFile().toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
+        prefs.edit().putString("modelName",name==null ? "Modell.gguf" : name).remove("optimizedFor").apply();
+        main.post(() -> { status="Modell wird geladen …"; notifyUi(); });
+        loadOnWorker(sha);
     }
     void loadModel() {
         if (!modelFile().isFile()) { error="Bitte zuerst eine GGUF-Datei importieren."; notifyUi(); return; }
@@ -162,11 +210,14 @@ public final class BonsaiApp extends Application {
         loaded=false;
         worker.execute(() -> {
             String issue="";
+            ModelApproval approval=null;
             try { loadOnWorker(); } catch (Exception | LinkageError e) {
                 issue=reason(e);
+                if(e instanceof ModelIntegrity.Mismatch) approval=new ModelApproval((ModelIntegrity.Mismatch)e,false);
                 try { NativeEngine.unload(handle); } catch(Exception | LinkageError ignored) { }
             }
-            String result=issue; main.post(() -> complete(result));
+            String result=issue;ModelApproval request=approval;
+            main.post(() -> { modelApproval=cancelled?null:request;complete(result); });
         });
     }
     void unloadModel() {
@@ -182,9 +233,10 @@ public final class BonsaiApp extends Application {
         if (!begin("GGUF wird importiert …")) return;
         worker.execute(() -> {
             String issue="";
+            ModelApproval approval=null;
             File partial=new File(getFilesDir(),"model.gguf.part");
             try {
-                String name="Bonsai.gguf"; long size=-1;
+                String name="Modell.gguf"; long size=-1;
                 java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
                 try(Cursor c=getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE},null,null,null)) {
                     if(c != null && c.moveToFirst()) {
@@ -215,16 +267,17 @@ public final class BonsaiApp extends Application {
                 }
                 if(cancelled) throw new IllegalStateException("Abgebrochen.");
                 String sha=ModelIntegrity.hex(digest.digest());
-                ModelIntegrity.verify(name,partial.length(),sha);
-                NativeEngine.unload(handle);
-                main.post(() -> { loaded=false; cpuReference=null; });
-                Files.move(partial.toPath(),modelFile().toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
-                prefs.edit().putString("modelName",name==null ? "Bonsai.gguf" : name).remove("optimizedFor").apply();
-                main.post(() -> { status="Modell wird geladen …"; notifyUi(); });
-                loadOnWorker(sha);
+                verifyModel(name,partial.length(),sha);
+                installModelOnWorker(name,sha);
+            } catch(ModelIntegrity.Mismatch e) {
+                issue=reason(e);approval=new ModelApproval(e,true);
             } catch(Exception | LinkageError e) { issue=reason(e); }
-            finally { partial.delete(); }
-            String result=issue; main.post(() -> complete(result));
+            finally { if(approval==null) partial.delete(); }
+            String result=issue;ModelApproval request=approval;
+            main.post(() -> {
+                if(cancelled && request!=null) partial.delete();
+                modelApproval=cancelled?null:request;complete(result);
+            });
         });
     }
     boolean send(String input) {
@@ -291,8 +344,11 @@ public final class BonsaiApp extends Application {
         return battery==null ? -1 : battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,-10)/10.0;
     }
     private String modelSha256() throws Exception {
+        return fileSha256(modelFile());
+    }
+    private String fileSha256(File source) throws Exception {
         java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
-        try(InputStream file=new FileInputStream(modelFile())) {
+        try(InputStream file=new FileInputStream(source)) {
             byte[] buffer=new byte[1024*1024]; int count;
             while((count=file.read(buffer))!=-1) {
                 if(cancelled) throw new IllegalStateException("Abgebrochen.");

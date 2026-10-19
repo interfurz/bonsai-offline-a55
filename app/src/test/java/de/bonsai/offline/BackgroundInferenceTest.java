@@ -152,17 +152,19 @@ public class BackgroundInferenceTest {
         org.robolectric.shadows.ShadowContentResolver.registerProviderInternal("integrity-test",provider);
         Shadows.shadowOf(app.getContentResolver()).registerInputStream(uri,new java.io.ByteArrayInputStream(new byte[]{'G','G','U','F'}));
         app.importModel(uri); awaitCompletion();
-        assertTrue(app.error,app.error.contains("Modellprüfung fehlgeschlagen"));
+        assertNotNull(app.modelApproval);
         assertArrayEquals(old,java.nio.file.Files.readAllBytes(app.modelFile().toPath()));
         assertEquals("previous.gguf",app.modelName()); assertTrue(app.loaded);
         assertEquals(0,Engine.unloads); assertEquals(0,Engine.loads);
+        assertTrue(new java.io.File(app.getFilesDir(),"model.gguf.part").exists());
+        app.declineModel(app.modelApproval);
         assertFalse(new java.io.File(app.getFilesDir(),"model.gguf.part").exists());
     }
     @Test public void previouslyImportedMismatchedModelCannotBeLoaded() throws Exception {
         java.nio.file.Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F'});
         app.prefs.edit().putString("modelName",ModelIntegrity.Q2_NAME).apply();
         app.loadModel(); awaitCompletion();
-        assertTrue(app.error.contains("Modellprüfung fehlgeschlagen"));
+        assertNotNull(app.modelApproval);
         assertFalse(app.loaded); assertEquals(0,Engine.loads); assertEquals(1,Engine.unloads);
     }
 }

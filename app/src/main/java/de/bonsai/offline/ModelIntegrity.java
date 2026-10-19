@@ -2,6 +2,16 @@ package de.bonsai.offline;
 
 /** Checks the exact official Bonsai 2 files tested with this runtime, entirely offline. */
 final class ModelIntegrity {
+    static final class Mismatch extends IllegalStateException {
+        final String name, sha;
+        final long bytes;
+        Mismatch(String name,long bytes,String sha,String expected) {
+            super("Die Datei entspricht nicht der hier geprüften Fassung. Eine andere Prüfsumme allein beweist keinen Dateifehler."+
+                "\n\nDatei: "+name+"\nErwartete SHA256: "+expected+"\nDatei-SHA256: "+sha+
+                "\n\nDu kannst diese Datei trotzdem verwenden.");
+            this.name=name;this.bytes=bytes;this.sha=sha;
+        }
+    }
     static final String REVISION="8d6557168168f91ea6697a4a49ed2ef622b53adb";
     static final String Q2_NAME="Ternary-Bonsai-2-4B-Q2_0.gguf";
     static final String Q2_SHA="64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4";
@@ -20,10 +30,10 @@ final class ModelIntegrity {
         if(expected==null) return;
         long expectedBytes=Q2_SHA.equals(expected)?1212103520L:1146465120L;
         if(bytes!=expectedBytes || !expected.equalsIgnoreCase(sha))
-            throw new IllegalStateException("Modellprüfung fehlgeschlagen: "+name+
-                "\nDie Datei entspricht nicht der geprüften offiziellen Fassung. Gleiche Dateigröße genügt nicht."+
-                "\nErwartete SHA256: "+expected+"\nImportierte SHA256: "+sha+
-                "\nBitte die geprüfte Datei erneut herunterladen und importieren.");
+            throw new Mismatch(name,bytes,sha,expected);
+    }
+    static String approval(String name,long bytes,String sha) {
+        return expectedSha(name)+":"+bytes+":"+sha.toLowerCase(java.util.Locale.ROOT);
     }
     static String downloadUrl() {
         return "https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/resolve/"+REVISION+"/"+Q2_NAME+"?download=true";
