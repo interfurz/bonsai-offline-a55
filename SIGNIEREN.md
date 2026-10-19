@@ -1,25 +1,23 @@
-# Bonsai 0.4.0 lokal signieren
+# Bonsai-Release signieren
 
-Dieses vollständige CPU/Vulkan-Release-APK ist noch unsigniert und damit nicht installierbar. Für ein direktes Update der bisherigen CPU/Vulkan-Version muss der ursprüngliche private Signierschlüssel verwendet werden. Das öffentliche Zertifikat in einer vorhandenen APK reicht dafür nicht aus.
+Version 0.4.0 verwendet auf ausdrücklichen Wunsch einen **neuen dauerhaften Schlüssel**. Sie ist deshalb kein direktes Update der mit dem früheren Zertifikat signierten 0.3.0/0.3.1-Installation. Eine Deinstallation löscht private Chats, Einstellungen und die Modellkopie.
 
-Erwarteter SHA256-Fingerabdruck des bisherigen Zertifikats:
+Aktuelles Zertifikat, SHA256:
 
-`ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db`
+`933bc216a40682ce964cb0a2db03fb7ab511ae1916a7ea3bd0d0328c153bc462`
 
-## Android Studio
+## Schlüssel für künftige Updates sichern
 
-Die vorhandene Keystore-Datei und den Alias des bisherigen Schlüssels verwenden. Ein neues Keystore erzeugt keine update-kompatible Signatur. Keystore und Passwörter privat halten und nicht als GitHub-Assets hochladen.
+Die private Datei `bonsai-release.keystore` und die zugehörige Passwortdatei werden separat im privaten Arbeitsbereich bereitgestellt. Sie gehören nicht in Git, GitHub-Release-Assets oder CI-Artefakte. Beide auf dem eigenen Laptop sichern. Alias: `bonsai-release`, Format: PKCS12, RSA 4096 Bit, Gültigkeit 10.000 Tage ab Erstellung.
 
-## Windows / PowerShell mit Android SDK Build-Tools 35.0.0
+Für spätere Updates diesen Schlüssel erneut verwenden. In Android Studio **Generate Signed Bundle / APK → APK → Choose existing** auswählen und die gesicherte Keystore-Datei mit Alias und Passwort verwenden.
 
-Im Ordner mit der heruntergeladenen APK ausführen. Keystore-Pfad und Alias anpassen; Passwörter werden interaktiv abgefragt.
+Alternativ unter Windows / PowerShell mit Android SDK Build-Tools 35.0.0:
 
 ```powershell
 $signer = "$env:LOCALAPPDATA\Android\Sdk\build-tools\35.0.0\apksigner.bat"
-& $signer sign --ks "C:\Pfad\bisheriger-schluessel.jks" --ks-key-alias "DEIN_ALIAS" --out "Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk" "Bonsai-Offline-0.4.0-arm64-CPU-Vulkan-unsigned.apk"
-& $signer verify --verbose --print-certs "Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk"
+& $signer sign --ks "C:\Pfad\bonsai-release.keystore" --ks-key-alias "bonsai-release" --out "Bonsai-Offline-signed.apk" "Bonsai-Offline-unsigned.apk"
+& $signer verify --verbose --print-certs "Bonsai-Offline-signed.apk"
 ```
 
-Das ausgerichtete APK anschließend nicht mehr verändern. Vor Veröffentlichung den Fingerabdruck mit dem oben angegebenen Original vergleichen und eine neue SHA256-Prüfsumme für die signierte Datei erstellen. Die bestehende App nicht deinstallieren, um einen Schlüsselwechsel zu erzwingen: Das würde ihre privaten Chats und Modellkopie löschen.
-
-Die korrekte Signatur garantiert nicht, dass Samsung Auto Blocker oder Google Play Protect eine außerhalb eines Stores installierte App ohne Rückfrage akzeptieren.
+Das Passwort wird interaktiv abgefragt. Vor Veröffentlichung den Zertifikatsfingerabdruck vergleichen und die Prüfsumme der signierten Datei neu erstellen. Die korrekte Signatur garantiert keine unterdrückte Warnung von Samsung Auto Blocker oder Google Play Protect.
