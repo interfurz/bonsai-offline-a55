@@ -14,6 +14,14 @@ on:
         description: 'Geprüfte, lokal signierte 0.4.0-APK mit neuem Schlüssel veröffentlichen (kein neuer Build)'
         type: boolean
         default: false
+      signedReleaseVersion:
+        description: 'Bereits lokal signierte Version veröffentlichen, z. B. 0.4.1 (leer = normaler Build)'
+        type: string
+        default: ''
+      signedBuildRunId:
+        description: 'Erfolgreicher CPU/Vulkan-Build für die signierte Version'
+        type: string
+        default: ''
   push:
     branches:
       - fix/draft-and-kernel-validation
@@ -32,7 +40,7 @@ concurrency:
 
 jobs:
   full-release:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.attachUnsigned040ToDraft && !inputs.publishSigned040) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.attachUnsigned040ToDraft && !inputs.publishSigned040 && !inputs.signedReleaseVersion) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
@@ -250,7 +258,7 @@ jobs:
           if-no-files-found: warn
 
   attach-unsigned-040-to-draft:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.attachUnsigned040ToDraft && !inputs.publishSigned040 }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.attachUnsigned040ToDraft && !inputs.publishSigned040 && !inputs.signedReleaseVersion }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -322,8 +330,8 @@ jobs:
           print('Verified unsigned release assets attached; original local signing is still required.')
           PY
 
-  publish-signed-040:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publishSigned040 && !inputs.attachUnsigned040ToDraft }}
+  publish-signed-apk:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.publishSigned040 || inputs.signedReleaseVersion) && !inputs.attachUnsigned040ToDraft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -332,6 +340,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      RELEASE_VERSION: ${{ inputs.publishSigned040 && '0.4.0' || inputs.signedReleaseVersion }}
+      RELEASE_BUILD_RUN_ID: ${{ inputs.publishSigned040 && '39196937446' || inputs.signedBuildRunId }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -339,76 +349,87 @@ jobs:
       - name: Verify source build and release draft
         run: |
           set -euo pipefail
-          gh run view 39196937446 --json conclusion,headSha > verified-run.json
-          gh release view v0.4.0 --json isDraft,targetCommitish > verified-draft.json
+          gh run view "$RELEASE_BUILD_RUN_ID" --json conclusion,headSha > verified-run.json
+          gh release view "v$RELEASE_VERSION" --json isDraft,targetCommitish > verified-draft.json
           python3 - <<'PY'
-          import json
+          import json, os, re
           from pathlib import Path
+          version = os.environ['RELEASE_VERSION']
+          assert re.fullmatch(r'\d+\.\d+\.\d+', version)
+          assert os.environ['RELEASE_BUILD_RUN_ID'].isdigit()
+          info = json.loads(Path(f'release/{version}/build-info.json').read_text())
+          assert str(info['run_id']) == os.environ['RELEASE_BUILD_RUN_ID']
           run = json.loads(Path('verified-run.json').read_text())
           draft = json.loads(Path('verified-draft.json').read_text())
           assert run['conclusion'] == 'success'
-          assert run['headSha'] == '2bb08b43ccb068460e8c9f1a00d0194748d6c32d'
+          assert run['headSha'] == info['source_commit']
           assert draft['isDraft'] is True and draft['targetCommitish'] == run['headSha']
           PY
       - name: Download verified unsigned build
         run: |
-          gh run download 39196937446 \
-            --pattern 'bonsai-offline-cpu-vulkan-release-unsigned-39196937446-1' \
+          gh run download "$RELEASE_BUILD_RUN_ID" \
+            --pattern "bonsai-offline-cpu-vulkan-release-unsigned-${RELEASE_BUILD_RUN_ID}-1" \
             --dir release-input
       - name: Restore exact locally signed APK without private key
         run: |
           set -euo pipefail
           mkdir release-assets
           python3 - <<'PY'
+          import os
           from pathlib import Path
           from scripts.restore_signed_apk import restore
+          version = os.environ['RELEASE_VERSION']
           apks = list(Path('release-input').rglob('app-release-unsigned.apk'))
           assert len(apks) == 1
-          restore(apks[0], 'release/0.4.0/signature.json',
-                  'release-assets/Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk')
+          restore(apks[0], f'release/{version}/signature.json',
+                  f'release-assets/Bonsai-Offline-{version}-arm64-CPU-Vulkan.apk')
           PY
-          cp release/0.4.0/build-info.json release-assets/build-info.json
+          cp "release/$RELEASE_VERSION/build-info.json" release-assets/build-info.json
           cp SIGNIEREN.md release-assets/SIGNIEREN.md
           cd release-assets
-          sha256sum Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk > SHA256SUMS.txt
+          sha256sum "Bonsai-Offline-${RELEASE_VERSION}-arm64-CPU-Vulkan.apk" > SHA256SUMS.txt
       - name: Verify signed APK, certificate, package and alignment
         run: |
           set -euo pipefail
           tools="$ANDROID_HOME/build-tools/35.0.0"
           if [[ ! -x "$tools/apksigner" ]]; then sdkmanager 'build-tools;35.0.0'; fi
-          apk=release-assets/Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk
+          apk="release-assets/Bonsai-Offline-${RELEASE_VERSION}-arm64-CPU-Vulkan.apk"
           "$tools/apksigner" verify --verbose --print-certs "$apk" | tee apk-signature.txt
           "$tools/zipalign" -c -P 16 4 "$apk"
           "$tools/aapt2" dump badging "$apk" > apk-badging.txt
           python3 - <<'PY'
-          import hashlib, json
+          import hashlib, json, os
           from pathlib import Path
           info = json.loads(Path('release-assets/build-info.json').read_text())
-          apk = Path('release-assets/Bonsai-Offline-0.4.0-arm64-CPU-Vulkan.apk')
+          version = os.environ['RELEASE_VERSION']
+          apk = Path(f'release-assets/Bonsai-Offline-{version}-arm64-CPU-Vulkan.apk')
           assert hashlib.sha256(apk.read_bytes()).hexdigest() == info['apk_sha256']
           assert apk.stat().st_size == info['apk_bytes']
           signature = Path('apk-signature.txt').read_text()
           assert 'Signer #1 certificate SHA-256 digest: ' + info['signing_certificate_sha256'] in signature
           badging = Path('apk-badging.txt').read_text()
-          assert "package: name='de.bonsai.offline.debug' versionCode='7' versionName='0.4.0'" in badging
+          assert f"package: name='{info['package']}' versionCode='{info['version_code']}' versionName='{version}'" in badging
           assert 'application-debuggable' not in badging
           assert info['compatible_update_with_0_3_1'] is False
           PY
       - name: Upload verified signed assets and publish release
         run: |
           set -euo pipefail
-          gh release upload v0.4.0 release-assets/* --clobber
-          gh release view v0.4.0 --json isDraft,assets > uploaded-release.json
+          gh release upload "v$RELEASE_VERSION" release-assets/* --clobber
+          gh release view "v$RELEASE_VERSION" --json isDraft,assets > uploaded-release.json
           python3 - <<'PY'
-          import json
+          import json, os, subprocess
           from pathlib import Path
           release = json.loads(Path('uploaded-release.json').read_text())
           assert release['isDraft'] is True
           assets = {a['name']: a['size'] for a in release['assets']}
           for path in Path('release-assets').iterdir():
               assert assets.get(path.name) == path.stat().st_size, path.name
+          version = os.environ['RELEASE_VERSION']
+          unsigned = f'Bonsai-Offline-{version}-arm64-CPU-Vulkan-unsigned.apk'
+          if unsigned in assets:
+              subprocess.run(['gh','release','delete-asset','v'+version,unsigned,'--yes'],check=True)
           PY
-          gh release delete-asset v0.4.0 Bonsai-Offline-0.4.0-arm64-CPU-Vulkan-unsigned.apk --yes
-          gh release edit v0.4.0 --draft=false --latest \
-            --title 'Bonsai Offline 0.4.0 — CPU/Vulkan, neuer Signierschlüssel' \
-            --notes-file release/0.4.0/RELEASE-NOTES.md
+          gh release edit "v$RELEASE_VERSION" --draft=false --latest \
+            --title "Bonsai Offline ${RELEASE_VERSION} — CPU/Vulkan" \
+            --notes-file "release/$RELEASE_VERSION/RELEASE-NOTES.md"
