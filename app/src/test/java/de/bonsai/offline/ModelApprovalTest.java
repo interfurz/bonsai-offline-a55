@@ -47,6 +47,8 @@ public class ModelApprovalTest {
         ShadowStatFs.registerStats(app.getFilesDir().getAbsolutePath(),1000000,1000000,1000000);
     }
     private void awaitCompletion() throws Exception {
+        // Dialog button messages must enqueue their worker before the barrier.
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
         app.worker.submit(()->{}).get(5,TimeUnit.SECONDS);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertFalse(app.busy);
