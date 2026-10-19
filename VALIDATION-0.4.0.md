@@ -4,7 +4,7 @@
 
 ## Android
 
-Die Prüfungen umfassen die übernommenen UI-/Profil-/Temperaturtests aus 0.3.1, Hintergrundverarbeitung und Referenzrückfall sowie Dateiintegrität und den erweiterten Benchmarkexport. Der endgültige Teststand und APK-Hash stehen in `BUILD-INFO.json`.
+Alle 26 Unit-/Robolectric-Tests, `assembleDebug` und `lintDebug` bestehen. Die Prüfungen umfassen die übernommenen UI-/Profil-/Temperaturtests aus 0.3.1, Hintergrundverarbeitung und Referenzrückfall sowie Dateiintegrität und den erweiterten Benchmarkexport. Der Teststand und APK-Hash stehen in `BUILD-INFO.json`.
 
 Neue Prüffälle:
 
@@ -19,6 +19,8 @@ Neue Prüffälle:
 - Ein abgewiesener Import erhält die bisherige Modellkopie und die geladene Engine; ein schon importiertes abweichendes Modell gelangt beim Laden nicht zur nativen Engine.
 
 Lint meldet keine Fehler und vier Warnungen (API-Attribut, ChromeOS-ABI, Touch-Accessibility und Stringressourcen). APK-Signaturprüfung und `zipalign -c -P 16 4` bestehen. Der neue lokale Debug-Schlüssel stimmt **nicht** mit dem früheren Release überein. Das APK ist deshalb kein direktes Update einer mit dem alten Schlüssel signierten Installation.
+
+Der vollständige [CPU/Vulkan-Release-Build auf GitHub](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39196937446) besteht für Quellstand `2bb08b43ccb068460e8c9f1a00d0194748d6c32d`: alle 26 Release-Tests ohne Fehler, Release-Lint, nativer Build und Prüfung beider Backends. Die heruntergeladenen Testberichte und Build-Provenienz bestätigen diese Ergebnisse. Das ebenfalls heruntergeladene unsignierte APK hat 67.976.300 Bytes und SHA256 `fbc14cd3eb31da22414a86c6760b41efe71a39a772489f36dcf87605044617cd`; seine Prüfsumme stimmt mit dem CI-Nachweis überein. Paket `de.bonsai.offline.debug`, Version 0.4.0, Code 7 und 16-KB-Zipalignment sind lokal nachgeprüft. Das Release-Artefakt benötigt vor der Installation den bisherigen lokalen Signierschlüssel. Diese JVM-/Build-Prüfungen führen Vulkan nicht auf einem echten Gerät aus.
 
 `python3 scripts/check_project.py`, Java-Syntaxprüfung und die UTF-8-Tests bestehen. Die Manifestprüfung verlangt genau die vier Hintergrund-/Benachrichtigungsberechtigungen; INTERNET bleibt ausgeschlossen.
 
@@ -49,6 +51,10 @@ Der vollständige Rechentest mit derselben Modelldatei besteht außerdem als sta
 Die offizielle Datei auf Hugging-Face-Revision `8d6557168168f91ea6697a4a49ed2ef622b53adb` hat 1.212.103.520 Bytes und SHA256 `64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4`. Hash und Größe stimmen mit dem offiziellen LFS-Pointer überein; die Datei bleibt auch nach dem Laden unverändert. Stichproben ihrer entpackten Gewichte stimmen mit der PQ2_0-Datei überein.
 
 `tests/ModelResponseSmoke.java` prüft die App-JNI samt tatsächlichem Sampler mit 4 Threads, Kontext 4096, Microbatch 32, Seed 42 und der App-Systemnachricht. Die offizielle Q2_0-Datei antwortet auf „1+1“ mit `1+1 = 2` und auf „Was ist 2 + 2? Antworte nur mit der Zahl.“ exakt mit `4`.
+
+Derselbe JNI-Test besteht auch im skalaren CPU-Kompatibilitätsmodus mit Microbatch 1: erneut `1+1 = 2` und exakt `4`. Die Host-Laufzeiten sind keine Messung der A55-Geschwindigkeit.
+
+Auch der vollständige Q2_0-Rechentest besteht als statisch gelinktes Android-ARM64-Programm unter QEMU `cortex-a55`: optimierte ARM-Kernel, 2 Threads, Microbatch 32, Kontext 512 und 54 Prompttokens. Die Greedy-Ausgabe lautet exakt `4`. Damit sind beide geprüften 4B-Dateien durch den vollständigen emulierten ARM-Modelltest gelaufen.
 
 Der bereitgestellte A55-Modelltest nennt dieselbe Dateigröße, aber SHA256 `4e157769ecbdbdc9f555c58a0834d00bce09430a99efd53a8f3beca642042eff`, und dokumentiert falsche Antworten auch ohne Chatverlauf. Die konkrete private Kopie liegt nicht vor. Eine abweichende oder beschädigte Datei ist damit eingegrenzt; der genaue Ursprung der Byteabweichung und das Verhalten nach Neuimport sind noch nicht auf dem Gerät geprüft.
 

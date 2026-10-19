@@ -30,6 +30,8 @@
   ],
   "arm_emulated_real_model_smoke_passed": true,
   "host_real_q2_jni_smoke_passed": true,
+  "host_scalar_q2_jni_smoke_passed": true,
+  "arm_emulated_real_q2_smoke_passed": true,
   "cpu_compatibility_default": false,
   "official_model_integrity_checks": true,
   "merged_release_revision": "a3123671301d61412b97f47d19116005e54d0753",
@@ -37,5 +39,19 @@
     "revision": "8d6557168168f91ea6697a4a49ed2ef622b53adb",
     "bytes": 1212103520,
     "sha256": "64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4"
+  },
+  "ci_cpu_vulkan_release": {
+    "source_commit": "2bb08b43ccb068460e8c9f1a00d0194748d6c32d",
+    "run_id": 39196937446,
+    "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39196937446",
+    "backends": [
+      "CPU",
+      "Vulkan"
+    ],
+    "unsigned": true,
+    "unit_tests_passed": 26,
+    "apk_bytes": 67976300,
+    "apk_sha256": "fbc14cd3eb31da22414a86c6760b41efe71a39a772489f36dcf87605044617cd",
+    "zipalign_16k_verified": true
   }
 }

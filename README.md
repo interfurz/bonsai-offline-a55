@@ -71,11 +71,11 @@ Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3. Die Download
 
 7. Auf das A55 kopieren und installieren oder per USB aus Android Studio starten. Die Modellgewichte werden separat importiert und sind nicht in der APK enthalten.
 
-Alternativ enthält `.github/workflows/android.yml` einen vorbereiteten GitHub-Actions-Build. Nach Upload des Projekts in ein eigenes Repository kann der Workflow unter **Actions → Android APK → Run workflow** gestartet werden. Diese Sitzung hat kein Repository veröffentlicht und keinen Workflow ausgeführt. Nur der Build benötigt dabei Internet; die App läuft weiterhin lokal.
+GitHub Actions bietet **Android APK** für CPU-Debug-Builds und **Android CPU + Vulkan unsigned release** für vollständige CPU/Vulkan-Release-Builds. Beide lassen sich unter **Actions → Run workflow** starten. Der Release-Workflow installiert die festgelegte Vulkan-Toolchain und stellt ein unsigniertes APK für die lokale Signierung bereit. Ein Update einer vorhandenen Installation benötigt deren bisherigen Signierschlüssel; ein neuer Debug-Schlüssel ist dafür nicht geeignet. Nur der Build benötigt Internet; die App läuft weiterhin lokal.
 
 ## Erstes Modell
 
-Aus dem [offiziellen Bonsai-2-4B-Repository](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/main) zunächst nur diese Datei herunterladen:
+Aus dem [geprüften Stand des offiziellen Bonsai-2-4B-Repositorys](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/8d6557168168f91ea6697a4a49ed2ef622b53adb) zunächst nur diese Datei herunterladen:
 
 ```text
 Ternary-Bonsai-2-4B-PQ2_0.gguf
@@ -110,7 +110,7 @@ Der Standardbuild enthält nur CPU-Inferenz. Die Codeanbindung für einen experi
 ./gradlew -PbonsaiVulkan=true :app:assembleDebug
 ```
 
-**Der bisherige Release 0.3.0 enthält Vulkan; Standardbuild und GitHub Actions bauen CPU.** Zum eigenen Bauen mit Vulkan benötigt dieser Pfad zusätzlich eine zum PrismML-Fork passende Host-Vulkan-Toolchain mit `glslc`, Vulkan-Headers und SPIRV-Headers/CMake-Paket. Gradle installiert diese nicht automatisch. Ohne diese Pakete schlägt die CMake-Konfiguration absichtlich fehl. Für CPU-Builds ist diese zusätzliche Toolchain nicht erforderlich.
+**Der bisherige Release 0.3.1 enthält Vulkan.** Zum lokalen Bauen mit Vulkan benötigt dieser Pfad zusätzlich eine zum PrismML-Fork passende Host-Vulkan-Toolchain mit `glslc`, Vulkan-Headers und SPIRV-Headers/CMake-Paket. Gradle installiert diese nicht automatisch. Ohne diese Pakete schlägt die CMake-Konfiguration absichtlich fehl. Der separate CPU/Vulkan-Release-Workflow richtet diese Toolchain ein; der Standardworkflow **Android APK** baut CPU.
 
 In einem erfolgreich gebauten Vulkan-Build erscheint die Backend-Auswahl. Eine erkannte GPU oder unterstützte PQ2_0-Kernel garantieren keine korrekte und stabile Ausführung auf der Xclipse 530. Der CPU-Pfad kann danach mit demselben Benchmark verglichen werden. Ein Vulkan-Abbruch kann erst nach dem laufenden GPU-Aufruf wirksam werden.
 
@@ -123,7 +123,7 @@ java scripts/ParseJava.java
 
 Der erste Aufruf prüft XML/Manifest, JNI-Namen, Versionsbindung und UTF-8-Streaming über sämtliche Zeichengrenzen von Umlauten, Emoji und anderen mehrbyteigen Zeichen. Dafür muss ein C++17-Compiler installiert sein. Der zweite Aufruf prüft die Java-Syntax mit einem JDK, aber ohne Android-Typauflösung.
 
-Die hier durchgeführten Prüfungen stehen in `VALIDATION.md`. Ein echter Gradle-/NDK-Build und ein physischer A55-Test bleiben erforderlich.
+Die Prüfungen für 0.4.0 einschließlich Gradle-/NDK-Build, Android-Tests und echten 4B-Modelltests stehen in [VALIDATION-0.4.0.md](VALIDATION-0.4.0.md). Ein physischer A55-Nachtest bleibt erforderlich. `VALIDATION.md` dokumentiert den älteren Projektstand.
 
 ## Technische Quellen
 
