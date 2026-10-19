@@ -1,9 +1,15 @@
 name: Android CPU + Vulkan unsigned release
 
-# Deliberately opt-in: this builds an unsigned update for LOCAL signing only.
-# No signing key, signing secret, publishing permission, or CPU-only fallback.
+# Opt-in unsigned build for local signing. The separate attachment job verifies
+# and uploads existing artifacts to the 0.4.0 draft; it never publishes the release.
+# No signing key, signing secret, or CPU-only fallback.
 on:
   workflow_dispatch:
+    inputs:
+      attachUnsigned040ToDraft:
+        description: 'Nur geprüfte 0.4.0-Dateien an den bestehenden Release-Entwurf anhängen (kein neuer Build)'
+        type: boolean
+        default: false
   push:
     branches:
       - fix/draft-and-kernel-validation
@@ -22,6 +28,7 @@ concurrency:
 
 jobs:
   full-release:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.attachUnsigned040ToDraft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     defaults:
@@ -236,4 +243,77 @@ jobs:
             app/.cxx/**/CMakeFiles/CMakeError.log
             app/.cxx/**/CMakeFiles/CMakeOutput.log
             app/build/intermediates/cxx/**/logs/**
+
+  attach-unsigned-040-to-draft:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.attachUnsigned040ToDraft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify existing build and unsigned release draft
+        run: |
+          set -euo pipefail
+          gh run view 39196937446 --json conclusion,headSha > verified-run.json
+          gh release view v0.4.0 --json isDraft > verified-draft.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          run = json.loads(Path('verified-run.json').read_text())
+          assert run['conclusion'] == 'success'
+          assert run['headSha'] == '2bb08b43ccb068460e8c9f1a00d0194748d6c32d'
+          assert json.loads(Path('verified-draft.json').read_text())['isDraft'] is True
+          PY
+      - name: Download already verified unsigned APK
+        run: |
+          gh run download 39196937446 \
+            --pattern 'bonsai-offline-cpu-vulkan-release-unsigned-39196937446-1' \
+            --dir release-input
+      - name: Prepare unsigned release assets
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, shutil
+          from pathlib import Path
+          files = list(Path('release-input').rglob('app-release-unsigned.apk'))
+          assert len(files) == 1
+          digest = hashlib.sha256(files[0].read_bytes()).hexdigest()
+          assert digest == 'fbc14cd3eb31da22414a86c6760b41efe71a39a772489f36dcf87605044617cd'
+          info = json.loads(Path('BUILD-INFO.json').read_text())['ci_cpu_vulkan_release']
+          assert info['source_commit'] == '2bb08b43ccb068460e8c9f1a00d0194748d6c32d'
+          assert info['apk_sha256'] == digest and info['unsigned'] is True
+          out = Path('release-assets')
+          out.mkdir()
+          name = 'Bonsai-Offline-0.4.0-arm64-CPU-Vulkan-unsigned.apk'
+          shutil.copyfile(files[0], out / name)
+          (out / 'SHA256SUMS.txt').write_text(digest + '  ' + name + '\n')
+          info.update(version='0.4.0', version_code=7, package='de.bonsai.offline.debug',
+                      abi='arm64-v8a', installable=False,
+                      signing_status='Awaiting original local signing key',
+                      expected_update_certificate_sha256='ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db',
+                      physical_a55_tested=False, exynos_1480_npu_supported=False)
+          (out / 'build-info.json').write_text(json.dumps(info, indent=2) + '\n')
+          shutil.copyfile('SIGNIEREN.md', out / 'SIGNIEREN.md')
+          PY
+      - name: Attach unsigned files and keep release in draft
+        run: |
+          set -euo pipefail
+          gh release upload v0.4.0 release-assets/* --clobber
+          gh release view v0.4.0 --json isDraft,assets > uploaded-release.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          release = json.loads(Path('uploaded-release.json').read_text())
+          assert release['isDraft'] is True
+          uploaded = {asset['name']: asset['size'] for asset in release['assets']}
+          for path in Path('release-assets').iterdir():
+              assert uploaded.get(path.name) == path.stat().st_size, path.name
+          print('Verified unsigned release assets attached; original local signing is still required.')
+          PY
           if-no-files-found: warn
