@@ -66,6 +66,50 @@ public class AppExperienceTest {
         assertFalse(BackendGuard.matches(ref,new org.json.JSONObject("{\"signature\":[\"NaN\",2,3,4],\"top_tokens\":[1,2,3,4]}")));
         assertFalse(BackendGuard.matches(new org.json.JSONObject("{\"signature\":[1],\"top_tokens\":[]}"),new org.json.JSONObject("{\"signature\":[1],\"top_tokens\":[]}")));
     }
+    @Test public void kernelReferenceWithoutTopTokensIsRejected() throws Exception {
+        org.json.JSONObject incomplete=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[]}");
+        org.json.JSONObject candidate=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[99,98,97,96]}");
+        assertFalse("An empty top-token reference cannot validate a kernel",BackendGuard.matches(incomplete,candidate));
+    }
+    @Test public void longerKernelProbesCanMatchTheReferencePrefix() throws Exception {
+        org.json.JSONObject reference=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[1,2]}");
+        org.json.JSONObject longer=new org.json.JSONObject("{\"signature\":[1,2,3,4,5,6],\"top_tokens\":[1,2,3]}");
+        assertTrue(BackendGuard.matches(reference,longer));
+    }
+    @Test public void oversizedMessageKeepsItsDraftWhenRejected() throws Exception {
+        assertRejectedSendKeepsDraft("  " + "x".repeat(32001) + "  ", "Die Nachricht ist zu lang.");
+    }
+    @Test public void unavailableRuntimeKeepsItsDraftWhenRejected() throws Exception {
+        assertRejectedSendKeepsDraft("  Bitte diesen Entwurf behalten.  ", "Native Runtime konnte nicht geladen werden");
+    }
+    private void assertRejectedSendKeepsDraft(String draft,String expectedError) throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.loaded=true; // Reach send validation without loading a model on the host.
+            assertEquals(0L,((Long)field(app,"handle")).longValue());
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");
+            input.setText(draft);
+            assertTrue(((View)field(a,"send")).performClick());
+            assertTrue(app.error,app.error.contains(expectedError));
+            assertEquals("A synchronously rejected send must preserve the exact draft",draft,input.getText().toString());
+            assertFalse(app.busy);assertEquals(0,app.currentChat);assertTrue(app.messages.isEmpty());
+            assertTrue(app.store.chats().isEmpty());
+        }
+    }
+    @Test @Config(shadows=KernelTemperatureTest.NativeFixture.class)
+    public void acceptedMessageClearsItsDraftAndPersistsTheTurn() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");input.setText("  Hallo Bonsai  ");
+            assertTrue(((View)field(a,"send")).performClick());
+            assertEquals("",input.getText().toString());
+            app.worker.shutdown();assertTrue(app.worker.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            List<ChatStore.Message> saved=app.store.messages(app.currentChat);
+            assertEquals(2,saved.size());assertEquals("Hallo Bonsai",saved.get(0).text);
+            assertEquals("Synthetic test reply",saved.get(1).text);assertEquals("",app.error);
+        }
+    }
     @Test public void conversationAndDraftSurviveRecreation() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();

@@ -10,7 +10,7 @@ android {
         applicationId 'de.bonsai.offline'
         minSdk 28
         targetSdk 35
-        versionCode 5
+        versionCode 7
         versionName '0.4.0'
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild {
@@ -48,7 +48,13 @@ android {
     }
     buildTypes {
         debug { applicationIdSuffix '.debug' }
-        release { minifyEnabled false }
+        release {
+            // Preserve the package ID actually used by the installed CPU/Vulkan releases.
+            applicationIdSuffix '.debug'
+            debuggable false
+            minifyEnabled false
+            // Keep signing local with the original key; CI exports an aligned unsigned APK.
+        }
     }
     packaging { jniLibs { useLegacyPackaging false } }
 }

@@ -1,8 +1,8 @@
-# Bonsai Offline — Android-Prototyp
+# Bonsai Offline — Android-App
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[Bisherigen Release 0.3.0 herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0). Die nachfolgend beschriebenen Änderungen aus 0.4.0 sind im neuen Quellstand enthalten.
+[Bisherigen CPU/Vulkan-Release 0.3.1 herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.1). Die nachfolgend beschriebenen Änderungen aus 0.4.0 sind im neuen Quellstand enthalten.
 
 ## Stand
 
@@ -18,6 +18,7 @@ Implementiert:
 - CPU als Ausgangspunkt, 4 Threads, 4.096 Tokens Kontext, maximal 512 Antworttokens. Thinking deaktiviert.
 - Modell laden/entladen, Kontext-/Thread-Einstellungen und Anzeige des Prozess-RAM.
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
+- Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
 Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Der Chatverlauf ist kein semantisches Langzeitgedächtnis. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
 

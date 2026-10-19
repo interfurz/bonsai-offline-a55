@@ -215,11 +215,11 @@ public final class BonsaiApp extends Application {
             String result=issue; main.post(() -> complete(result));
         });
     }
-    void send(String input) {
-        if(busy || input.trim().isEmpty()) return;
-        if(!loaded) { error="Bitte zuerst ein Modell importieren und laden."; notifyUi(); return; }
-        if(input.length()>32000) { error="Die Nachricht ist zu lang."; notifyUi(); return; }
-        if(!begin("Antwort wird vorbereitet …")) return;
+    boolean send(String input) {
+        if(busy || input.trim().isEmpty()) return false;
+        if(!loaded) { error="Bitte zuerst ein Modell importieren und laden."; notifyUi(); return false; }
+        if(input.length()>32000) { error="Die Nachricht ist zu lang."; notifyUi(); return false; }
+        if(!begin("Antwort wird vorbereitet …")) return false;
         if(currentChat==0) {
             String title=input.trim().replace('\n',' ');
             currentChat=store.createChat(title.substring(0,Math.min(title.length(),60)));
@@ -261,6 +261,7 @@ public final class BonsaiApp extends Application {
                 complete(finalIssue);
             });
         });
+        return true;
     }
     static byte[] utf8(String text) { return text.getBytes(StandardCharsets.UTF_8); }
 

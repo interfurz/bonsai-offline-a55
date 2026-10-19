@@ -1,0 +1,239 @@
+name: Android CPU + Vulkan unsigned release
+
+# Deliberately opt-in: this builds an unsigned update for LOCAL signing only.
+# No signing key, signing secret, publishing permission, or CPU-only fallback.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/draft-and-kernel-validation
+    paths:
+      - '.github/workflows/android-vulkan-release.yml'
+      - 'app/**'
+      - 'scripts/**'
+      - '*.gradle'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-vulkan-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUNTIME_REVISION: e3de715222b2667c54a267441159a5729f11155e
+      # Official SDK index/checksum: https://vulkan.lunarg.com/sdk/files.json
+      # Archive and config.json come from sdk.lunarg.com/sdk/download/VERSION/linux/.
+      # config.json pins Vulkan-Headers/SPIRV-Headers to vulkan-sdk-1.4.363.0,
+      # and shaderc (host glslc) to 75137cca3b41a59b8b3e5c42177da8a9490c042f.
+      VULKAN_SDK_VERSION: '1.4.363.0'
+      VULKAN_SDK_SHA256: 197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43
+      VULKAN_CONFIG_SHA256: 5a4d3ee31f3c215fd8a370b90f785325deecd5276d59fa56bef0204dcc6eda8c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Install pinned Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+
+      - name: Install checksum-pinned official Linux Vulkan SDK
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence "$RUNNER_TEMP/vulkan-sdk"
+          base="https://sdk.lunarg.com/sdk/download/${VULKAN_SDK_VERSION}/linux"
+          archive="$RUNNER_TEMP/vulkan-sdk/vulkan_sdk.tar.xz"
+          curl --fail --location --retry 3 "$base/vulkan_sdk.tar.xz" -o "$archive"
+          printf '%s  %s\n' "$VULKAN_SDK_SHA256" "$archive" | sha256sum --check
+          curl --fail --location --retry 3 "$base/config.json" -o ci-evidence/vulkan-sdk-config.json
+          printf '%s  %s\n' "$VULKAN_CONFIG_SHA256" ci-evidence/vulkan-sdk-config.json | sha256sum --check
+          tar -xJf "$archive" -C "$RUNNER_TEMP/vulkan-sdk"
+          sdk="$RUNNER_TEMP/vulkan-sdk/$VULKAN_SDK_VERSION/x86_64"
+          test -f "$sdk/include/vulkan/vulkan.hpp"
+          test -f "$sdk/include/vulkan/vulkan_core.h"
+          test -f "$sdk/include/spirv/unified1/spirv.hpp"
+          test -f "$sdk/share/cmake/SPIRV-Headers/SPIRV-HeadersConfig.cmake"
+          test -x "$sdk/bin/glslc"
+          "$sdk/bin/glslc" --version | tee ci-evidence/glslc-version.txt
+          # Only headers/CMake metadata and HOST tools come from this SDK.
+          # Android's NDK supplies the target libvulkan; never pass SDK/lib as a target library.
+          {
+            echo "VULKAN_SDK=$sdk"
+            echo "BONSAI_VULKAN_SDK=$sdk"
+            echo "BONSAI_GLSLC=$sdk/bin/glslc"
+          } >> "$GITHUB_ENV"
+
+      - name: Verify runtime and host prerequisites
+        id: ready
+        run: |
+          set -euo pipefail
+          # Runtime dependencies at the exact revision:
+          # ggml/src/ggml-vulkan/CMakeLists.txt requires Vulkan COMPONENTS glslc,
+          # SPIRV-Headers CONFIG, plus a native C++17 ExternalProject shader generator.
+          command -v gcc g++ ninja python3
+          python3 scripts/fetch_runtime.py
+          test "$(git -C vendor/llama.cpp rev-parse HEAD)" = "$RUNTIME_REVISION"
+          python3 scripts/check_project.py 2>&1 | tee ci-evidence/host-checks.log
+
+      - name: Release Robolectric tests (Vulkan build configuration)
+        id: tests
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+            :app:testReleaseUnitTest 2>&1 | tee ci-evidence/release-unit-tests.log
+
+      - name: Release lint (Vulkan build configuration)
+        id: lint
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+            :app:lintRelease 2>&1 | tee ci-evidence/release-lint.log
+
+      - name: Build full CPU + Vulkan unsigned release APK
+        id: build
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+            :app:assembleRelease 2>&1 | tee ci-evidence/release-build.log
+
+      - name: Verify unsigned APK and native configuration
+        id: verify
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import zipfile
+
+          apks = list(Path('app/build/outputs/apk/release').glob('*.apk'))
+          assert len(apks) == 1, f'Expected one release APK, found {apks}'
+          assert apks[0].name.endswith('-unsigned.apk'), 'Release must be unsigned'
+          assert apks[0].with_name('output-metadata.json').is_file(), 'Missing AGP metadata'
+          with zipfile.ZipFile(apks[0]) as apk:
+              native = apk.read('lib/arm64-v8a/libbonsai-jni.so')
+              assert native[:4] == b'\x7fELF' and native[4] == 2
+              assert int.from_bytes(native[18:20], 'little') == 183, 'Expected AArch64 ELF'
+          caches = list(Path('app/.cxx').rglob('arm64-v8a/CMakeCache.txt'))
+          assert caches, 'No arm64 native CMake configuration found'
+          for cache in caches:
+              # -D arguments can remain UNINITIALIZED rather than FILEPATH in CMake caches.
+              values = {key.split(':', 1)[0]: value for key, value in
+                        (line.split('=', 1) for line in cache.read_text().splitlines()
+                         if '=' in line and not line.startswith(('#', '//')))}
+              assert values.get('BONSAI_VULKAN') == 'ON', cache
+              assert values.get('GGML_VULKAN') == 'ON', cache
+              assert values.get('GGML_CPU') == 'ON', cache
+              assert values.get('Vulkan_INCLUDE_DIR') == os.environ['BONSAI_VULKAN_SDK'] + '/include', cache
+              assert values.get('Vulkan_GLSLC_EXECUTABLE') == os.environ['BONSAI_GLSLC'], cache
+              loader = values.get('Vulkan_LIBRARY', '')
+              assert '/ndk/28.2.13676358/' in loader and 'aarch64-linux-android' in loader, loader
+          print(f'Unsigned arm64 APK and CPU + Vulkan CMake configuration verified: {apks[0]}')
+          PY
+          apk=(app/build/outputs/apk/release/*-unsigned.apk)
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "${apk[0]}" | tee ci-evidence/apk-badging.txt
+          if grep -q '^application-debuggable' ci-evidence/apk-badging.txt; then
+            echo 'Release APK must not be debuggable.' >&2
+            exit 1
+          fi
+          # An unsigned APK must fail signature verification. Preserve the diagnostic.
+          if "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "${apk[0]}" > ci-evidence/apk-signature-status.txt 2>&1; then
+            echo 'Unexpected signed release APK; signing belongs outside CI.' >&2
+            exit 1
+          fi
+          sha256sum "${apk[0]}" | tee ci-evidence/SHA256SUMS
+
+      - name: Record provenance and step outcomes
+        if: always()
+        env:
+          STEP_RESULTS: ${{ toJSON(steps) }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p ci-evidence
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = {
+              'source_sha': os.environ['SOURCE_SHA'],
+              'runtime_revision': os.environ['RUNTIME_REVISION'],
+              'vulkan_sdk_version': os.environ['VULKAN_SDK_VERSION'],
+              'vulkan_sdk_sha256': os.environ['VULKAN_SDK_SHA256'],
+              'vulkan_config_sha256': os.environ['VULKAN_CONFIG_SHA256'],
+              'android': {'platform': 35, 'build_tools': '35.0.0', 'ndk': '28.2.13676358',
+                          'cmake': '3.22.1', 'java': '17', 'gradle': '8.11.1'},
+              'variant': 'release', 'bonsaiVulkan': True, 'signing': 'unsigned; local signing only',
+              'physical_device_test': 'not performed',
+              'robolectric_scope': 'release JVM tests; no device JNI/Vulkan execution',
+              'steps': json.loads(os.environ['STEP_RESULTS']),
+          }
+          Path('ci-evidence/build-info.json').write_text(json.dumps(data, indent=2) + '\n')
+          PY
+
+      - name: Preserve release JUnit and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-offline-full-release-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/test-results/testReleaseUnitTest/**/*.xml
+            app/build/reports/tests/testReleaseUnitTest/**
+          if-no-files-found: warn
+
+      - name: Preserve release lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-offline-full-release-lint-${{ github.run_id }}-${{ github.run_attempt }}
+          path: app/build/reports/lint-results-release.*
+          if-no-files-found: warn
+
+      - name: Preserve unsigned release APK and AGP output metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-offline-cpu-vulkan-release-unsigned-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/output-metadata.json
+          if-no-files-found: warn
+
+      - name: Preserve provenance and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bonsai-offline-full-release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          include-hidden-files: true
+          path: |
+            ci-evidence/**
+            app/.cxx/**/CMakeCache.txt
+            app/.cxx/**/CMakeFiles/CMakeError.log
+            app/.cxx/**/CMakeFiles/CMakeOutput.log
+            app/build/intermediates/cxx/**/logs/**
+          if-no-files-found: warn

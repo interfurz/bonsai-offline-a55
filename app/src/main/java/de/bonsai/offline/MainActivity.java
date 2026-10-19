@@ -129,7 +129,10 @@ public final class MainActivity extends Activity {
         send=icon("send","Nachricht senden",v -> {
             if(app.busy) { app.cancel(); return; }
             String value=input.getText().toString().trim();
-            if(!value.isEmpty() && app.loaded) { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); input.setText(""); autoScroll=true; app.send(value); }
+            if(!value.isEmpty() && app.loaded) {
+                v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                if(app.send(value)) { input.setText(""); autoScroll=true; }
+            }
             else if(!app.loaded) settings();
         }); composer.addView(send);
         input.addTextChangedListener(new TextWatcher() {
@@ -380,7 +383,7 @@ public final class MainActivity extends Activity {
         performanceStatus=text("",15,TEXT);performanceStatus.setPadding(0,0,0,dp(12));content.addView(performanceStatus);
         performanceProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);performanceProgress.setMax(1000);performanceProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));content.addView(performanceProgress,new LinearLayout.LayoutParams(-1,dp(6)));
         performanceResult=text("",13,MUTED);performanceResult.setTextIsSelectable(true);performanceResult.setLineSpacing(dp(6),1);performanceResult.setPadding(0,dp(20),0,dp(18));content.addView(performanceResult);
-        TextView explanation=text("Findet das schnellste geprüfte Profil für vorhandene Compute-Kernel. Vergleicht Threads und Batchgrößen mit identischer Arbeit; prüft Rechenergebnisse und speichert lokal. Modellpräzision und Kontext bleiben gleich.\n\nBitte das Gerät abkühlen lassen und die App geöffnet halten. Eine Messung kann mehrere Minuten dauern. Bei Erwärmung wird ohne Profilwechsel abgebrochen.",13,MUTED);explanation.setLineSpacing(dp(4),1);content.addView(explanation);
+        TextView explanation=text("Findet das schnellste geprüfte Profil für vorhandene Compute-Kernel. Vergleicht Threads und Batchgrößen mit identischer Arbeit; prüft Rechenergebnisse und speichert lokal. Modellpräzision und Kontext bleiben gleich.\n\nOptimierung ist bei jedem Temperaturstatus möglich. Temperatur und Drosselung beeinflussen die Messwerte; Androids Geräteschutz bleibt aktiv. Die Optimierung läuft auch im Hintergrund weiter. Eine Messung kann mehrere Minuten dauern.",13,MUTED);explanation.setLineSpacing(dp(4),1);content.addView(explanation);
         TextView benchmark=menuItem("Benchmark & Messbericht  ↗");benchmark.setOnClickListener(v->{performanceDialog.dismiss();showBenchmark();});content.addView(benchmark);
         TextView export=menuItem("Optimizer-Protokoll exportieren  ↗");export.setOnClickListener(v->{if(app.readReport("optimizer.json")!=null&&!app.busy)startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").putExtra(Intent.EXTRA_TITLE,"bonsai-optimizer.json").addCategory(Intent.CATEGORY_OPENABLE),EXPORT_OPTIMIZER);else Toast.makeText(this,"Noch kein abgeschlossenes Protokoll",Toast.LENGTH_SHORT).show();});content.addView(export);
         performanceStart=pill("");performanceStart.setTextColor(BG);performanceStart.setBackground(round(ACCENT,18));performanceStart.setOnClickListener(v->{if(app.optimizing)app.cancel();else if(!app.busy)app.optimize(false);});panel.addView(performanceStart);
