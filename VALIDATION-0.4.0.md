@@ -39,6 +39,8 @@ Offizielle `Ternary-Bonsai-2-4B-PQ2_0.gguf`, 1.146.465.120 Bytes, SHA256 `d406b1
 
 `tests/ModelArithmeticSmoke.cpp` ist ein eigenständiger Rechentest ohne JNI, auch für ARM64. Er kann mit `-DBONSAI_MODEL_TESTS=ON` als Ziel `bonsai-model-test` gebaut werden; Aufruf: `bonsai-model-test /pfad/modell.gguf scalar` oder `optimized`.
 
+Der vollständige Rechentest mit derselben Modelldatei besteht außerdem als statisch gelinktes Android-ARM64-Programm unter QEMU `cortex-a55`: optimierte ARM-Kernel, 2 Threads, Microbatch 32, Kontext 512, 54 Prompttokens inklusive Systemnachricht und deaktiviertem Thinking. Greedy-Ausgabe exakt `4`. Auch hier wurde das gemeldete Wirrwarr nicht reproduziert. Das ist ein emulierter ARM-Test, kein Nachweis auf einem Samsung-Gerät.
+
 ## Grenzen
 
 Kein physisches Galaxy A55 ist angeschlossen. Robolectric prüft keine reale Samsung-Energieverwaltung, und QEMU bildet den Samsung-Treiber-/Gerätezustand nicht ab. Das vom Nutzer gezeigte inhaltliche Wirrwarr auf „1+1“ ist bisher nicht mit seiner konkreten Gerätedatei reproduziert. Die genaue Dateibezeichnung und ein Modelltestprotokoll mit SHA256 wurden angefragt. Die skalare Referenz teilt weiterhin andere Runtime-Operationen mit dem optimierten Pfad. Deshalb wird keine vollständige Behebung des A55-Fehlers behauptet.

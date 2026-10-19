@@ -27,5 +27,6 @@
     "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
     "android.permission.WAKE_LOCK",
     "android.permission.POST_NOTIFICATIONS"
-  ]
+  ],
+  "arm_emulated_real_model_smoke_passed": true
 }
