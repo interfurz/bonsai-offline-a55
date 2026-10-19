@@ -243,6 +243,7 @@ jobs:
             app/.cxx/**/CMakeFiles/CMakeError.log
             app/.cxx/**/CMakeFiles/CMakeOutput.log
             app/build/intermediates/cxx/**/logs/**
+          if-no-files-found: warn
 
   attach-unsigned-040-to-draft:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.attachUnsigned040ToDraft }}
@@ -316,4 +317,3 @@ jobs:
               assert uploaded.get(path.name) == path.stat().st_size, path.name
           print('Verified unsigned release assets attached; original local signing is still required.')
           PY
-          if-no-files-found: warn
