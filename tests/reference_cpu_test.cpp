@@ -3,6 +3,9 @@
 #include "ggml-cpu.h"
 #include "ggml-impl.h"
 #include "ggml-quants.h"
+#include "ggml-alloc.h"
+#include "ggml-backend.h"
+#include <atomic>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -16,6 +19,54 @@ DECLARE_DOT(ggml_vec_dot_q2_0_q8_0)
 DECLARE_DOT(ggml_vec_dot_pq2_0_q8_0)
 DECLARE_DOT(ggml_vec_dot_pq2_0_q8_K)
 DECLARE_DOT(ggml_vec_dot_ptq1_0_q8_0)
+
+// Observe the actual execution path, not just agreement between two runs of it.
+static std::atomic<int> fwht_calls{0};
+struct ggml_compute_params;
+extern "C" void __real_ggml_compute_forward_fwht(const ggml_compute_params *, ggml_tensor *);
+extern "C" void __wrap_ggml_compute_forward_fwht(const ggml_compute_params * params, ggml_tensor * dst) {
+    ++fwht_calls;
+    __real_ggml_compute_forward_fwht(params,dst);
+}
+
+static void check_hadamard(int n,int rows) {
+    std::vector<float> weights(n*n),input(n*rows),output(n*rows),expected(n*rows);
+    for(int r=0;r<n;++r)for(int c=0;c<n;++c)
+        weights[r*n+c]=(__builtin_parity(unsigned(r&c))?-1.f:1.f)/std::sqrt(float(n));
+    for(int r=0;r<rows;++r)for(int c=0;c<n;++c)input[r*n+c]=std::sin(c*.731f+r);
+    for(int r=0;r<rows;++r)for(int i=0;i<n;++i) {
+        double value=0;
+        for(int c=0;c<n;++c)value+=double(weights[i*n+c])*input[r*n+c];
+        expected[r*n+i]=float(value);
+    }
+    for(bool reference : {false,true,false}) {
+        bonsai_reference_cpu=reference;
+        auto backend=ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU,nullptr);
+        if(!backend)throw std::runtime_error("CPU backend missing");
+        ggml_backend_cpu_set_n_threads(backend,2);
+        auto * ctx=ggml_init({1024*1024,nullptr,true});
+        auto * w=ggml_new_tensor_2d(ctx,GGML_TYPE_F32,n,n);
+        auto * x=ggml_new_tensor_2d(ctx,GGML_TYPE_F32,n,rows);
+        auto * y=ggml_mul_mat(ctx,w,x);
+        ggml_mul_mat_set_hint(y,GGML_HINT_SRC0_IS_HADAMARD);
+        auto * graph=ggml_new_graph(ctx);
+        ggml_build_forward_expand(graph,y);
+        auto buffer=ggml_backend_alloc_ctx_tensors(ctx,backend);
+        if(!buffer)throw std::runtime_error("Test tensor allocation failed");
+        ggml_backend_tensor_set(w,weights.data(),0,ggml_nbytes(w));
+        ggml_backend_tensor_set(x,input.data(),0,ggml_nbytes(x));
+        fwht_calls=0;
+        if(ggml_backend_graph_compute(backend,graph)!=GGML_STATUS_SUCCESS)
+            throw std::runtime_error("Hadamard graph failed");
+        if(reference ? fwht_calls!=0 : fwht_calls==0)
+            throw std::runtime_error("CPU reference did not select an independent Hadamard path");
+        ggml_backend_tensor_get(y,output.data(),0,ggml_nbytes(y));
+        for(size_t i=0;i<output.size();++i)
+            if(!std::isfinite(output[i]) || std::abs(output[i]-expected[i])>2e-5f)
+                throw std::runtime_error("Hadamard dense-reference mismatch");
+        ggml_backend_buffer_free(buffer);ggml_free(ctx);ggml_backend_free(backend);
+    }
+}
 
 static void check(ggml_type wt, ggml_type qt, Dot dot, int n) {
     const auto * wtraits = ggml_get_type_traits(wt);
@@ -60,6 +111,7 @@ static void check(ggml_type wt, ggml_type qt, Dot dot, int n) {
 }
 
 int main() {
+    ggml_backend_load_all();
     ggml_cpu_init();
     // Initializes GGML's FP16 conversion tables.
     auto * context = ggml_init({1024 * 1024, nullptr, true});
@@ -71,5 +123,8 @@ int main() {
         if (n % 256 == 0) check(GGML_TYPE_PQ2_0, GGML_TYPE_Q8_K, __wrap_ggml_vec_dot_pq2_0_q8_K, n);
     }
     ggml_free(context);
+    for(int n : {128,1024})for(int rows : {1,3})check_hadamard(n,rows);
+    bonsai_reference_cpu=false;
     std::cout << "Bonsai optimized/scalar kernels and 2x2 fallback match independent dense dots\n";
+    std::cout << "CPU reference bypasses fast Hadamard paths and matches dense transforms\n";
 }

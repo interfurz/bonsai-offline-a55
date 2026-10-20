@@ -3,10 +3,10 @@ package de.bonsai.offline;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Differential checks against scalar ternary CPU dot products of the same model. */
+/** Differential checks against scalar ternary dots and unfused, dense Hadamard rotations. */
 final class BackendGuard {
     static String identity(BonsaiApp a) {
-        return a.modelFile().length()+":"+a.modelFile().lastModified()+":"+a.context()+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":"+android.os.Build.FINGERPRINT;
+        return a.modelFile().length()+":"+a.modelFile().lastModified()+":"+a.context()+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":"+android.os.Build.FINGERPRINT+":dense-hadamard-v1";
     }
     static boolean matches(JSONObject reference,JSONObject candidate) throws Exception {
         JSONArray expected=reference.getJSONArray("signature"), actual=candidate.getJSONArray("signature");

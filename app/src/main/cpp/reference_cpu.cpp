@@ -1,9 +1,23 @@
 #include "reference_cpu.h"
+#include "ggml-backend.h"
+#include "ggml-cpu.h"
 extern "C" {
 #include "quants.h"
 }
 
 std::atomic<bool> bonsai_reference_cpu{false};
+
+// A scalar dot product alone is not an independent reference for Bonsai 2:
+// its Hadamard rotations and fused graph operations would still use fast paths.
+// llama creates this CPU backend for every new context, including configure().
+extern "C" ggml_backend_t __real_ggml_backend_init_by_type(enum ggml_backend_dev_type, const char *);
+extern "C" ggml_backend_t __wrap_ggml_backend_init_by_type(enum ggml_backend_dev_type type, const char * params) {
+    auto backend = __real_ggml_backend_init_by_type(type, params);
+    if (backend && ggml_backend_is_cpu(backend)) {
+        ggml_backend_cpu_set_use_ref(backend, bonsai_reference_cpu.load(std::memory_order_relaxed));
+    }
+    return backend;
+}
 
 #if defined(__x86_64__) || defined(__i386__)
 // The pinned x86 runtime already aliases Q2_0 to its scalar implementation.

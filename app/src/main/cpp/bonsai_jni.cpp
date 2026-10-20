@@ -5,6 +5,7 @@
 #include "chat.h"
 #include "utf8_stream.h"
 #include "reference_cpu.h"
+#include "chat_sampler.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -315,14 +316,8 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         }
         double prefill_ms = elapsed(start), first_token_ms = 0;
         auto generation_start = Clock::now(), last_emit = Clock::now();
-        Sampler sampler(llama_sampler_chain_init(llama_sampler_chain_default_params()), llama_sampler_free);
+        Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed)), llama_sampler_free);
         if (!sampler) throw std::runtime_error("Sampler konnte nicht angelegt werden.");
-        // Official Bonsai 2 4B non-thinking profile. Penalty applies only to generated tokens.
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_penalties(llama_vocab_n_tokens(vocab), 64, 1.0f, 0.0f, 1.5f));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(20));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(0.80f, 1));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.70f));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_dist(static_cast<uint32_t>(seed)));
         std::string pending;
         int generated = 0;
         bool eos = false;
