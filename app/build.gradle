@@ -10,8 +10,8 @@ android {
         applicationId 'de.bonsai.offline'
         minSdk 28
         targetSdk 35
-        versionCode 4
-        versionName '0.3.0'
+        versionCode 10
+        versionName '0.4.3'
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild {
             cmake {
@@ -48,7 +48,12 @@ android {
     }
     buildTypes {
         debug { applicationIdSuffix '.debug' }
-        release { minifyEnabled false }
+        release {
+            // Retain the distributed package identity without producing a debug build.
+            applicationIdSuffix '.debug'
+            debuggable false
+            minifyEnabled false
+        }
     }
     packaging { jniLibs { useLegacyPackaging false } }
 }
