@@ -1,13 +1,9 @@
 package de.bonsai.offline;
 
 import android.app.Activity;
-import android.app.Dialog;
-import android.animation.ValueAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.view.HapticFeedbackConstants;
-import android.view.MotionEvent;
-import android.view.Window;
 import android.widget.ProgressBar;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -20,7 +16,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Debug;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -31,7 +26,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
@@ -46,7 +40,18 @@ import java.util.Locale;
 
 public final class MainActivity extends Activity {
     private static final int IMPORT=10, EXPORT=11, EXPORT_OPTIMIZER=12;
-    private static final int BG=0xff101713, PANEL=0xff1d2922, TEXT=0xfff0f2e9, MUTED=0xffa7b6aa, ACCENT=0xffe8c39a, LINE=0xff34483b;
+    private DesignTokens tokens;
+    private int BG, PANEL, TEXT, MUTED, ACCENT, LINE;
+    private FrameLayout screenHost;
+    private LinearLayout page, chatPage, modelPage, performancePage, statusCard, composerGroup;
+    private TextView[] tabs;
+    private TextView statusAction, inputError;
+    private ProgressBar statusProgress;
+    private int activeScreen;
+    private boolean lastLoaded, lastModelPresent;
+    private long busySince;
+    private String pendingPrompt="";
+    private final Runnable progressTick=()->{ if(!isFinishing()) render(); };
     private BonsaiApp app;
     private FrameLayout root, drawer;
     private LinearLayout chat;
@@ -54,198 +59,218 @@ public final class MainActivity extends Activity {
     private EditText input;
     private TextView subtitle, title, state, liveAnswer, liveDetail;
     private IconButton send, newChat;
-    private Dialog performanceDialog;
-    private TextView performanceStatus, performanceResult, performanceStart, performanceCompare;
+    private TextView performanceStatus, performanceResult, performanceStart, performanceCompare, performanceExport;
     private ProgressBar performanceProgress;
     private View drawerPanel;
     private boolean drawerClosing;
     private int renderedCount=-1;
     private long renderedChat=-1;
     private boolean lastBusy, autoScroll=true;
-    private String shownError="";
     private final Runnable uiListener=this::render;
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         app=(BonsaiApp)getApplication();
+        tokens=new DesignTokens(getResources());
+        BG=tokens.background; PANEL=tokens.surface; TEXT=tokens.text; MUTED=tokens.muted; ACCENT=tokens.primary; LINE=tokens.border;
         if(android.os.Build.VERSION.SDK_INT>=30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(BG);
         root=new FrameLayout(this); root.setBackgroundColor(BG);
-        LinearLayout page=column(); root.addView(page,new FrameLayout.LayoutParams(-1,-1));
+        page=column(); FrameLayout.LayoutParams pageBounds=new FrameLayout.LayoutParams(-1,-1,Gravity.CENTER_HORIZONTAL);
+        root.addView(page,pageBounds);
         page.setOnApplyWindowInsetsListener((v,insets) -> {
             if(android.os.Build.VERSION.SDK_INT>=30) {
                 android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
                 android.graphics.Insets keyboard=insets.getInsets(WindowInsets.Type.ime());
                 v.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard.bottom));
-            } else {
-                v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
-            }
+            } else v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
             return insets;
         });
-        LinearLayout header=row(); header.setPadding(dp(12),dp(8),dp(12),dp(8));
+        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
+            int width=Math.min(r-l,dp(DesignTokens.CONTENT_WIDTH));
+            if(page.getLayoutParams().width!=width){page.getLayoutParams().width=width;page.requestLayout();}
+        });
+        LinearLayout header=row(); header.setPadding(dp(16),dp(8),dp(16),dp(8));
         header.addView(icon("menu","Chatverlauf öffnen",v -> showDrawer()));
-        LinearLayout heading=column(); heading.setGravity(Gravity.CENTER_VERTICAL); heading.setPadding(dp(10),0,0,0);
-        title=text("bonsai",25,TEXT); title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); title.setLetterSpacing(-.04f);
-        subtitle=text("DEIN RAUM. DEIN GERÄT.",9,MUTED); subtitle.setLetterSpacing(.12f); subtitle.setMaxLines(1); subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        heading.addView(title); heading.addView(subtitle);
-        heading.setContentDescription("Modell und Einstellungen"); heading.setOnClickListener(v -> settings());
-        header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        TextView local=text("● OFFLINE",10,ACCENT); local.setLetterSpacing(.08f); local.setPadding(dp(10),dp(9),dp(10),dp(9)); local.setBackground(outline(PANEL,30)); header.addView(local);
-        newChat=icon("edit","Neuen Chat starten",v -> { app.newChat(); input.setText(""); }); header.addView(newChat);
-        page.addView(header);
-        scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setClipToPadding(false);
-        scroll.setPadding(dp(24),dp(8),dp(24),dp(20));
-        chat=column(); scroll.addView(chat,new ScrollView.LayoutParams(-1,-1));
-        page.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        scroll.getViewTreeObserver().addOnScrollChangedListener(() -> {
-            View content=scroll.getChildAt(0);
-            autoScroll=content==null || content.getHeight()-scroll.getScrollY()-scroll.getHeight()<dp(100);
-        });
-        LinearLayout dock=row(); dock.setPadding(dp(20),0,dp(20),dp(10));
-        TextView chatTab=navItem("◌  Chat"), performanceTab=navItem("↗  Leistung"), modelTab=navItem("◇  Modell");
-        chatTab.setTextColor(ACCENT); chatTab.setBackground(outline(PANEL,20));
-        chatTab.setOnClickListener(v->scroll.smoothScrollTo(0,chat.getHeight()));
-        performanceTab.setOnClickListener(v->showPerformance()); modelTab.setOnClickListener(v->settings());
-        for(TextView tab:new TextView[]{chatTab,performanceTab,modelTab}) dock.addView(tab,new LinearLayout.LayoutParams(0,-2,1));
-        page.addView(dock);
-        state=text("",12,MUTED); state.setPadding(dp(24),dp(4),dp(24),dp(8)); state.setGravity(Gravity.CENTER);
-        state.setOnClickListener(v -> {
-            if(!app.error.isEmpty()) new AlertDialog.Builder(this).setTitle("Bonsai").setMessage(app.error).setPositiveButton("OK",null).show();
-            else if(!app.backendNotice.isEmpty())new AlertDialog.Builder(this).setTitle("Rechenprüfung").setMessage(app.backendNotice).setPositiveButton("OK",null).show();
-            else if(app.optimizing) showPerformance();
-            else if(!app.benchmarkProgress.isEmpty()) showBenchmark();
-            else settings();
-        }); page.addView(state);
-        LinearLayout composer=row(); composer.setGravity(Gravity.BOTTOM); composer.setBackground(outline(PANEL,26));
-        composer.setPadding(dp(5),dp(5),dp(5),dp(5));
-        composer.addView(icon("plus","Modell importieren oder Werkzeuge öffnen",v -> composerMenu(v)));
-        input=new EditText(this); input.setTextColor(TEXT); input.setHintTextColor(MUTED); input.setTextSize(16);
-        input.setHint("Was beschäftigt dich?"); input.setBackgroundColor(Color.TRANSPARENT);
-        input.setPadding(dp(4),dp(12),dp(4),dp(12)); input.setMaxLines(6); input.setMinLines(1);
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        input.setContentDescription("Nachricht eingeben");
-        composer.addView(input,new LinearLayout.LayoutParams(0,-2,1));
-        send=icon("send","Nachricht senden",v -> {
-            if(app.busy) { app.cancel(); return; }
-            String value=input.getText().toString().trim();
-            if(!value.isEmpty() && app.loaded) { v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); input.setText(""); autoScroll=true; app.send(value); }
-            else if(!app.loaded) settings();
-        }); composer.addView(send);
-        input.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s,int start,int count,int after) { }
-            public void onTextChanged(CharSequence s,int start,int before,int count) { updateSend(); }
-            public void afterTextChanged(Editable e) { }
-        });
-        LinearLayout.LayoutParams composerParams=new LinearLayout.LayoutParams(-1,-2); composerParams.setMargins(dp(12),0,dp(12),0);
-        page.addView(composer,composerParams);
-        TextView note=text("Privat gedacht. Lokal verarbeitet.",10,MUTED); note.setGravity(Gravity.CENTER); note.setPadding(0,dp(8),0,dp(10)); page.addView(note);
-        setContentView(root);
-        if(saved!=null) input.setText(saved.getString("draft",""));
-        app.listener=uiListener; render();
-    }
-    @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putString("draft",input.getText().toString()); }
-    @Override protected void onDestroy() {
-        if(performanceDialog!=null) performanceDialog.dismiss();
-        if(app.listener==uiListener) app.listener=null;
-        super.onDestroy();
-    }
-    @Override protected void onStop() {
-        super.onStop();
-        // No foreground service in v0.1: stop heavy work when the app leaves the foreground.
-        if(!isChangingConfigurations() && app.busy) app.cancel();
-    }
-    @Override public void onBackPressed() { if(drawer!=null) closeDrawer(); else super.onBackPressed(); }
+        LinearLayout heading=column(); heading.setPadding(dp(8),0,dp(8),0);
+        title=text("Bonsai",DesignTokens.TYPE_TITLE,TEXT); title.setTypeface(null,Typeface.BOLD); title.setAccessibilityHeading(true);
+        subtitle=text("Privat. Auf deinem Gerät.",DesignTokens.TYPE_META,MUTED);
+        heading.addView(title); heading.addView(subtitle); header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        newChat=icon("edit","Neuen Chat starten",v -> {app.newChat();input.setText("");navigate(0);});header.addView(newChat);page.addView(header);
 
-    private void render() {
+        statusCard=column();statusCard.setPadding(dp(16),dp(8),dp(16),dp(8));
+        LinearLayout statusRow=row();state=text("",DesignTokens.TYPE_LABEL,MUTED);state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        statusRow.addView(state,new LinearLayout.LayoutParams(0,-2,1));
+        statusAction=menuItem("Abbrechen");statusRow.addView(statusAction);statusCard.addView(statusRow);
+        statusProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);statusProgress.setMax(1000);
+        statusProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));statusCard.addView(statusProgress,new LinearLayout.LayoutParams(-1,dp(4)));
+        page.addView(statusCard);
+        screenHost=new FrameLayout(this);page.addView(screenHost,new LinearLayout.LayoutParams(-1,0,1));
+        createChatPage();screenHost.addView(chatPage,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout dock=row();dock.setPadding(dp(16),dp(8),dp(16),dp(8));
+        dock.setContentDescription("Hauptnavigation");tabs=new TextView[]{navItem("Chat"),navItem("Modell"),navItem("Leistung")};
+        for(int i=0;i<tabs.length;i++){final int index=i;tabs[i].setOnClickListener(v->navigate(index));dock.addView(tabs[i],new LinearLayout.LayoutParams(0,-2,1));}
+        page.addView(dock);
+        setContentView(root);
+        if(saved!=null){input.setText(saved.getString("draft",""));pendingPrompt=saved.getString("pendingPrompt","");}
+        app.listener=uiListener;render();navigate(saved==null?0:saved.getInt("screen",0));
+    }
+    private void createChatPage() {
+        chatPage=column();
+        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setPadding(dp(24),dp(16),dp(24),dp(24));
+        chat=column();scroll.addView(chat,new ScrollView.LayoutParams(-1,-1));chatPage.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        scroll.getViewTreeObserver().addOnScrollChangedListener(()->{
+            View content=scroll.getChildAt(0);autoScroll=content==null||content.getHeight()-scroll.getScrollY()-scroll.getHeight()<dp(100);
+        });
+        composerGroup=column();composerGroup.setPadding(dp(16),dp(8),dp(16),0);
+        TextView label=text("Deine Nachricht",DesignTokens.TYPE_LABEL,MUTED);label.setPadding(dp(8),0,0,dp(8));composerGroup.addView(label);
+        LinearLayout composer=row();composer.setGravity(Gravity.BOTTOM);composer.setPadding(dp(8),dp(4),dp(8),dp(4));composer.setBackground(outline(PANEL,DesignTokens.RADIUS_CARD));
+        input=new EditText(this);input.setId(View.generateViewId());label.setLabelFor(input.getId());input.setTextColor(TEXT);input.setHintTextColor(MUTED);input.setTextSize(DesignTokens.TYPE_BODY);
+        input.setHint("Stelle eine Frage …");input.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
+        input.setPadding(dp(8),dp(12),dp(8),dp(12));input.setMaxLines(4);input.setMinLines(1);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        composer.addView(input,new LinearLayout.LayoutParams(0,-2,1));
+        send=icon("send","Nachricht senden",v->{
+            if(app.busy){app.cancel();return;}
+            String value=input.getText().toString().trim();
+            if(value.length()>32000){showInputError();return;}
+            if(!value.isEmpty()&&app.loaded){v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);autoScroll=true;pendingPrompt=value;app.send(value);if(app.busy)input.setText("");}
+        });composer.addView(send);composerGroup.addView(composer);
+        inputError=text("",DesignTokens.TYPE_LABEL,tokens.error);inputError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);composerGroup.addView(inputError);
+        input.addTextChangedListener(new TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){showInputError();updateSend();}
+            public void afterTextChanged(Editable e){}
+        });
+        TextView note=text("Offline verarbeitet · KI-Antworten können Fehler enthalten",DesignTokens.TYPE_META,MUTED);note.setGravity(Gravity.CENTER);note.setPadding(dp(8),dp(8),dp(8),dp(8));composerGroup.addView(note);
+        chatPage.addView(composerGroup);
+    }
+    private void showInputError(){
+        boolean tooLong=input.length()>32000;inputError.setText(tooLong?"Bitte kürze deine Nachricht auf höchstens 32.000 Zeichen.":"");inputError.setVisibility(tooLong?View.VISIBLE:View.GONE);
+    }
+    private void navigate(int destination){
+        if(destination<0||destination>2)destination=0;
+        int previous=activeScreen;activeScreen=destination;
+        if(destination!=0)((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
+        screenHost.removeAllViews();
+        View screen;
+        if(destination==0)screen=chatPage;
+        else if(destination==1){modelPage=buildModelPage();screen=modelPage;}
+        else{performancePage=buildPerformancePage();screen=performancePage;}
+        screenHost.addView(screen,new FrameLayout.LayoutParams(-1,-1));
+        title.setText(destination==0?"Bonsai":destination==1?"Modell":"Leistung");
+        for(int i=0;i<tabs.length;i++){
+            tabs[i].setSelected(i==destination);tabs[i].setTextColor(i==destination?ACCENT:MUTED);
+            tabs[i].setTypeface(null,i==destination?Typeface.BOLD:Typeface.NORMAL);
+            tabs[i].setBackground(interactiveBackground(i==destination?PANEL:Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
+        }
+        if(previous!=destination)UiMotion.enter(screen,dp(destination>previous?16:-16),0);
+        updatePerformance();
+    }
+    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);}
+    @Override protected void onDestroy(){app.main.removeCallbacks(progressTick);if(app.listener==uiListener)app.listener=null;super.onDestroy();}
+    @Override protected void onStop(){super.onStop();if(!isChangingConfigurations()&&app.busy)app.cancel();}
+    @Override public void onBackPressed(){if(drawer!=null)closeDrawer();else if(activeScreen!=0)navigate(0);else super.onBackPressed();}
+
+    private void render(){
         if(app.busy)getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        subtitle.setText(app.loaded ? app.backend+(app.optimized()?" · OPTIMIERT":" · LOKAL") : app.busy ? "WIRD VORBEREITET" : "DEIN RAUM. DEIN GERÄT.");
-        updatePerformance();
-        state.setText(app.busy ? app.status : app.error.isEmpty() ? app.backendNotice.isEmpty()?"":"Sicheres CPU-Profil · Details" : "Hinweis anzeigen");
-        state.setVisibility(app.busy || !app.error.isEmpty() || !app.backendNotice.isEmpty() ? View.VISIBLE : View.GONE);
-        newChat.setEnabled(!app.busy); newChat.setAlpha(app.busy?.35f:1);
-        updateSend();
-        if(renderedCount!=app.messages.size() || renderedChat!=app.currentChat || lastBusy!=app.busy) {
-            renderedCount=app.messages.size(); renderedChat=app.currentChat; lastBusy=app.busy;
-            chat.removeAllViews(); liveAnswer=null; liveDetail=null;
-            if(ValueAnimator.areAnimatorsEnabled()) { chat.setAlpha(.4f); chat.setTranslationY(dp(8)); chat.animate().alpha(1).translationY(0).setDuration(220).start(); }
-            if(app.messages.isEmpty()) emptyState();
-            else {
-                chat.setGravity(Gravity.TOP);
-                for(ChatStore.Message m:app.messages) addMessage(m);
-            }
-        } else if(liveAnswer!=null && !app.messages.isEmpty()) {
-            ChatStore.Message m=app.messages.get(app.messages.size()-1);
-            liveAnswer.setText(m.text.isEmpty() ? "●" : m.text);
-            if(liveDetail!=null) liveDetail.setText(m.detail);
+        if(!app.busy&&!pendingPrompt.isEmpty()){
+            if((!app.error.isEmpty()||app.cancelled)&&input.length()==0)input.setText(pendingPrompt);
+            pendingPrompt="";
         }
-        if(autoScroll && !app.messages.isEmpty()) scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
-        if(!app.error.isEmpty() && !app.error.equals(shownError)) {
-            shownError=app.error;
-            new AlertDialog.Builder(this).setTitle("Bonsai").setMessage(app.error).setPositiveButton("OK",(d,w)->{}).show();
+        subtitle.setText(app.loaded?app.backend+" · Modell bereit":!app.messages.isEmpty()?"Modell nicht geladen":"Privat. Auf deinem Gerät.");
+        updateStatus();updatePerformance();
+        newChat.setEnabled(!app.busy);newChat.setAlpha(app.busy?.4f:1);updateSend();
+        boolean modelChanged=lastLoaded!=app.loaded||lastModelPresent!=app.modelFile().isFile();
+        boolean phaseChanged=lastBusy!=app.busy;
+        if(renderedCount!=app.messages.size()||renderedChat!=app.currentChat||phaseChanged||modelChanged){
+            boolean switched=renderedChat!=-1&&renderedChat!=app.currentChat;
+            renderedCount=app.messages.size();renderedChat=app.currentChat;lastBusy=app.busy;lastLoaded=app.loaded;lastModelPresent=app.modelFile().isFile();
+            chat.removeAllViews();liveAnswer=null;liveDetail=null;
+            if(app.messages.isEmpty())emptyState();else{chat.setGravity(Gravity.TOP);for(ChatStore.Message m:app.messages)addMessage(m);}
+            // Existing streamed text never fades or moves for each token or status update.
+            if(switched)UiMotion.enter(chat,0,dp(8));
+            if(activeScreen==1&&(phaseChanged||modelChanged)){modelPage=buildModelPage();screenHost.removeAllViews();screenHost.addView(modelPage,new FrameLayout.LayoutParams(-1,-1));}
+        }else if(liveAnswer!=null&&!app.messages.isEmpty()){
+            ChatStore.Message m=app.messages.get(app.messages.size()-1);liveAnswer.setText(m.text.isEmpty()?"Bonsai denkt nach …":m.text);
+            if(liveDetail!=null)liveDetail.setText(m.detail);
         }
-        if(app.error.isEmpty()) shownError="";
-        if(app.modelCheckFinished && !app.busy) { app.modelCheckFinished=false;showModelCheck(); }
+        if(autoScroll&&!app.messages.isEmpty())scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));
+        if(app.modelCheckFinished&&!app.busy){app.modelCheckFinished=false;showModelCheck();}
     }
-    private void updateSend() {
-        if(send==null || input==null) return;
-        send.kind=app.busy ? "stop" : "send";
-        send.setContentDescription(app.busy ? "Vorgang abbrechen" : "Nachricht senden");
-        send.setAlpha(app.busy || input.getText().length()>0 ? 1:.45f); send.invalidate();
-        input.setEnabled(!app.busy);
+    private void updateStatus(){
+        app.main.removeCallbacks(progressTick);
+        if(app.busy){
+            if(busySince==0)busySince=android.os.SystemClock.elapsedRealtime();
+            long elapsed=android.os.SystemClock.elapsedRealtime()-busySince;
+            state.setAccessibilityLiveRegion(lastBusy?View.ACCESSIBILITY_LIVE_REGION_NONE:View.ACCESSIBILITY_LIVE_REGION_POLITE);
+            state.setText(app.status+(elapsed>=10000?" · "+elapsed/1000+" s":""));state.setTextColor(TEXT);
+            statusAction.setText(app.cancelled?"Wird beendet":"Abbrechen");statusAction.setEnabled(!app.cancelled);statusAction.setOnClickListener(v->app.cancel());
+            statusProgress.setVisibility(elapsed>=DesignTokens.LOADING_DELAY?View.VISIBLE:View.GONE);
+            statusProgress.setIndeterminate(!app.optimizing);
+            if(app.optimizing)statusProgress.setProgress((int)(app.optimizingFraction*1000));
+            app.main.postDelayed(progressTick,elapsed<DesignTokens.LOADING_DELAY?DesignTokens.LOADING_DELAY:1000);
+        }else{
+            busySince=0;state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);statusProgress.setVisibility(View.GONE);statusAction.setEnabled(true);
+            boolean error=!app.error.isEmpty();state.setText(error?"Vorgang nicht abgeschlossen. Öffne die Details für den nächsten Schritt.":"Sicheres CPU-Profil ist aktiv.");state.setTextColor(error?tokens.error:MUTED);
+            statusAction.setText("Details");statusAction.setOnClickListener(v->new AlertDialog.Builder(this).setTitle(error?"Vorgang nicht abgeschlossen":"Rechenprüfung").setMessage(error?app.error+"\n\nPrüfe das Modell und die Einstellungen. Danach kannst du den Vorgang erneut starten.":app.backendNotice).setPositiveButton("Schließen",null).setNeutralButton("Modell öffnen",(d,w)->settings()).show());
+        }
+        boolean needsModel=!app.loaded&&!app.messages.isEmpty();
+        if(!app.busy&&app.error.isEmpty()&&app.backendNotice.isEmpty()&&needsModel){
+            state.setText("Lade dein Modell, um diesen Chat fortzusetzen.");state.setTextColor(MUTED);statusAction.setText("Modell öffnen");statusAction.setOnClickListener(v->settings());
+        }
+        statusCard.setVisibility(app.busy||!app.error.isEmpty()||!app.backendNotice.isEmpty()||needsModel?View.VISIBLE:View.GONE);
     }
-    private void emptyState() {
+    private void updateSend(){
+        if(send==null||input==null)return;
+        send.kind=app.busy?"stop":"send";send.setContentDescription(app.busy?"Vorgang abbrechen":"Nachricht senden");
+        send.setEnabled(app.busy?!app.cancelled:app.loaded&&!input.getText().toString().trim().isEmpty()&&input.length()<=32000);
+        send.setAlpha(send.isEnabled()?1:.4f);send.invalidate();
+        // Drafting the next question stays available while inference runs.
+        input.setEnabled(true);
+        composerGroup.setVisibility(app.loaded||!app.messages.isEmpty()||input.length()>0?View.VISIBLE:View.GONE);
+    }
+    private void emptyState(){
         chat.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout hero=column();
-        OrbitView orbit=new OrbitView(this); hero.addView(orbit,new LinearLayout.LayoutParams(dp(116),dp(116)));
-        TextView eyebrow=text("INTELLIGENZ, DIE BEI DIR BLEIBT",10,ACCENT); eyebrow.setLetterSpacing(.12f); eyebrow.setPadding(0,dp(16),0,dp(16)); hero.addView(eyebrow);
-        TextView greeting=text("Raum für deine\nGedanken.",38,TEXT); greeting.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL)); greeting.setLetterSpacing(-.045f); greeting.setLineSpacing(dp(1),1); hero.addView(greeting);
-        TextView caption=text("Fragen, Ideen und neue Perspektiven.\nGanz ohne Verbindung nach draußen.",14,MUTED); caption.setLineSpacing(dp(4),1); caption.setPadding(0,dp(16),0,dp(22)); hero.addView(caption);
-        if(!app.loaded) {
-            TextView start=pill(app.modelFile().isFile()?"Modell aufwecken  ↗":"Dein Modell verbinden  ↗"); start.setTextColor(BG); start.setBackground(round(ACCENT,18));
-            start.setOnClickListener(v->{ if(!app.busy) { if(app.modelFile().isFile())app.loadModel();else pickModel(); } }); hero.addView(start);
-        } else {
-            LinearLayout ideas=row();
-            TextView explain=suggestion("01 / VERSTEHEN", "Mach es verständlich", "Erkläre mir ein schwieriges Thema einfach: ");
-            TextView create=suggestion("02 / WEITERDENKEN", "Eine Idee entwickeln", "Hilf mir, eine Idee weiterzuentwickeln: ");
-            LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,-2,1);left.rightMargin=dp(8);ideas.addView(explain,left);ideas.addView(create,new LinearLayout.LayoutParams(0,-2,1));hero.addView(ideas);
+        LinearLayout hero=column();hero.setPadding(0,dp(16),0,dp(16));
+        TextView eyebrow=text("DEIN PRIVATER KI-ASSISTENT",DesignTokens.TYPE_META,ACCENT);eyebrow.setLetterSpacing(.08f);hero.addView(eyebrow);
+        TextView greeting=text(app.loaded?"Was möchtest du\nherausfinden?":"Gute Gedanken.\nGanz für dich.",DesignTokens.TYPE_HERO,TEXT);greeting.setTypeface(null,Typeface.BOLD);greeting.setLineSpacing(0,1.1f);greeting.setPadding(0,dp(16),0,dp(16));greeting.setAccessibilityHeading(true);hero.addView(greeting);
+        TextView caption=text(app.loaded?"Dein Modell ist bereit. Stelle eine Frage oder nutze einen Einstieg.":"Einmal ein Modell importieren. Danach Fragen stellen – auch ohne Internet.",DesignTokens.TYPE_BODY,MUTED);hero.addView(caption);
+        if(!app.loaded){
+            LinearLayout card=card();TextView step=text(app.busy?"Modell wird vorbereitet":"1. Modell öffnen   2. Frage stellen",DesignTokens.TYPE_LABEL,MUTED);card.addView(step);
+            TextView start=primary(app.busy?"Vorgang läuft …":app.modelFile().isFile()?"Modell laden":"Modell importieren");start.setEnabled(!app.busy);start.setOnClickListener(v->{if(app.modelFile().isFile())app.loadModel();else pickModel();});addSpaced(card,start,16);
+            TextView hint=text("GGUF-Datei · bleibt auf diesem Gerät",DesignTokens.TYPE_META,MUTED);addSpaced(card,hint,12);addSpaced(hero,card,24);
+        }else{
+            addSpaced(hero,suggestion("Einfach verstehen","Erkläre mir ein schwieriges Thema einfach: "),24);
+            addSpaced(hero,suggestion("Eine Idee entwickeln","Hilf mir, eine Idee weiterzuentwickeln: "),8);
         }
         chat.addView(hero,new LinearLayout.LayoutParams(-1,-2));
     }
-    private TextView suggestion(String label,String title,String prompt) {
-        TextView t=text(label+"\n\n"+title+"  ↗",12,TEXT);t.setLineSpacing(dp(3),1);t.setPadding(dp(14),dp(18),dp(14),dp(18));t.setBackground(outline(PANEL,18));
+    private TextView suggestion(String label,String prompt){
+        TextView t=menuItem(label);t.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
         t.setOnClickListener(v->{input.setText(prompt);input.setSelection(input.length());input.requestFocus();((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);});return t;
     }
-    private void addMessage(ChatStore.Message m) {
-        boolean user=m.role.equals("user");
-        LinearLayout box=column(); box.setPadding(user?dp(14):0,user?dp(10):dp(14),user?dp(14):0,user?dp(10):dp(8));
-        if(user) box.setBackground(outline(PANEL,22));
-        else { TextView author=text("✳  BONSAI",10,ACCENT); author.setLetterSpacing(.13f); author.setPadding(0,0,0,dp(12)); box.addView(author); }
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(user?-2:-1,-2);
-        p.gravity=user?Gravity.END:Gravity.START; p.topMargin=dp(16); p.bottomMargin=dp(10);
-        if(user) p.leftMargin=dp(38);
-        TextView body=text(m.text.isEmpty()?"●":m.text,16,TEXT);
-        body.setTextIsSelectable(true); body.setLineSpacing(dp(5),1); box.addView(body);
-        if(!user) {
-            TextView detail=text(m.detail,10,MUTED); detail.setPadding(0,dp(10),0,0); box.addView(detail);
-            if(!m.text.isEmpty()) {
-                TextView copy=text("Kopieren",11,MUTED);copy.setMinHeight(dp(48));copy.setGravity(Gravity.CENTER_VERTICAL);
-                copy.setOnClickListener(v->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bonsai",m.text));Toast.makeText(this,"Antwort kopiert",Toast.LENGTH_SHORT).show();});box.addView(copy);
+    private void addMessage(ChatStore.Message m){
+        boolean user=m.role.equals("user");LinearLayout box=column();box.setPadding(user?dp(16):0,dp(16),user?dp(16):0,dp(16));
+        if(user)box.setBackground(round(PANEL,DesignTokens.RADIUS_CARD));
+        TextView author=text(user?"Du":"Bonsai",DesignTokens.TYPE_LABEL,user?MUTED:ACCENT);author.setTypeface(null,Typeface.BOLD);box.addView(author);
+        TextView body=text(m.text.isEmpty()?"Bonsai denkt nach …":m.text,DesignTokens.TYPE_BODY,TEXT);body.setTextIsSelectable(true);addSpaced(box,body,8);
+        LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user)bounds.leftMargin=dp(24);
+        if(!user){
+            TextView detail=text(m.detail,DesignTokens.TYPE_META,MUTED);addSpaced(box,detail,8);
+            if(!m.text.isEmpty()&&!app.busy){
+                TextView copy=menuItem("Antwort kopieren");copy.setTextColor(MUTED);copy.setOnClickListener(v->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bonsai",m.text));Toast.makeText(this,"Antwort kopiert",Toast.LENGTH_SHORT).show();});box.addView(copy);
+                if(m==app.messages.get(app.messages.size()-1)){
+                    TextView retry=menuItem("Neu generieren");retry.setEnabled(app.loaded);retry.setOnClickListener(v->{autoScroll=true;app.regenerateLastAnswer();});box.addView(retry);
+                    box.addView(text("Eine neue Variante wird als eigener Chat gespeichert.",DesignTokens.TYPE_META,MUTED));
+                }
             }
-            if(m==app.messages.get(app.messages.size()-1)) { liveAnswer=body; liveDetail=detail; }
+            if(m==app.messages.get(app.messages.size()-1)){liveAnswer=body;liveDetail=detail;}
         }
-        chat.addView(box,p);
+        chat.addView(box,bounds);
     }
 
-    private void composerMenu(View anchor) {
-        PopupMenu menu=new PopupMenu(this,anchor);
-        menu.getMenu().add("GGUF-Modell importieren").setEnabled(!app.busy).setOnMenuItemClickListener(i->{pickModel();return true;});
-        menu.getMenu().add("Modell und Einstellungen").setOnMenuItemClickListener(i->{settings();return true;});
-        menu.getMenu().add("Modelltest ohne Chatverlauf").setOnMenuItemClickListener(i->{showModelCheck();return true;});
-        menu.getMenu().add("Kernel Optimizer").setOnMenuItemClickListener(i->{showPerformance();return true;});
-        menu.getMenu().add("Benchmark").setOnMenuItemClickListener(i->{showBenchmark();return true;});
-        menu.show();
-    }
     private void pickModel() {
         if(app.busy) return;
         new AlertDialog.Builder(this).setTitle("Bonsai-Modell importieren")
@@ -267,7 +292,7 @@ public final class MainActivity extends Activity {
                 try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")) {
                     if(out==null) throw new IllegalStateException("Datei nicht beschreibbar.");
                     out.write(report.toString(2).getBytes(StandardCharsets.UTF_8));
-                    app.main.post(()->Toast.makeText(this,"Benchmark gespeichert",Toast.LENGTH_SHORT).show());
+                    app.main.post(()->Toast.makeText(this,"Messprotokoll gespeichert",Toast.LENGTH_SHORT).show());
                 } catch(Exception e) { app.main.post(()->Toast.makeText(this,"Export fehlgeschlagen: "+e.getMessage(),Toast.LENGTH_LONG).show()); }
             });
         }
@@ -276,114 +301,105 @@ public final class MainActivity extends Activity {
         if(drawer!=null) return;
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
         drawer=new FrameLayout(this); drawer.setBackgroundColor(0x99000000); drawer.setOnClickListener(v->closeDrawer());
-        LinearLayout panel=column(); panel.setBackgroundColor(BG); panel.setPadding(dp(16),dp(40),dp(16),dp(24)); panel.setOnClickListener(v->{});
+        LinearLayout panel=column(); panel.setBackgroundColor(BG); panel.setPadding(dp(16),Math.max(dp(24),page.getPaddingTop()),dp(16),dp(24)); panel.setOnClickListener(v->{});
         FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(Math.min(dp(315),getResources().getDisplayMetrics().widthPixels-dp(40)),-1);
         drawer.addView(panel,bounds);
         TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setPadding(dp(10),0,0,dp(24)); panel.addView(brand);
-        TextView fresh=menuItem("＋   Neuer Chat"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");}); panel.addView(fresh);
+        TextView fresh=menuItem("Neuen Chat starten"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);}); panel.addView(fresh);
         TextView label=text("Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); panel.addView(label);
         ScrollView history=new ScrollView(this); LinearLayout entries=column(); history.addView(entries);
         for(ChatStore.Chat c:app.store.chats()) {
-            TextView item=menuItem(c.title); item.setMaxLines(2); item.setEnabled(!app.busy);
-            if(c.id==app.currentChat) item.setBackground(round(PANEL,12));
-            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");}); entries.addView(item);
+            TextView item=menuItem(c.title); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
+            if(c.id==app.currentChat) item.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
+            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");navigate(0);}); entries.addView(item);
         }
         panel.addView(history,new LinearLayout.LayoutParams(-1,0,1));
-        TextView optimize=menuItem("↗   Kernel Optimizer");optimize.setOnClickListener(v->{closeDrawer();showPerformance();});panel.addView(optimize);
-        TextView bench=menuItem("Benchmark"); bench.setOnClickListener(v->{closeDrawer();showBenchmark();}); panel.addView(bench);
-        TextView prefs=menuItem("Modell und Einstellungen"); prefs.setOnClickListener(v->{closeDrawer();settings();}); panel.addView(prefs);
-        TextView privacy=text("Alle Chats bleiben auf diesem Gerät.",11,MUTED); privacy.setPadding(dp(12),dp(14),0,0); panel.addView(privacy);
-        root.addView(drawer,new FrameLayout.LayoutParams(-1,-1));
+        TextView privacy=text("Alle Chats bleiben auf diesem Gerät.",14,MUTED); privacy.setPadding(dp(12),dp(16),0,0); panel.addView(privacy);
+        TextView close=menuItem("Verlauf schließen");close.setOnClickListener(v->closeDrawer());panel.addView(close);
+        if(app.store.chats().isEmpty())entries.addView(text("Noch keine Chats. Deine Gespräche erscheinen hier, sobald du eine Nachricht sendest.",16,MUTED));
+        TextView delete=menuItem("Aktuellen Chat löschen");delete.setTextColor(tokens.error);delete.setEnabled(!app.busy&&app.currentChat!=0);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Chat dauerhaft löschen?").setMessage("Alle Nachrichten dieses Chats werden von diesem Gerät gelöscht.").setNegativeButton("Behalten",null).setPositiveButton("Chat löschen",(d,w)->{app.deleteCurrentChat();closeDrawer();navigate(0);}).show());panel.addView(delete);
+        page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);page.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        root.addView(drawer,new FrameLayout.LayoutParams(-1,-1));close.requestFocus();
         drawerPanel=panel; drawerClosing=false;
-        if(ValueAnimator.areAnimatorsEnabled()) { panel.setTranslationX(-bounds.width); panel.animate().translationX(0).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator()).start(); }
+        UiMotion.enter(panel,-bounds.width,0);
 
     }
     private void closeDrawer() {
         if(drawer==null || drawerClosing)return;
         FrameLayout closing=drawer; drawerClosing=true;
-        Runnable done=()->{root.removeView(closing);if(drawer==closing)drawer=null;drawerClosing=false;};
-        if(ValueAnimator.areAnimatorsEnabled()) drawerPanel.animate().translationX(-drawerPanel.getWidth()).setDuration(200).withEndAction(done).start();else done.run();
+        Runnable done=()->{root.removeView(closing);if(drawer==closing)drawer=null;drawerClosing=false;page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);page.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);};
+        UiMotion.exit(drawerPanel,-drawerPanel.getWidth(),done);
     }
 
-    private void settings() {
-        LinearLayout content=column(); content.setPadding(dp(24),dp(8),dp(24),dp(16));
-        TextView model=text(app.modelFile().isFile()?app.modelName():"Kein Modell importiert",15,TEXT); model.setTextIsSelectable(true); content.addView(model);
-        content.addView(settingLabel((app.loaded?"Geladen · "+app.backend:"Nicht geladen")+"\nProzess-RAM: "+ram(BonsaiApp.rssKb())+" · Native Heap: "+ram(Debug.getNativeHeapAllocatedSize()/1024)));
-        TextView choose=menuItem("GGUF-Datei auswählen …"); choose.setEnabled(!app.busy); content.addView(choose);
-        TextView ctx=settingLabel("Kontext"); content.addView(ctx);
-        Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1); content.addView(context);
-        content.addView(settingLabel("CPU-Threads"));
-        Spinner threads=spinner(new String[]{"2","4","6","8"},app.threads()/2-1); content.addView(threads);
-        content.addView(settingLabel("Maximale Antwortlänge"));
-        Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2); content.addView(length);
-        content.addView(settingLabel("Inferenz"));
-        Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0); content.addView(engine);
-        for(Spinner s:new Spinner[]{context,threads,length,engine}) s.setEnabled(!app.busy);
-        TextView nativeInfo=settingLabel("Bonsai "+BuildConfig.VERSION_NAME+" · Runtime prism-b10777-e3de715\n"+(BuildConfig.VULKAN_BUILD?"CPU/Vulkan-Wechsel lädt das Modell neu.\nKernel Optimizer misst das schnellste geprüfte Profil auf deinem Gerät.":"Vulkan ist in diesem Build nicht enthalten.")+"\nThinking ist für kurze Antworten deaktiviert."); content.addView(nativeInfo);
-        TextView load=menuItem(app.loaded?"Modell entladen · RAM freigeben":"Modell laden"); load.setEnabled(!app.busy&&app.modelFile().isFile()); content.addView(load);
-        TextView delete=menuItem("Aktuellen Chat löschen"); delete.setEnabled(!app.busy&&app.currentChat!=0); content.addView(delete);
-        TextView check=menuItem("Modelltest ohne Chatverlauf  ↗"); content.addView(check);
-        TextView licenses=menuItem("Open-Source-Lizenzen"); content.addView(licenses);
-        ScrollView scroll=new ScrollView(this); scroll.addView(content);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Modell und Einstellungen").setView(scroll)
-            .setNegativeButton("Schließen",null).setPositiveButton("Übernehmen",(d,w)-> {
-                if(app.busy) return;
-                int c=new int[]{2048,4096,8192}[context.getSelectedItemPosition()], t=new int[]{2,4,6,8}[threads.getSelectedItemPosition()], l=new int[]{128,256,512,1024,2048}[length.getSelectedItemPosition()];
-                boolean gpu=engine.getSelectedItemPosition()==1;
-                boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu();
-                boolean reload=app.modelFile().isFile()&&changed;
-                if(changed)app.prefs.edit().remove("optimizedFor").remove("batchThreads").remove("microBatch").apply();
-                app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).apply();
-                if(reload) app.loadModel();
-            }).create();
-        check.setOnClickListener(v->{dialog.dismiss();showModelCheck();});
-        choose.setOnClickListener(v->{dialog.dismiss();pickModel();});
-        load.setOnClickListener(v->{dialog.dismiss();if(app.loaded) app.unloadModel();else app.loadModel();});
-        delete.setOnClickListener(v->{dialog.dismiss();new AlertDialog.Builder(this).setTitle("Chat löschen?").setMessage("Dieser Chat wird dauerhaft von diesem Gerät gelöscht.").setNegativeButton("Abbrechen",null).setPositiveButton("Löschen",(d,w)->app.deleteCurrentChat()).show();});
-        licenses.setOnClickListener(v->{
-            dialog.dismiss();
-            try(InputStream stream=getAssets().open("third_party_notices.txt")) {
-                ByteArrayOutputStream bytes=new ByteArrayOutputStream(); byte[] buffer=new byte[4096]; int n;
-                while((n=stream.read(buffer))!=-1) bytes.write(buffer,0,n);
-                TextView notice=text(new String(bytes.toByteArray(),StandardCharsets.UTF_8),12,TEXT);
-                notice.setTextIsSelectable(true); notice.setPadding(dp(20),dp(12),dp(20),dp(12));
-                ScrollView pane=new ScrollView(this); pane.addView(notice);
-                new AlertDialog.Builder(this).setTitle("Open-Source-Lizenzen").setView(pane).setPositiveButton("Schließen",null).show();
-            } catch(Exception e) { Toast.makeText(this,"Lizenzen konnten nicht geöffnet werden.",Toast.LENGTH_SHORT).show(); }
+    private void settings(){navigate(1);}
+    private LinearLayout buildModelPage(){
+        LinearLayout screen=column();ScrollView pane=new ScrollView(this);pane.setFillViewport(true);
+        LinearLayout content=column();content.setPadding(dp(24),dp(16),dp(24),dp(24));pane.addView(content);screen.addView(pane,new LinearLayout.LayoutParams(-1,0,1));
+        addSectionTitle(content,"Dein Modell. Dein Gerät.","Das Modell verarbeitet deine Nachrichten vollständig offline.");
+        LinearLayout modelCard=card();TextView status=text(app.loaded?"Bereit zum Chatten":app.modelFile().isFile()?"Importiert · nicht geladen":"Noch kein Modell",DesignTokens.TYPE_LABEL,ACCENT);modelCard.addView(status);
+        TextView name=text(app.modelFile().isFile()?app.modelName():"Bonsai 2 · GGUF",DesignTokens.TYPE_TITLE,TEXT);name.setTextIsSelectable(true);addSpaced(modelCard,name,8);
+        addSpaced(modelCard,text(app.modelFile().isFile()?"Prozess-RAM: "+ram(BonsaiApp.rssKb())+" · "+app.backend:"Wähle eine lokale GGUF-Datei. Die App legt eine private Kopie an.",DesignTokens.TYPE_BODY,MUTED),12);addSpaced(content,modelCard,24);
+        if(app.modelFile().isFile()){
+            TextView replace=menuItem("Anderes Modell importieren");replace.setEnabled(!app.busy);replace.setOnClickListener(v->pickModel());addSpaced(content,replace,8);
+        }
+        TextView section=text("Antworten anpassen",DesignTokens.TYPE_TITLE,TEXT);section.setAccessibilityHeading(true);addSpaced(content,section,24);
+        TextView ctx=settingLabel("Kontextlänge");content.addView(ctx);Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1);labelSpinner(ctx,context);content.addView(context);
+        TextView threadLabel=settingLabel("CPU-Threads");content.addView(threadLabel);Spinner threads=spinner(new String[]{"2","4","6","8"},app.threads()/2-1);labelSpinner(threadLabel,threads);content.addView(threads);
+        TextView lengthLabel=settingLabel("Maximale Antwortlänge");content.addView(lengthLabel);Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2);labelSpinner(lengthLabel,length);content.addView(length);
+        TextView engineLabel=settingLabel("Rechenbackend");content.addView(engineLabel);Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0);labelSpinner(engineLabel,engine);content.addView(engine);
+        for(Spinner field:new Spinner[]{context,threads,length,engine})field.setEnabled(!app.busy);
+        addSpaced(content,text("Mehr Kontext benötigt mehr Arbeitsspeicher. Änderungen an Kontext, Threads oder Backend laden ein vorhandenes Modell neu.",DesignTokens.TYPE_LABEL,MUTED),16);
+        TextView apply=primary(app.busy?"Vorgang läuft …":!app.modelFile().isFile()?"Modell importieren":app.loaded?"Einstellungen speichern":"Modell laden");apply.setEnabled(!app.busy);
+        apply.setOnClickListener(v->{
+            if(app.busy)return;
+            int c=new int[]{2048,4096,8192}[context.getSelectedItemPosition()],t=new int[]{2,4,6,8}[threads.getSelectedItemPosition()],l=new int[]{128,256,512,1024,2048}[length.getSelectedItemPosition()];boolean gpu=engine.getSelectedItemPosition()==1;
+            boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu();
+            if(changed)app.prefs.edit().remove("optimizedFor").remove("batchThreads").remove("microBatch").apply();
+            app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).apply();
+            if(!app.modelFile().isFile())pickModel();else if(changed||!app.loaded)app.loadModel();else Toast.makeText(this,"Einstellungen gespeichert",Toast.LENGTH_SHORT).show();
         });
-        dialog.show();
+        if(app.loaded){TextView unload=menuItem("Modell entladen und RAM freigeben");unload.setEnabled(!app.busy);unload.setOnClickListener(v->app.unloadModel());addSpaced(content,unload,16);}
+        TextView check=menuItem("Modell prüfen");check.setOnClickListener(v->showModelCheck());content.addView(check);
+        TextView licenses=menuItem("Open-Source-Lizenzen");licenses.setOnClickListener(v->showLicenses());content.addView(licenses);
+        addSpaced(content,text("Bonsai "+BuildConfig.VERSION_NAME+" · lokal auf diesem Gerät",DesignTokens.TYPE_META,MUTED),16);
+        LinearLayout footer=column();footer.setPadding(dp(16),dp(8),dp(16),dp(8));footer.addView(apply);screen.addView(footer);return screen;
     }
-    private void showPerformance() {
-        if(performanceDialog!=null && performanceDialog.isShowing())return;
+    private void labelSpinner(TextView label,Spinner spinner){spinner.setId(View.generateViewId());label.setLabelFor(spinner.getId());spinner.setContentDescription(label.getText());}
+    private void showLicenses(){
+        try(InputStream stream=getAssets().open("third_party_notices.txt")){
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;
+            while((n=stream.read(buffer))!=-1)bytes.write(buffer,0,n);
+            TextView notice=text(new String(bytes.toByteArray(),StandardCharsets.UTF_8),DesignTokens.TYPE_LABEL,TEXT);notice.setTextIsSelectable(true);notice.setPadding(dp(24),dp(16),dp(24),dp(16));
+            ScrollView pane=new ScrollView(this);pane.addView(notice);new AlertDialog.Builder(this).setTitle("Open-Source-Lizenzen").setView(pane).setPositiveButton("Schließen",null).show();
+        }catch(Exception e){Toast.makeText(this,"Lizenzen konnten nicht geöffnet werden. Bitte versuche es erneut.",Toast.LENGTH_LONG).show();}
+    }
+    private void showPerformance(){navigate(2);}
+    private LinearLayout buildPerformancePage(){
         if(app.optimizerReport==null)app.optimizerReport=app.readReport("optimizer.json");
-        performanceDialog=new Dialog(this);performanceDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout panel=column();panel.setPadding(dp(24),dp(12),dp(24),dp(24));panel.setBackground(outline(BG,28));
-        TextView handle=text("━━━━",16,LINE);handle.setGravity(Gravity.CENTER);panel.addView(handle);
-        LinearLayout heading=row();TextView title=text("Mehr aus deinem\nModell holen.",29,TEXT);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));heading.addView(title,new LinearLayout.LayoutParams(0,-2,1));heading.addView(icon("close","Leistungsbereich schließen",v->performanceDialog.dismiss()));panel.addView(heading);
-        TextView badge=text("KERNEL OPTIMIZER / ON DEVICE",10,ACCENT);badge.setLetterSpacing(.13f);badge.setPadding(0,dp(16),0,dp(16));panel.addView(badge);
-        ScrollView details=new ScrollView(this);LinearLayout content=column();details.addView(content);panel.addView(details,new LinearLayout.LayoutParams(-1,0,1));
-        performanceStatus=text("",15,TEXT);performanceStatus.setPadding(0,0,0,dp(12));content.addView(performanceStatus);
-        performanceProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);performanceProgress.setMax(1000);performanceProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));content.addView(performanceProgress,new LinearLayout.LayoutParams(-1,dp(6)));
-        performanceResult=text("",13,MUTED);performanceResult.setTextIsSelectable(true);performanceResult.setLineSpacing(dp(6),1);performanceResult.setPadding(0,dp(20),0,dp(18));content.addView(performanceResult);
-        TextView explanation=text("Findet das schnellste geprüfte Profil für vorhandene Compute-Kernel. Vergleicht Threads und Batchgrößen mit identischer Arbeit; prüft Rechenergebnisse und speichert lokal. Modellpräzision und Kontext bleiben gleich.\n\nBitte das Gerät abkühlen lassen und die App geöffnet halten. Eine Messung kann mehrere Minuten dauern. Bei Erwärmung wird ohne Profilwechsel abgebrochen.",13,MUTED);explanation.setLineSpacing(dp(4),1);content.addView(explanation);
-        TextView benchmark=menuItem("Benchmark & Messbericht  ↗");benchmark.setOnClickListener(v->{performanceDialog.dismiss();showBenchmark();});content.addView(benchmark);
-        TextView export=menuItem("Optimizer-Protokoll exportieren  ↗");export.setOnClickListener(v->{if(app.readReport("optimizer.json")!=null&&!app.busy)startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").putExtra(Intent.EXTRA_TITLE,"bonsai-optimizer.json").addCategory(Intent.CATEGORY_OPENABLE),EXPORT_OPTIMIZER);else Toast.makeText(this,"Noch kein abgeschlossenes Protokoll",Toast.LENGTH_SHORT).show();});content.addView(export);
-        performanceStart=pill("");performanceStart.setTextColor(BG);performanceStart.setBackground(round(ACCENT,18));performanceStart.setOnClickListener(v->{if(app.optimizing)app.cancel();else if(!app.busy)app.optimize(false);});panel.addView(performanceStart);
-        performanceCompare=menuItem("CPU & Vulkan vergleichen  ↗");performanceCompare.setGravity(Gravity.CENTER);performanceCompare.setOnClickListener(v->{if(!app.busy)app.optimize(true);});panel.addView(performanceCompare);
-        performanceDialog.setContentView(panel);Window w=performanceDialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setLayout(-1,Math.round(getResources().getDisplayMetrics().heightPixels*.88f));w.setGravity(Gravity.BOTTOM);w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);w.setDimAmount(.65f);}
-        performanceDialog.show();if(w!=null)w.setLayout(-1,Math.round(getResources().getDisplayMetrics().heightPixels*.88f));updatePerformance();
-        if(ValueAnimator.areAnimatorsEnabled()){panel.setTranslationY(dp(60));panel.setAlpha(0);panel.animate().translationY(0).alpha(1).setDuration(280).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();}
+        LinearLayout panel=column();ScrollView details=new ScrollView(this);details.setFillViewport(true);LinearLayout content=column();content.setPadding(dp(24),dp(16),dp(24),dp(24));details.addView(content);panel.addView(details,new LinearLayout.LayoutParams(-1,0,1));
+        addSectionTitle(content,"Passend zu deinem Gerät.","Finde mit einer lokalen Messung die schnellste geprüfte Einstellung.");
+        LinearLayout resultCard=card();performanceStatus=text("",DesignTokens.TYPE_BODY,TEXT);resultCard.addView(performanceStatus);
+        performanceProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);performanceProgress.setMax(1000);performanceProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));addSpaced(resultCard,performanceProgress,16);
+        performanceResult=text("",DesignTokens.TYPE_BODY,MUTED);performanceResult.setTextIsSelectable(true);addSpaced(resultCard,performanceResult,16);addSpaced(content,resultCard,24);
+        addSpaced(content,text("So funktioniert die Messung",DesignTokens.TYPE_TITLE,TEXT),24);
+        addSpaced(content,text("1. Gerät abkühlen lassen.\n2. Optimierung starten und die App geöffnet halten.\n3. Das schnellste geprüfte Profil wird gespeichert.",DesignTokens.TYPE_BODY,MUTED),12);
+        addSpaced(content,text("Die Messung kann mehrere Minuten dauern. Bei Überhitzung wird sie ohne Profilwechsel beendet. Modellpräzision und Kontext bleiben gleich.",DesignTokens.TYPE_LABEL,MUTED),16);
+        TextView benchmark=menuItem("Benchmark öffnen");benchmark.setOnClickListener(v->showBenchmark());addSpaced(content,benchmark,16);
+        TextView export=menuItem("Messprotokoll exportieren");performanceExport=export;export.setEnabled(app.readReport("optimizer.json")!=null&&!app.busy);export.setOnClickListener(v->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").putExtra(Intent.EXTRA_TITLE,"bonsai-optimizer.json").addCategory(Intent.CATEGORY_OPENABLE),EXPORT_OPTIMIZER));content.addView(export);
+        performanceCompare=menuItem("CPU und Vulkan vergleichen");performanceCompare.setOnClickListener(v->{if(!app.busy)app.optimize(true);});content.addView(performanceCompare);
+        if(!BuildConfig.VULKAN_BUILD)content.addView(text("Vulkan ist in diesem Build nicht verfügbar.",DesignTokens.TYPE_META,MUTED));
+        LinearLayout footer=column();footer.setPadding(dp(16),dp(8),dp(16),dp(8));performanceStart=primary("");performanceStart.setOnClickListener(v->{if(app.optimizing)app.cancel();else if(!app.busy&&!app.loaded)settings();else if(!app.busy)app.optimize(false);});footer.addView(performanceStart);panel.addView(footer);return panel;
     }
-    private void updatePerformance() {
-        if(performanceDialog==null || !performanceDialog.isShowing())return;
-        performanceStatus.setText(app.optimizing?app.optimizingProgress:app.loaded?"● "+app.backend+" · bereit":"Modell zuerst laden");
+    private void updatePerformance(){
+        if(activeScreen!=2||performanceStatus==null)return;
+        performanceStatus.setText(app.optimizing?app.optimizingProgress:app.loaded?app.backend+" · bereit zur Messung":"Zuerst ein Modell laden");
         performanceProgress.setVisibility(app.optimizing?View.VISIBLE:View.GONE);performanceProgress.setProgress((int)(app.optimizingFraction*1000));
-        JSONObject r=app.optimizerReport;
-        String result=app.optimized()?"Dein gemessenes Profil ist aktiv.":"Manuelles Profil · noch nicht für diese Konfiguration optimiert.";
-        if(r!=null)result+="\n\n"+r.optString("winner_label")+String.format(Locale.GERMAN,"\nKürzere Laufzeit im Testworkload: %.1f %%\n",r.optDouble("estimated_gain_percent"))+"Gilt für den gemessenen Prompt und die aktuelle Temperatur. Andere Chatlängen können sich anders verhalten.";
-        result+="\n\n"+app.threads()+" Decode-Threads · "+app.batchThreads()+" Prefill-Threads\nMicrobatch "+app.microBatch()+" · Kontext "+app.context();
-        performanceResult.setText(result);performanceStart.setText(app.optimizing?"Optimierung abbrechen":"Dieses Backend optimieren  ↗");performanceStart.setEnabled(app.optimizing||(!app.busy&&app.loaded));performanceStart.setAlpha(performanceStart.isEnabled()?1:.4f);
-        performanceCompare.setEnabled(!app.busy&&app.loaded&&BuildConfig.VULKAN_BUILD);performanceCompare.setAlpha(performanceCompare.isEnabled()?1:.4f);
+        JSONObject r=app.optimizerReport;String result=app.optimized()?"Dein gemessenes Profil ist aktiv.":"Noch kein aktives Messprofil. Die App verwendet deine manuellen Einstellungen.";
+        if(r!=null)result+="\n\nLetzte Messung: "+r.optString("winner_label")+String.format(Locale.GERMAN,"\n%.1f %% kürzere Laufzeit im Test.\n",r.optDouble("estimated_gain_percent"))+"Das Ergebnis gilt für den gemessenen Prompt und die damalige Temperatur.";
+        result+="\n\n"+app.threads()+" CPU-Threads · "+app.context()+" Tokens Kontext";performanceResult.setText(result);
+        performanceStart.setText(app.optimizing?"Optimierung abbrechen":!app.loaded?"Modell öffnen":"Optimierung starten");performanceStart.setEnabled((app.optimizing&&!app.cancelled)||!app.busy);
+        performanceCompare.setEnabled(!app.busy&&app.loaded&&BuildConfig.VULKAN_BUILD);
+        performanceExport.setEnabled(!app.busy&&app.optimizerReport!=null);
     }
 
     private void showModelCheck() {
@@ -426,21 +442,39 @@ public final class MainActivity extends Activity {
     private Spinner spinner(String[] values,int selected) {
         Spinner s=new Spinner(this); ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,values);
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); s.setAdapter(a); s.setSelection(selected);
-        s.setMinimumHeight(dp(48)); return s;
+        s.setMinimumHeight(dp(48));s.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ACCENT));s.setPadding(dp(12),dp(8),dp(12),dp(8));return s;
     }
-    private TextView navItem(String s) { TextView t=text(s,12,MUTED);t.setGravity(Gravity.CENTER);t.setMinHeight(dp(48));t.setPadding(dp(4),dp(10),dp(4),dp(10));return t; }
-    private GradientDrawable outline(int color,float radius) { GradientDrawable d=round(color,radius);d.setStroke(dp(1),LINE);return d; }
-    private TextView settingLabel(String s) { TextView t=text(s,12,MUTED); t.setPadding(0,dp(14),0,dp(6)); return t; }
-    private TextView menuItem(String s) { TextView t=text(s,15,TEXT); t.setGravity(Gravity.CENTER_VERTICAL); t.setMinHeight(dp(52)); t.setPadding(dp(12),dp(10),dp(12),dp(10)); t.setBackground(round(0x00212121,12)); return t; }
-    private TextView pill(String s) { TextView t=text(s,14,TEXT); t.setPadding(dp(20),dp(14),dp(20),dp(14)); t.setBackground(round(PANEL,26)); t.setGravity(Gravity.CENTER); t.setMinHeight(dp(48)); return t; }
-    private LinearLayout column() { LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); return l; }
-    private LinearLayout row() { LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.HORIZONTAL); l.setGravity(Gravity.CENTER_VERTICAL); return l; }
-    private TextView text(String s,float size,int color) { TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color); return t; }
-    private GradientDrawable round(int color,float radius) { GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius)); return d; }
-    private int dp(float v) { return Math.round(v*getResources().getDisplayMetrics().density); }
+    private TextView navItem(String s){TextView t=menuItem(s);t.setTextSize(DesignTokens.TYPE_LABEL);t.setGravity(Gravity.CENTER);t.setPadding(dp(4),dp(12),dp(4),dp(12));return t;}
+    private GradientDrawable outline(int color,float radius){GradientDrawable d=round(color,radius);d.setStroke(dp(1),LINE);return d;}
+    private TextView settingLabel(String s){TextView t=text(s,DesignTokens.TYPE_LABEL,MUTED);t.setPadding(0,dp(16),0,dp(8));return t;}
+    private TextView menuItem(String s){
+        TextView t=new ActionText();t.setText(s);t.setTextSize(DesignTokens.TYPE_BODY);t.setTextColor(actionColors(TEXT));t.setGravity(Gravity.CENTER_VERTICAL);t.setMinHeight(dp(DesignTokens.TOUCH_TARGET));t.setPadding(dp(12),dp(12),dp(12),dp(12));t.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));return t;
+    }
+    private TextView primary(String s){TextView t=menuItem(s);t.setTypeface(null,Typeface.BOLD);t.setGravity(Gravity.CENTER);t.setTextColor(actionColors(tokens.onPrimary));t.setBackground(interactiveBackground(tokens.action,DesignTokens.RADIUS_SMALL));return t;}
+    private android.content.res.ColorStateList actionColors(int normal){return new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{MUTED,normal});}
+    private android.graphics.drawable.Drawable interactiveBackground(int fill,int radius){
+        android.graphics.drawable.StateListDrawable states=new android.graphics.drawable.StateListDrawable();
+        states.addState(new int[]{-android.R.attr.state_enabled},round(PANEL,radius));
+        GradientDrawable focus=round(fill,radius);focus.setStroke(dp(2),fill==tokens.action?tokens.onPrimary:ACCENT);states.addState(new int[]{android.R.attr.state_focused},focus);
+        GradientDrawable hovered=round(fill,radius);hovered.setStroke(dp(1),fill==tokens.action?tokens.onPrimary:ACCENT);states.addState(new int[]{android.R.attr.state_hovered},hovered);
+        states.addState(new int[]{},round(fill,radius));
+        return new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf((ACCENT&0x00ffffff)|0x33000000),states,round(Color.WHITE,radius));
+    }
+    private final class ActionText extends TextView{
+        ActionText(){super(MainActivity.this);setFocusable(true);setClickable(true);setLineSpacing(0,1.2f);}
+        @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
+    }
+    private LinearLayout card(){LinearLayout c=column();c.setPadding(dp(24),dp(24),dp(24),dp(24));c.setBackground(round(PANEL,DesignTokens.RADIUS_CARD));return c;}
+    private void addSpaced(LinearLayout parent,View child,int top){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(top);parent.addView(child,p);}
+    private void addSectionTitle(LinearLayout parent,String heading,String description){TextView h=text(heading,DesignTokens.TYPE_HERO,TEXT);h.setTypeface(null,Typeface.BOLD);h.setLineSpacing(0,1.1f);h.setAccessibilityHeading(true);parent.addView(h);addSpaced(parent,text(description,DesignTokens.TYPE_BODY,MUTED),16);}
+    private LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l;}
+    private LinearLayout row(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.HORIZONTAL);l.setGravity(Gravity.CENTER_VERTICAL);return l;}
+    private TextView text(String s,float size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setLineSpacing(0,size>=16?1.4f:1.3f);return t;}
+    private GradientDrawable round(int color,float radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
+    private int dp(float v){return Math.round(v*getResources().getDisplayMetrics().density);}
     private IconButton icon(String kind,String description,View.OnClickListener listener) {
         IconButton v=new IconButton(kind); v.setContentDescription(description); v.setOnClickListener(listener);
-        v.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48))); v.setFocusable(true); return v;
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));v.setFocusable(true);v.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));return v;
     }
     private final class IconButton extends View {
         String kind;
@@ -449,19 +483,19 @@ public final class MainActivity extends Activity {
         final Path editPath=new Path();
         IconButton(String kind) { super(MainActivity.this); this.kind=kind; setMinimumHeight(dp(48)); setMinimumWidth(dp(48)); }
         @Override public boolean performClick() { return super.performClick(); }
-        @Override public boolean onTouchEvent(MotionEvent event) {
-            if(isEnabled() && ValueAnimator.areAnimatorsEnabled()) {
-                if(event.getActionMasked()==MotionEvent.ACTION_DOWN)animate().scaleX(.88f).scaleY(.88f).setDuration(100).start();
-                else if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL)animate().scaleX(1).scaleY(1).setDuration(180).start();
-            }
-            return super.onTouchEvent(event);
+        @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
+        private boolean pressedBefore;
+        @Override protected void drawableStateChanged(){
+            super.drawableStateChanged();
+            boolean down=isEnabled()&&isPressed();
+            if(down!=pressedBefore){pressedBefore=down;UiMotion.press(this,down);}
         }
         @Override protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             canvas.save(); canvas.translate(getWidth()/2f,getHeight()/2f); canvas.scale(dp(1),dp(1));
             paint.setColor(ACCENT); paint.setStrokeWidth(1.8f); paint.setStyle(Paint.Style.STROKE); paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
             if(kind.equals("send") || kind.equals("stop")) {
-                paint.setStyle(Paint.Style.FILL); canvas.drawCircle(0,0,18,paint); paint.setColor(BG);
+                paint.setColor(tokens.action);paint.setStyle(Paint.Style.FILL); canvas.drawCircle(0,0,18,paint); paint.setColor(tokens.onPrimary);
                 if(kind.equals("stop")) canvas.drawRoundRect(stopBounds,1,1,paint);
                 else { paint.setStyle(Paint.Style.STROKE); canvas.drawLine(0,8,0,-8,paint); canvas.drawLine(0,-8,-6,-2,paint); canvas.drawLine(0,-8,6,-2,paint); }
             } else if(kind.equals("close")) {

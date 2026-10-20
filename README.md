@@ -4,6 +4,12 @@ Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu ges
 
 [APK und Projektarchive herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.3.0)
 
+## UI-Überarbeitung im aktuellen Quellcode
+
+Die Oberfläche verwendet Burgunderrot und Pflaume, folgt dem System-Theme und bietet drei feste Tabs: **Chat**, **Modell**, **Leistung**. Modellimport und Einstellungen stehen unter **Modell**, Benchmark und Optimierung unter **Leistung**. Der Chatverlauf ist über das Menü links oben erreichbar. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
+
+Kurze native Übergänge berücksichtigen abgeschaltete Systemanimationen. Es gibt keine dekorative Dauerschleife. „Neu generieren“ speichert eine Antwortvariante als eigenen Chat und erhält den ursprünglichen Verlauf. Die unten verlinkte Veröffentlichung 0.3.0 enthält diese Quellcode-Überarbeitung noch nicht.
+
 ## Stand
 
 Version **0.3.0** enthält CPU/Vulkan-Auswahl, Animationen, Leistungsbereich, Kernel-Autotuner und eine differentielle Rechenprüfung gegen einen konservativen CPU-Pfad. Details: [UPDATE-0.3.0.md](UPDATE-0.3.0.md). Die App bleibt vollständig offline. Das zuvor gemeldete Zeichensalat-Problem auf dem A55 ist auf der x86-Build-CPU mit der offiziellen PQ2_0-Datei bisher nicht reproduziert; eine erfolgreiche Desktop-Prüfung ist kein A55-Nachweis. Über **Modelltest ohne Chatverlauf** lassen sich unabhängige Antworten, Modellmetadaten und SHA256 lokal prüfen und kopieren.
@@ -80,13 +86,13 @@ Ternary-Bonsai-2-4B-PQ2_0.gguf
 
 Die Model Card nennt etwa 1,15 GB. **Nicht** mit dem älteren `Ternary-Bonsai-4B` ohne `-2-` verwechseln. Vision-Projektor, MTP- und DFlash-Dateien werden für diesen ersten Textchat nicht benötigt.
 
-In der App **Bonsai-Modell auswählen** oder **+ → GGUF-Modell importieren** benutzen. Während des Imports werden Modell- und App-Speicher zeitweise beide benötigt. Die Originaldatei kann nach erfolgreichem Import außerhalb der App gelöscht werden. Eine Deinstallation löscht die private Modellkopie und die Chats.
+Im aktuellen Quellcode **Modell importieren** auf dem Startscreen oder im Tab **Modell** benutzen. Während des Imports werden Modell- und App-Speicher zeitweise beide benötigt. Die Originaldatei kann nach erfolgreichem Import außerhalb der App gelöscht werden. Eine Deinstallation löscht die private Modellkopie und die Chats.
 
-Falls der Ladevorgang scheitert: andere Apps schließen und **Modell und Einstellungen → 2.048 Tokens → Übernehmen**, danach erneut laden. Die Größe der GGUF-Datei ist nicht der gesamte RAM-Bedarf. Android kann die App bei Speichermangel ohne auffangbare Fehlermeldung beenden.
+Falls der Ladevorgang scheitert: andere Apps schließen und **Modell → Kontextlänge → 2.048 Tokens → Einstellungen speichern**, danach erneut laden. Die Größe der GGUF-Datei ist nicht der gesamte RAM-Bedarf. Android kann die App bei Speichermangel ohne auffangbare Fehlermeldung beenden.
 
 ## Benchmark
 
-Über **Seitenmenü → Benchmark** starten. Die Messung verwendet keinen Chatverlauf und speichert die Testausgabe nicht als Chat.
+Über **Leistung → Benchmark öffnen** starten. Die Messung verwendet keinen Chatverlauf und speichert die Testausgabe nicht als Chat.
 
 - Ein nicht gewerteter Aufwärmdurchlauf mit bis zu 32 Tokens.
 - Drei Messläufe mit identischem deutschem Prompt, Seed 42, deaktiviertem Thinking und jeweils maximal 128 Ausgabetokens.
