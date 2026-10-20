@@ -1,0 +1,57 @@
+{
+  "version": "0.4.0",
+  "package": "de.bonsai.offline.debug",
+  "version_code": 7,
+  "abi": "arm64-v8a",
+  "backends": [
+    "CPU"
+  ],
+  "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
+  "apk_bytes": 9196100,
+  "apk_sha256": "04a7db2bc4a6d59405ad178dc8d432ad1910a4577bc230d863203e26cdf58e43",
+  "signing_certificate_sha256": "5e4539a95f5f03b79cbca73e5cc4adc66940bc53aad8c33f52d33032979e2865",
+  "compatible_update_signature": false,
+  "signing_note": "Local test build uses a new debug key. Updating an existing installation requires its original signing key.",
+  "zipalign_16k_verified": true,
+  "unit_tests_passed": 26,
+  "lint_errors": 0,
+  "host_real_pq2_jni_smoke_passed": true,
+  "host_scalar_pq2_math_passed": true,
+  "host_dense_kernel_checks_passed": true,
+  "arm_emulated_dense_kernel_checks_passed": true,
+  "a55_tested": false,
+  "a55_gibberish_reproduced": false,
+  "exynos_1480_npu_supported": false,
+  "permissions": [
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+    "android.permission.WAKE_LOCK",
+    "android.permission.POST_NOTIFICATIONS"
+  ],
+  "arm_emulated_real_model_smoke_passed": true,
+  "host_real_q2_jni_smoke_passed": true,
+  "host_scalar_q2_jni_smoke_passed": true,
+  "arm_emulated_real_q2_smoke_passed": true,
+  "cpu_compatibility_default": false,
+  "official_model_integrity_checks": true,
+  "merged_release_revision": "a3123671301d61412b97f47d19116005e54d0753",
+  "verified_q2_model": {
+    "revision": "8d6557168168f91ea6697a4a49ed2ef622b53adb",
+    "bytes": 1212103520,
+    "sha256": "64a5183b44921bdb5ac4a6f5f92007821d6ebe5c66997d3c147fd214ab9433d4"
+  },
+  "ci_cpu_vulkan_release": {
+    "source_commit": "2bb08b43ccb068460e8c9f1a00d0194748d6c32d",
+    "run_id": 39196937446,
+    "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39196937446",
+    "backends": [
+      "CPU",
+      "Vulkan"
+    ],
+    "unsigned": true,
+    "unit_tests_passed": 26,
+    "apk_bytes": 67976300,
+    "apk_sha256": "fbc14cd3eb31da22414a86c6760b41efe71a39a772489f36dcf87605044617cd",
+    "zipalign_16k_verified": true
+  }
+}

@@ -5,6 +5,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.view.HapticFeedbackConstants;
 import android.widget.ProgressBar;
+import android.widget.CheckBox;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Canvas;
@@ -60,6 +61,9 @@ public final class MainActivity extends Activity {
     private TextView subtitle, title, state, liveAnswer, liveDetail;
     private IconButton send, newChat;
     private TextView performanceStatus, performanceResult, performanceStart, performanceCompare, performanceExport;
+    private AlertDialog errorDialog;
+    private BonsaiApp.ModelApproval shownModelApproval;
+    private AlertDialog chatActionsDialog;
     private ProgressBar performanceProgress;
     private View drawerPanel;
     private boolean drawerClosing;
@@ -132,9 +136,12 @@ public final class MainActivity extends Activity {
         composer.addView(input,new LinearLayout.LayoutParams(0,-2,1));
         send=icon("send","Nachricht senden",v->{
             if(app.busy){app.cancel();return;}
-            String value=input.getText().toString().trim();
-            if(value.length()>32000){showInputError();return;}
-            if(!value.isEmpty()&&app.loaded){v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);autoScroll=true;pendingPrompt=value;app.send(value);if(app.busy)input.setText("");}
+            String draft=input.getText().toString(),value=draft.trim();
+            if(draft.length()>32000){showInputError();return;}
+            if(!value.isEmpty()&&app.loaded){
+                v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                if(app.send(value)){pendingPrompt=draft;input.setText("");autoScroll=true;}
+            }
         });composer.addView(send);composerGroup.addView(composer);
         inputError=text("",DesignTokens.TYPE_LABEL,tokens.error);inputError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);composerGroup.addView(inputError);
         input.addTextChangedListener(new TextWatcher(){
@@ -168,11 +175,27 @@ public final class MainActivity extends Activity {
         updatePerformance();
     }
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);}
-    @Override protected void onDestroy(){app.main.removeCallbacks(progressTick);if(app.listener==uiListener)app.listener=null;super.onDestroy();}
-    @Override protected void onStop(){super.onStop();if(!isChangingConfigurations()&&app.busy)app.cancel();}
+    @Override protected void onDestroy(){
+        app.main.removeCallbacks(progressTick);
+        if(errorDialog!=null)errorDialog.dismiss();
+        if(chatActionsDialog!=null)chatActionsDialog.dismiss();
+        if(app.listener==uiListener)app.listener=null;
+        super.onDestroy();
+    }
+    @Override protected void onStart(){super.onStart();app.listener=uiListener;render();}
+    @Override protected void onStop(){
+        app.main.removeCallbacks(progressTick);
+        if(app.listener==uiListener)app.listener=null;
+        super.onStop();
+    }
     @Override public void onBackPressed(){if(drawer!=null)closeDrawer();else if(activeScreen!=0)navigate(0);else super.onBackPressed();}
 
     private void render(){
+        if(app.busy && android.os.Build.VERSION.SDK_INT>=33 && !app.prefs.getBoolean("notificationsAsked",false)) {
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();
+            if(checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},20);
+        }
         if(app.busy)getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if(!app.busy&&!pendingPrompt.isEmpty()){
@@ -196,6 +219,7 @@ public final class MainActivity extends Activity {
             ChatStore.Message m=app.messages.get(app.messages.size()-1);liveAnswer.setText(m.text.isEmpty()?"Bonsai denkt nach …":m.text);
             if(liveDetail!=null)liveDetail.setText(m.detail);
         }
+        if(app.modelApproval!=null&&!app.busy)showError();
         if(autoScroll&&!app.messages.isEmpty())scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));
         if(app.modelCheckFinished&&!app.busy){app.modelCheckFinished=false;showModelCheck();}
     }
@@ -214,13 +238,33 @@ public final class MainActivity extends Activity {
         }else{
             busySince=0;state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);statusProgress.setVisibility(View.GONE);statusAction.setEnabled(true);
             boolean error=!app.error.isEmpty();state.setText(error?"Vorgang nicht abgeschlossen. Öffne die Details für den nächsten Schritt.":"Sicheres CPU-Profil ist aktiv.");state.setTextColor(error?tokens.error:MUTED);
-            statusAction.setText("Details");statusAction.setOnClickListener(v->new AlertDialog.Builder(this).setTitle(error?"Vorgang nicht abgeschlossen":"Rechenprüfung").setMessage(error?app.error+"\n\nPrüfe das Modell und die Einstellungen. Danach kannst du den Vorgang erneut starten.":app.backendNotice).setPositiveButton("Schließen",null).setNeutralButton("Modell öffnen",(d,w)->settings()).show());
+            statusAction.setText("Details");statusAction.setOnClickListener(v->{if(error)showError();else new AlertDialog.Builder(this).setTitle("Rechenprüfung").setMessage(app.backendNotice).setPositiveButton("Schließen",null).setNeutralButton("Modell öffnen",(d,w)->settings()).show();});
         }
         boolean needsModel=!app.loaded&&!app.messages.isEmpty();
         if(!app.busy&&app.error.isEmpty()&&app.backendNotice.isEmpty()&&needsModel){
             state.setText("Lade dein Modell, um diesen Chat fortzusetzen.");state.setTextColor(MUTED);statusAction.setText("Modell öffnen");statusAction.setOnClickListener(v->settings());
         }
         statusCard.setVisibility(app.busy||!app.error.isEmpty()||!app.backendNotice.isEmpty()||needsModel?View.VISIBLE:View.GONE);
+    }
+    private void showError() {
+        BonsaiApp.ModelApproval request=app.modelApproval;
+        if(errorDialog!=null && errorDialog.isShowing()) {
+            if(shownModelApproval==request) return;
+            errorDialog.dismiss();
+        }
+        shownModelApproval=request;
+        AlertDialog.Builder builder=new AlertDialog.Builder(this);
+        if(request!=null) {
+            builder.setTitle("Abweichende Prüfsumme").setMessage(request.mismatch.getMessage())
+                .setPositiveButton("Trotzdem fortfahren",(d,w)->app.acceptModel(request))
+                .setNegativeButton("Abbrechen",(d,w)->app.declineModel(request))
+                .setOnCancelListener(d->app.declineModel(request));
+        } else builder.setTitle("Vorgang nicht abgeschlossen")
+            .setMessage(app.error+"\n\nPrüfe das Modell und die Einstellungen. Danach kannst du den Vorgang erneut starten.")
+            .setPositiveButton("Schließen",null).setNeutralButton("Modell öffnen",(d,w)->settings());
+        errorDialog=builder.create();
+        errorDialog.setOnDismissListener(d->{if(errorDialog==d) errorDialog=null;});
+        errorDialog.show();
     }
     private void updateSend(){
         if(send==null||input==null)return;
@@ -273,8 +317,8 @@ public final class MainActivity extends Activity {
 
     private void pickModel() {
         if(app.busy) return;
-        new AlertDialog.Builder(this).setTitle("Bonsai-Modell importieren")
-            .setMessage("Wähle die lokale Datei Ternary-Bonsai-2-4B-PQ2_0.gguf. Die App kopiert sie in ihren privaten Speicher. Dafür werden zusätzlich etwa 1,15 GB benötigt.\n\nEin bestehendes Modell wird erst nach vollständigem Import ersetzt.")
+        new AlertDialog.Builder(this).setTitle("GGUF-Modell importieren")
+            .setMessage("Wähle eine lokale GGUF-Datei. Die Inferenz-Engine muss Architektur und Quantisierung des Modells unterstützen; außerdem muss genügend RAM frei sein.\n\nDie App legt eine private Kopie an und benötigt dafür zusätzlichen Speicher in Größe der Datei. Ein bestehendes Modell wird erst nach vollständigem Import und gegebenenfalls deiner Bestätigung ersetzt.")
             .setNegativeButton("Abbrechen",null).setPositiveButton("Datei auswählen",(d,w)-> {
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
                 startActivityForResult(intent,IMPORT);
@@ -298,6 +342,9 @@ public final class MainActivity extends Activity {
         }
     }
     private void showDrawer() {
+        showDrawer(false);
+    }
+    private void showDrawer(boolean archived) {
         if(drawer!=null) return;
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
         drawer=new FrameLayout(this); drawer.setBackgroundColor(0x99000000); drawer.setOnClickListener(v->closeDrawer());
@@ -306,23 +353,56 @@ public final class MainActivity extends Activity {
         drawer.addView(panel,bounds);
         TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setPadding(dp(10),0,0,dp(24)); panel.addView(brand);
         TextView fresh=menuItem("Neuen Chat starten"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);}); panel.addView(fresh);
-        TextView label=text("Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); panel.addView(label);
+        TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); panel.addView(label);
         ScrollView history=new ScrollView(this); LinearLayout entries=column(); history.addView(entries);
-        for(ChatStore.Chat c:app.store.chats()) {
+        for(ChatStore.Chat c:app.store.chats(archived)) {
             TextView item=menuItem(c.title); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
             if(c.id==app.currentChat) item.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
-            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");navigate(0);}); entries.addView(item);
+            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");navigate(0);});
+            item.setOnLongClickListener(v->{showChatActions(c,archived);return true;}); entries.addView(item);
         }
         panel.addView(history,new LinearLayout.LayoutParams(-1,0,1));
+        TextView archive=menuItem(archived?"Zurück zu deinen Chats":"Archivierte Chats");
+        archive.setOnClickListener(v->refreshDrawer(!archived));panel.addView(archive);
         TextView privacy=text("Alle Chats bleiben auf diesem Gerät.",14,MUTED); privacy.setPadding(dp(12),dp(16),0,0); panel.addView(privacy);
         TextView close=menuItem("Verlauf schließen");close.setOnClickListener(v->closeDrawer());panel.addView(close);
-        if(app.store.chats().isEmpty())entries.addView(text("Noch keine Chats. Deine Gespräche erscheinen hier, sobald du eine Nachricht sendest.",16,MUTED));
+        if(app.store.chats(archived).isEmpty())entries.addView(text(archived?"Noch keine archivierten Chats.":"Noch keine Chats. Deine Gespräche erscheinen hier, sobald du eine Nachricht sendest.",16,MUTED));
         TextView delete=menuItem("Aktuellen Chat löschen");delete.setTextColor(tokens.error);delete.setEnabled(!app.busy&&app.currentChat!=0);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Chat dauerhaft löschen?").setMessage("Alle Nachrichten dieses Chats werden von diesem Gerät gelöscht.").setNegativeButton("Behalten",null).setPositiveButton("Chat löschen",(d,w)->{app.deleteCurrentChat();closeDrawer();navigate(0);}).show());panel.addView(delete);
         page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);page.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
         root.addView(drawer,new FrameLayout.LayoutParams(-1,-1));close.requestFocus();
         drawerPanel=panel; drawerClosing=false;
         UiMotion.enter(panel,-bounds.width,0);
 
+    }
+    private void refreshDrawer(boolean archived) {
+        if(drawer==null || drawerClosing)return;
+        drawerPanel.animate().cancel(); root.removeView(drawer); drawer=null;
+        showDrawer(archived);
+    }
+    private void showChatActions(ChatStore.Chat selected,boolean archived) {
+        if(app.busy)return;
+        chatActionsDialog=new AlertDialog.Builder(this).setTitle(selected.title)
+            .setItems(new String[]{"Löschen",archived?"Wiederherstellen":"Archivieren","Abbrechen"},(dialog,which)->{
+                if(which==0) {
+                    chatActionsDialog=new AlertDialog.Builder(this).setTitle("Chat löschen?")
+                        .setMessage("Dieser Chat wird dauerhaft von diesem Gerät gelöscht.")
+                        .setNegativeButton("Abbrechen",null)
+                        .setPositiveButton("Löschen",(d,w)->{
+                            if(app.busy)return;
+                            boolean current=app.currentChat==selected.id;
+                            app.deleteChat(selected.id);
+                            if(current)input.setText("");
+                            refreshDrawer(archived);
+                        }).create();
+                    chatActionsDialog.setCanceledOnTouchOutside(true); chatActionsDialog.show();
+                } else if(which==1 && !app.busy) {
+                    boolean current=app.currentChat==selected.id;
+                    app.archiveChat(selected.id,!archived);
+                    if(current && !archived)input.setText("");
+                    refreshDrawer(archived);
+                }
+            }).create();
+        chatActionsDialog.setCanceledOnTouchOutside(true); chatActionsDialog.show();
     }
     private void closeDrawer() {
         if(drawer==null || drawerClosing)return;
@@ -342,20 +422,28 @@ public final class MainActivity extends Activity {
         if(app.modelFile().isFile()){
             TextView replace=menuItem("Anderes Modell importieren");replace.setEnabled(!app.busy);replace.setOnClickListener(v->pickModel());addSpaced(content,replace,8);
         }
+        TextView download=menuItem("Beispielmodell: Bonsai 2 4B herunterladen ↗");
+        download.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(ModelIntegrity.downloadUrl())))); content.addView(download);
+        content.addView(settingLabel("Du kannst auch andere GGUF-Modelle über die Dateiauswahl importieren. Unterstützte Architektur, Quantisierung und verfügbarer RAM bestimmen, ob ein Modell geladen werden kann."));
         TextView section=text("Antworten anpassen",DesignTokens.TYPE_TITLE,TEXT);section.setAccessibilityHeading(true);addSpaced(content,section,24);
         TextView ctx=settingLabel("Kontextlänge");content.addView(ctx);Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1);labelSpinner(ctx,context);content.addView(context);
         TextView threadLabel=settingLabel("CPU-Threads");content.addView(threadLabel);Spinner threads=spinner(new String[]{"2","4","6","8"},app.threads()/2-1);labelSpinner(threadLabel,threads);content.addView(threads);
         TextView lengthLabel=settingLabel("Maximale Antwortlänge");content.addView(lengthLabel);Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2);labelSpinner(lengthLabel,length);content.addView(length);
         TextView engineLabel=settingLabel("Rechenbackend");content.addView(engineLabel);Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0);labelSpinner(engineLabel,engine);content.addView(engine);
+        CheckBox compatible=new CheckBox(this); compatible.setText("CPU-Kompatibilitätsmodus");
+        compatible.setTextColor(TEXT); compatible.setChecked(app.prefs.getBoolean("cpuCompatibility",false)); compatible.setEnabled(!app.busy); content.addView(compatible);
+        content.addView(settingLabel("Bei Zeichensalat: CPU und Kompatibilitätsmodus wählen, übernehmen und einen neuen Chat starten. Der Modus nutzt skalare Bonsai-Quantisierungskernel und kann langsamer sein."));
+        content.addView(settingLabel("NPU: Für Bonsai-GGUF auf dem Exynos 1480 derzeit nicht verfügbar."));
         for(Spinner field:new Spinner[]{context,threads,length,engine})field.setEnabled(!app.busy);
-        addSpaced(content,text("Mehr Kontext benötigt mehr Arbeitsspeicher. Änderungen an Kontext, Threads oder Backend laden ein vorhandenes Modell neu.",DesignTokens.TYPE_LABEL,MUTED),16);
+        addSpaced(content,text("Mehr Kontext benötigt mehr Arbeitsspeicher. Änderungen an Kontext, Threads, Backend oder Kompatibilitätsmodus laden ein vorhandenes Modell neu.",DesignTokens.TYPE_LABEL,MUTED),16);
         TextView apply=primary(app.busy?"Vorgang läuft …":!app.modelFile().isFile()?"Modell importieren":app.loaded?"Einstellungen speichern":"Modell laden");apply.setEnabled(!app.busy);
         apply.setOnClickListener(v->{
             if(app.busy)return;
             int c=new int[]{2048,4096,8192}[context.getSelectedItemPosition()],t=new int[]{2,4,6,8}[threads.getSelectedItemPosition()],l=new int[]{128,256,512,1024,2048}[length.getSelectedItemPosition()];boolean gpu=engine.getSelectedItemPosition()==1;
-            boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu();
+            boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu()||compatible.isChecked()!=app.prefs.getBoolean("cpuCompatibility",false);
             if(changed)app.prefs.edit().remove("optimizedFor").remove("batchThreads").remove("microBatch").apply();
-            app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).apply();
+            app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).putBoolean("cpuCompatibility",compatible.isChecked()).apply();
+            if(compatible.isChecked()&&!gpu)app.prefs.edit().putInt("microBatch",1).apply();
             if(!app.modelFile().isFile())pickModel();else if(changed||!app.loaded)app.loadModel();else Toast.makeText(this,"Einstellungen gespeichert",Toast.LENGTH_SHORT).show();
         });
         if(app.loaded){TextView unload=menuItem("Modell entladen und RAM freigeben");unload.setEnabled(!app.busy);unload.setOnClickListener(v->app.unloadModel());addSpaced(content,unload,16);}
@@ -382,8 +470,8 @@ public final class MainActivity extends Activity {
         performanceProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);performanceProgress.setMax(1000);performanceProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));addSpaced(resultCard,performanceProgress,16);
         performanceResult=text("",DesignTokens.TYPE_BODY,MUTED);performanceResult.setTextIsSelectable(true);addSpaced(resultCard,performanceResult,16);addSpaced(content,resultCard,24);
         addSpaced(content,text("So funktioniert die Messung",DesignTokens.TYPE_TITLE,TEXT),24);
-        addSpaced(content,text("1. Gerät abkühlen lassen.\n2. Optimierung starten und die App geöffnet halten.\n3. Das schnellste geprüfte Profil wird gespeichert.",DesignTokens.TYPE_BODY,MUTED),12);
-        addSpaced(content,text("Die Messung kann mehrere Minuten dauern. Bei Überhitzung wird sie ohne Profilwechsel beendet. Modellpräzision und Kontext bleiben gleich.",DesignTokens.TYPE_LABEL,MUTED),16);
+        addSpaced(content,text("1. Optimierung bei jedem Temperaturstatus starten.\n2. Die Messung läuft auch im Hintergrund weiter.\n3. Das schnellste geprüfte Profil wird gespeichert.",DesignTokens.TYPE_BODY,MUTED),12);
+        addSpaced(content,text("Die Messung kann mehrere Minuten dauern. Temperatur und Drosselung beeinflussen die Messwerte; Androids Geräteschutz bleibt aktiv. Modellpräzision und Kontext bleiben gleich.",DesignTokens.TYPE_LABEL,MUTED),16);
         TextView benchmark=menuItem("Benchmark öffnen");benchmark.setOnClickListener(v->showBenchmark());addSpaced(content,benchmark,16);
         TextView export=menuItem("Messprotokoll exportieren");performanceExport=export;export.setEnabled(app.readReport("optimizer.json")!=null&&!app.busy);export.setOnClickListener(v->startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").putExtra(Intent.EXTRA_TITLE,"bonsai-optimizer.json").addCategory(Intent.CATEGORY_OPENABLE),EXPORT_OPTIMIZER));content.addView(export);
         performanceCompare=menuItem("CPU und Vulkan vergleichen");performanceCompare.setOnClickListener(v->{if(!app.busy)app.optimize(true);});content.addView(performanceCompare);

@@ -1,0 +1,26 @@
+{
+  "source_commit": "2bb08b43ccb068460e8c9f1a00d0194748d6c32d",
+  "run_id": 39196937446,
+  "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39196937446",
+  "backends": [
+    "CPU",
+    "Vulkan"
+  ],
+  "unsigned": false,
+  "unit_tests_passed": 26,
+  "apk_bytes": 67986140,
+  "apk_sha256": "6b46e54cf6349dda37352cc62b119f29de394335abe3df22d261b1ad86a5ff2f",
+  "version": "0.4.0",
+  "version_code": 7,
+  "package": "de.bonsai.offline.debug",
+  "abi": "arm64-v8a",
+  "installable": true,
+  "unsigned_apk_sha256": "fbc14cd3eb31da22414a86c6760b41efe71a39a772489f36dcf87605044617cd",
+  "signing_certificate_sha256": "933bc216a40682ce964cb0a2db03fb7ab511ae1916a7ea3bd0d0328c153bc462",
+  "compatible_update_with_0_3_1": false,
+  "zipalign_16k_verified": true,
+  "signature_verified": true,
+  "apk_contents_unchanged_after_signing": true,
+  "physical_a55_tested": false,
+  "exynos_1480_npu_supported": false
+}

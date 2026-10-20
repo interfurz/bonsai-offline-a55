@@ -4,6 +4,8 @@
 #include "ggml-backend.h"
 #include "chat.h"
 #include "utf8_stream.h"
+#include "reference_cpu.h"
+#include "chat_sampler.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -100,6 +102,11 @@ Java_de_bonsai_offline_NativeEngine_unload(JNIEnv * env, jclass, jlong handle) {
     try { engine(handle).unload(); } catch (const std::exception & e) { fail(env, e); }
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_de_bonsai_offline_NativeEngine_referenceCpu(JNIEnv *, jclass, jboolean enabled) {
+    bonsai_reference_cpu = enabled;
+}
+
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jbyteArray path,
                                         jint context_size, jint threads, jboolean gpu) {
@@ -140,6 +147,8 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         mp.n_gpu_layers = gpu ? 99 : 0;
         mp.devices = devices;  // Empty list on CPU prevents accidental GPU buffer allocations.
         mp.load_mode = LLAMA_LOAD_MODE_MMAP;
+        // Repacked tensors bypass the dot-product reference wrappers.
+        mp.use_extra_bufts = false;
         mp.progress_callback = load_progress;
         mp.progress_callback_user_data = &e;
         Model model(llama_model_load_from_file(bytes(env, path).c_str(), mp), llama_model_free);
@@ -166,7 +175,7 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         if (!templates) throw std::runtime_error("Chat-Template fehlt im Modell.");
         if (e.stop) throw std::runtime_error("Abgebrochen.");
         common_json metadata;
-        for (const auto key : {"general.architecture", "general.name", "general.file_type"}) {
+        for (const auto key : {"general.architecture", "general.name", "general.file_type", "prism.hadamard.version"}) {
             char buffer[512] = {};
             if (llama_model_meta_val_str(model.get(), key, buffer, sizeof(buffer)) >= 0) metadata[key] = buffer;
         }
@@ -176,7 +185,8 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         e.templates = std::move(templates);
         e.model = std::move(model);
         e.context = std::move(context);
-        return result_bytes(env, common_json({{"backend",e.backend},{"context",llama_n_ctx(e.context.get())},{"metadata",metadata}}).dump());
+        return result_bytes(env, common_json({{"backend",e.backend},{"context",llama_n_ctx(e.context.get())},{"metadata",metadata},
+            {"reference_cpu",bonsai_reference_cpu.load()}}).dump());
     } catch (const std::exception & e) { fail(env, e); return nullptr; }
 }
 
@@ -306,14 +316,8 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         }
         double prefill_ms = elapsed(start), first_token_ms = 0;
         auto generation_start = Clock::now(), last_emit = Clock::now();
-        Sampler sampler(llama_sampler_chain_init(llama_sampler_chain_default_params()), llama_sampler_free);
+        Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed)), llama_sampler_free);
         if (!sampler) throw std::runtime_error("Sampler konnte nicht angelegt werden.");
-        // Official Bonsai 2 4B non-thinking profile. Penalty applies only to generated tokens.
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_penalties(llama_vocab_n_tokens(vocab), 64, 1.0f, 0.0f, 1.5f));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(20));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(0.80f, 1));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(0.70f));
-        llama_sampler_chain_add(sampler.get(), llama_sampler_init_dist(static_cast<uint32_t>(seed)));
         std::string pending;
         int generated = 0;
         bool eos = false;
@@ -329,6 +333,9 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             if (env->ExceptionCheck()) throw std::runtime_error("Antwort-Streaming unterbrochen.");
         };
         while (generated < limit && !e.stop) {
+            const float * logits = llama_get_logits_ith(e.context.get(), -1);
+            if (!logits || !std::all_of(logits, logits + llama_vocab_n_tokens(vocab), [](float x) { return std::isfinite(x); }))
+                throw std::runtime_error("Das Modell liefert ungueltige Rechenwerte. CPU-Kompatibilitaetsmodus oder Modelltest verwenden.");
             auto token = llama_sampler_sample(sampler.get(), e.context.get(), -1);
             if (llama_vocab_is_eog(vocab, token)) { eos = true; break; }
             if (!generated) first_token_ms = elapsed(start);

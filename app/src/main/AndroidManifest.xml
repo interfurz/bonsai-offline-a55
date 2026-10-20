@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Deliberately no INTERNET, storage or microphone permission. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:name=".BonsaiApp"
         android:label="Bonsai"
@@ -11,6 +15,15 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="false"
         android:supportsRtl="true">
+        <service
+            android:name=".InferenceService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User initiated offline on-device language model inference, model import and benchmarking; no network transfer" />
+        </service>
         <activity
             android:name=".MainActivity"
             android:exported="true"

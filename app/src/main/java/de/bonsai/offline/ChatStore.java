@@ -23,23 +23,28 @@ final class ChatStore extends SQLiteOpenHelper {
         final String title;
         Chat(long id, String title) { this.id=id; this.title=title; }
     }
-    ChatStore(Context c) { super(c, "chats.sqlite", null, 1); }
+    ChatStore(Context c) { super(c, "chats.sqlite", null, 2); }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE chats(id INTEGER PRIMARY KEY, title TEXT NOT NULL, updated INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE chats(id INTEGER PRIMARY KEY, title TEXT NOT NULL, updated INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE, role TEXT NOT NULL, text TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE INDEX messages_chat ON messages(chat_id,id)");
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
-        throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion==1 && newVersion==2) {
+            db.execSQL("ALTER TABLE chats ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
+        } else throw new IllegalStateException("Unbekannte Datenbankversion");
     }
     long createChat(String title) {
         ContentValues v=new ContentValues(); v.put("title", title); v.put("updated",System.currentTimeMillis());
         return getWritableDatabase().insertOrThrow("chats",null,v);
     }
     List<Chat> chats() {
+        return chats(false);
+    }
+    List<Chat> chats(boolean archived) {
         List<Chat> result=new ArrayList<>();
-        try(Cursor c=getReadableDatabase().rawQuery("SELECT id,title FROM chats ORDER BY updated DESC LIMIT 100",null)) {
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT id,title FROM chats WHERE archived=? ORDER BY updated DESC LIMIT 100",new String[]{archived?"1":"0"})) {
             while(c.moveToNext()) result.add(new Chat(c.getLong(0),c.getString(1)));
         }
         return result;
@@ -84,4 +89,8 @@ final class ChatStore extends SQLiteOpenHelper {
         getWritableDatabase().execSQL("DELETE FROM messages WHERE role='user' AND id IN (SELECT MAX(id) FROM messages GROUP BY chat_id)");
     }
     void deleteChat(long chat) { getWritableDatabase().delete("chats","id=?",new String[]{Long.toString(chat)}); }
+    void archiveChat(long chat,boolean archived) {
+        ContentValues v=new ContentValues(); v.put("archived",archived?1:0);
+        getWritableDatabase().update("chats",v,"id=?",new String[]{Long.toString(chat)});
+    }
 }

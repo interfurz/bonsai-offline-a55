@@ -1,22 +1,36 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.1",
+  "version_code": 8,
   "package": "de.bonsai.offline.debug",
-  "version_code": 4,
   "abi": "arm64-v8a",
   "backends": [
     "CPU",
     "Vulkan"
   ],
+  "source_commit": "468e462cb9fcefa23a92b244720f43606e30b09b",
+  "release_commit": "48ee917704c24082ddcd266e53dc930aaa6d59ef",
+  "run_id": 39205659357,
+  "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39205659357",
   "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
-  "apk_bytes": 46695343,
-  "apk_sha256": "f3c53f1c3f801b6fa2b4fbb431a971950e424c707e222db8a33230f73a2bd9a9",
-  "signing_certificate_sha256": "ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db",
-  "compatible_update_signature": true,
+  "unit_tests_passed": 32,
+  "lint_errors": 0,
+  "unsigned": false,
+  "installable": true,
+  "apk_bytes": 67986140,
+  "apk_sha256": "53f56c4b63e172bce76d22cc2b94c292f4be6a29241e89157076a8eb00d99315",
+  "unsigned_apk_sha256": "5c07e6b9c24efd9e4fc6f90140c4d0f0e384fb60c957b6374cfc390e98e4b55d",
+  "signing_certificate_sha256": "933bc216a40682ce964cb0a2db03fb7ab511ae1916a7ea3bd0d0328c153bc462",
+  "compatible_update_with_0_3_1": false,
+  "compatible_update_with_0_4_0": true,
   "zipalign_16k_verified": true,
-  "unit_tests_passed": 4,
-  "host_real_pq2_jni_smoke_passed": true,
-  "host_long_german_response_passed": true,
-  "a55_tested": false,
-  "a55_gibberish_reproduced": false,
-  "permissions": []
+  "signature_verified": true,
+  "apk_contents_unchanged_after_signing": true,
+  "physical_a55_tested": false,
+  "exynos_1480_npu_supported": false,
+  "permissions": [
+    "android.permission.FOREGROUND_SERVICE",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+    "android.permission.WAKE_LOCK",
+    "android.permission.POST_NOTIFICATIONS"
+  ]
 }

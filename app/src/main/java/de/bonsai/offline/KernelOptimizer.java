@@ -29,11 +29,12 @@ final class KernelOptimizer {
     static Profile current(BonsaiApp a) { return new Profile(a.gpu(),a.threads(),a.batchThreads(),a.microBatch()); }
     static void configure(long handle, Profile p) { NativeEngine.configure(handle,p.threads,p.batchThreads,p.microBatch); }
     static String load(BonsaiApp a,long handle,Profile p) throws Exception {
+        NativeEngine.referenceCpu(!p.gpu && a.cpuCompatibility);
         JSONObject r=new JSONObject(new String(NativeEngine.load(handle,BonsaiApp.utf8(a.modelFile().getAbsolutePath()),a.context(),p.threads,p.gpu),StandardCharsets.UTF_8));
         configure(handle,p);
         JSONObject metadata=r.optJSONObject("metadata");
         if(metadata!=null)write(a,"model-metadata.json",metadata);
-        return r.getString("backend");
+        return r.getString("backend")+(!p.gpu && a.cpuCompatibility ? " · kompatibel" : "");
     }
     static JSONObject probe(long handle,int n) throws Exception {
         return new JSONObject(new String(NativeEngine.probe(handle,n),StandardCharsets.UTF_8));
@@ -61,11 +62,10 @@ final class KernelOptimizer {
         String winnerFingerprint="";
         a.prefs.edit().putBoolean("optimizerRunning",true).commit();
         try {
-            if(initialThermal>=2) throw new IllegalStateException("Das Gerät ist bereits warm. Bitte abkühlen lassen und erneut optimieren.");
             report.put("schema",1).put("app_version",BuildConfig.VERSION_NAME).put("runtime",BuildConfig.RUNTIME_REVISION)
                 .put("device",Build.MANUFACTURER+" "+Build.MODEL).put("android_api",Build.VERSION.SDK_INT)
                 .put("model",a.modelName()).put("model_bytes",a.modelFile().length()).put("model_modified",a.modelFile().lastModified())
-                .put("context",a.context()).put("thermal_before",initialThermal).put("timestamp",java.time.Instant.now().toString())
+                .put("context",a.context()).put("thermal_before",initialThermal).put("thermal_policy","observe_only").put("timestamp",java.time.Instant.now().toString())
                 .put("objective","192 prompt tokens + estimated 128 decode tokens; fixed token replay, 2 measured runs after warm-up")
                 .put("precision","Original model weights; F16 KV; flash attention disabled").put("trials",trials);
             List<Profile> all=profiles(original,original.gpu);
@@ -75,12 +75,11 @@ final class KernelOptimizer {
             for(int i=0;i<all.size();i++) {
                 if(a.cancelled) throw new IllegalStateException("Abgebrochen.");
                 int thermal=a.thermalStatus();
-                if(thermal>=2 && thermal>initialThermal) throw new IllegalStateException("Optimierung pausiert: Das Gerät wird zu warm. Das bisherige Profil bleibt erhalten.");
                 Profile p=all.get(i);
                 final String label="Profil "+(i+1)+" / "+all.size()+" · "+p.key();
                 final int completed=i, total=all.size();
                 a.main.post(()->{ a.optimizingProgress=label; a.optimizingFraction=completed/(float)total; a.status=label; a.notifyUi(); });
-                JSONObject trial=p.json().put("label",p.key());
+                JSONObject trial=p.json().put("label",p.key()).put("thermal_before",thermal);
                 trials.put(trial);
                 try {
                     if(!haveContext || loadedBackend!=p.gpu) {
@@ -116,8 +115,6 @@ final class KernelOptimizer {
             }
             if(!Double.isFinite(best)) throw new IllegalStateException("Kein Profil hat die Kernel-Prüfung bestanden.");
             if(a.cancelled) throw new IllegalStateException("Abgebrochen.");
-            if(a.thermalStatus()>=2 && a.thermalStatus()>initialThermal)
-                throw new IllegalStateException("Gerät zu warm für ein verlässliches Ergebnis. Bisheriges Profil bleibt erhalten.");
             actualBackend=load(a,handle,winner);
             JSONObject confirmation=probe(handle,32);
             if(!BackendGuard.matches(BackendGuard.reference(a),confirmation) || !winnerFingerprint.equals(confirmation.getString("fingerprint")))
@@ -125,8 +122,6 @@ final class KernelOptimizer {
             if(confirmation.getDouble("score_ms")>best*1.25)
                 throw new IllegalStateException("Die Abschlussmessung schwankt zu stark. Bisheriges Profil bleibt erhalten.");
             if(a.cancelled) throw new IllegalStateException("Abgebrochen.");
-            if(a.thermalStatus()>=2 && a.thermalStatus()>initialThermal)
-                throw new IllegalStateException("Gerät in der Abschlussmessung zu warm. Bisheriges Profil bleibt erhalten.");
             confirmation.remove("signature");confirmation.remove("top_tokens");
             report.put("thermal_after",a.thermalStatus()).put("winner",winner.json()).put("winner_label",winner.key()).put("confirmation",confirmation)
                 .put("score_ms",best).put("baseline_score_ms",originalScore)

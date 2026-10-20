@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - release/main-0.4.3
+      - integration/all-main-0.4.4
+      - main
     paths:
       - '.github/workflows/android-vulkan-release.yml'
       - 'app/**'
@@ -96,6 +97,14 @@ jobs:
           python3 scripts/fetch_runtime.py
           test "$(git -C vendor/llama.cpp rev-parse HEAD)" = "$RUNTIME_REVISION"
           python3 scripts/check_project.py 2>&1 | tee ci-evidence/host-checks.log
+
+      - name: Compare Bonsai CPU kernels against dense arithmetic
+        id: kernels
+        run: |
+          set -euo pipefail
+          cmake -S app/src/main/cpp -B build/kernel-check -DBONSAI_KERNEL_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/kernel-check --target bonsai-reference-test --parallel 2
+          ./build/kernel-check/bonsai-reference-test 2>&1 | tee ci-evidence/reference-kernel-tests.log
 
       - name: Release Robolectric tests (Vulkan build configuration)
         id: tests

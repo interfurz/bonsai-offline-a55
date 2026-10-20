@@ -8,6 +8,7 @@ final class NativeEngine {
     static native void resetStop(long handle);
     static native void stop(long handle);
     static native void unload(long handle);
+    static native void referenceCpu(boolean enabled);
     static native byte[] load(long handle, byte[] path, int context, int threads, boolean gpu);
     static native byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, Stream callback);
     static native void configure(long handle, int threads, int batchThreads, int microBatch);
