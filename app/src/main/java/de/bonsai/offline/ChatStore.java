@@ -64,6 +64,21 @@ final class ChatStore extends SQLiteOpenHelper {
         } finally { db.endTransaction(); }
     }
     void removeMessage(long id) { getWritableDatabase().delete("messages","id=?",new String[]{Long.toString(id)}); }
+    long forkBeforeLastTurn(long original) {
+        List<Message> history=messages(original);
+        if(history.size()<2 || !"user".equals(history.get(history.size()-2).role)
+            || !"assistant".equals(history.get(history.size()-1).role))
+            throw new IllegalStateException("Keine abgeschlossene Antwort vorhanden.");
+        SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
+        try {
+            String prompt=history.get(history.size()-2).text.replace('\n',' ');
+            long variant=createChat("Variante · "+prompt.substring(0,Math.min(prompt.length(),50)));
+            for(int i=0;i<history.size()-2;i++) {
+                Message m=history.get(i);add(variant,m.role,m.text,m.detail);
+            }
+            db.setTransactionSuccessful();return variant;
+        } finally { db.endTransaction(); }
+    }
     void recoverInterruptedTurns() {
         // Generation may have been killed by Android after persisting its user turn.
         getWritableDatabase().execSQL("DELETE FROM messages WHERE role='user' AND id IN (SELECT MAX(id) FROM messages GROUP BY chat_id)");

@@ -115,6 +115,18 @@ public final class BonsaiApp extends Application {
         if(currentChat != 0) store.deleteChat(currentChat);
         newChat();
     }
+    void regenerateLastAnswer() {
+        if(busy || !loaded || messages.size()<2) return;
+        if(handle==0) { error="Das Modell konnte nicht gestartet werden. Bitte lade es erneut.";notifyUi();return; }
+        ChatStore.Message question=messages.get(messages.size()-2);
+        ChatStore.Message answer=messages.get(messages.size()-1);
+        if(!"user".equals(question.role)||!"assistant".equals(answer.role))return;
+        // Keep the original conversation intact; a variant owns its own history.
+        currentChat=store.forkBeforeLastTurn(currentChat);
+        prefs.edit().putLong("chat",currentChat).apply();
+        messages.clear();messages.addAll(store.messages(currentChat));
+        send(question.text);
+    }
     private boolean begin(String label) {
         if (busy) return false;
         if (handle == 0) { error = "Native Runtime konnte nicht geladen werden: " + nativeError; notifyUi(); return false; }
