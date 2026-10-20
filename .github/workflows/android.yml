@@ -5,6 +5,7 @@ on:
     paths:
       - 'app/**'
       - 'scripts/**'
+      - 'tests/**'
       - '*.gradle'
       - 'gradle/**'
       - '.github/workflows/android.yml'
@@ -45,14 +46,15 @@ jobs:
           ./build/kernel-check/bonsai-reference-test
       - name: Build and lint the real native app
         run: ./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
-      - name: Upload regression test evidence
+      - name: Upload original test and lint evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bonsai-offline-unit-tests
+          name: bonsai-offline-validation
           path: |
             app/build/test-results/testDebugUnitTest/*.xml
             app/build/reports/tests/testDebugUnitTest/**
+            app/build/reports/lint-results-debug.*
           if-no-files-found: warn
       - name: Upload installable test APK and lint results
         uses: actions/upload-artifact@v4
@@ -60,5 +62,6 @@ jobs:
           name: bonsai-offline-cpu-debug
           path: |
             app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/output-metadata.json
             app/build/reports/lint-results-debug.*
           if-no-files-found: error
