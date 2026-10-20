@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
     private TextView subtitle, title, state, liveAnswer, liveDetail;
     private IconButton send, newChat;
     private Dialog performanceDialog;
+    private AlertDialog chatActionsDialog;
     private TextView performanceStatus, performanceResult, performanceStart, performanceCompare;
     private ProgressBar performanceProgress;
     private View drawerPanel;
@@ -145,6 +146,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putString("draft",input.getText().toString()); }
     @Override protected void onDestroy() {
+        if(chatActionsDialog!=null) chatActionsDialog.dismiss();
         if(performanceDialog!=null) performanceDialog.dismiss();
         if(app.listener==uiListener) app.listener=null;
         super.onDestroy();
@@ -273,6 +275,9 @@ public final class MainActivity extends Activity {
         }
     }
     private void showDrawer() {
+        showDrawer(false);
+    }
+    private void showDrawer(boolean archived) {
         if(drawer!=null) return;
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
         drawer=new FrameLayout(this); drawer.setBackgroundColor(0x99000000); drawer.setOnClickListener(v->closeDrawer());
@@ -281,14 +286,17 @@ public final class MainActivity extends Activity {
         drawer.addView(panel,bounds);
         TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setPadding(dp(10),0,0,dp(24)); panel.addView(brand);
         TextView fresh=menuItem("＋   Neuer Chat"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");}); panel.addView(fresh);
-        TextView label=text("Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); panel.addView(label);
+        TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); panel.addView(label);
         ScrollView history=new ScrollView(this); LinearLayout entries=column(); history.addView(entries);
-        for(ChatStore.Chat c:app.store.chats()) {
+        for(ChatStore.Chat c:app.store.chats(archived)) {
             TextView item=menuItem(c.title); item.setMaxLines(2); item.setEnabled(!app.busy);
             if(c.id==app.currentChat) item.setBackground(round(PANEL,12));
-            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");}); entries.addView(item);
+            item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");});
+            item.setOnLongClickListener(v->{showChatActions(c,archived);return true;}); entries.addView(item);
         }
         panel.addView(history,new LinearLayout.LayoutParams(-1,0,1));
+        TextView archive=menuItem(archived?"Zurück zu deinen Chats":"Archivierte Chats");
+        archive.setOnClickListener(v->refreshDrawer(!archived)); panel.addView(archive);
         TextView optimize=menuItem("↗   Kernel Optimizer");optimize.setOnClickListener(v->{closeDrawer();showPerformance();});panel.addView(optimize);
         TextView bench=menuItem("Benchmark"); bench.setOnClickListener(v->{closeDrawer();showBenchmark();}); panel.addView(bench);
         TextView prefs=menuItem("Modell und Einstellungen"); prefs.setOnClickListener(v->{closeDrawer();settings();}); panel.addView(prefs);
@@ -297,6 +305,36 @@ public final class MainActivity extends Activity {
         drawerPanel=panel; drawerClosing=false;
         if(ValueAnimator.areAnimatorsEnabled()) { panel.setTranslationX(-bounds.width); panel.animate().translationX(0).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator()).start(); }
 
+    }
+    private void refreshDrawer(boolean archived) {
+        if(drawer==null || drawerClosing)return;
+        drawerPanel.animate().cancel(); root.removeView(drawer); drawer=null;
+        showDrawer(archived);
+    }
+    private void showChatActions(ChatStore.Chat selected,boolean archived) {
+        if(app.busy)return;
+        chatActionsDialog=new AlertDialog.Builder(this).setTitle(selected.title)
+            .setItems(new String[]{"Löschen",archived?"Wiederherstellen":"Archivieren","Abbrechen"},(dialog,which)->{
+                if(which==0) {
+                    chatActionsDialog=new AlertDialog.Builder(this).setTitle("Chat löschen?")
+                        .setMessage("Dieser Chat wird dauerhaft von diesem Gerät gelöscht.")
+                        .setNegativeButton("Abbrechen",null)
+                        .setPositiveButton("Löschen",(d,w)->{
+                            if(app.busy)return;
+                            boolean current=app.currentChat==selected.id;
+                            app.deleteChat(selected.id);
+                            if(current)input.setText("");
+                            refreshDrawer(archived);
+                        }).create();
+                    chatActionsDialog.setCanceledOnTouchOutside(true); chatActionsDialog.show();
+                } else if(which==1 && !app.busy) {
+                    boolean current=app.currentChat==selected.id;
+                    app.archiveChat(selected.id,!archived);
+                    if(current && !archived)input.setText("");
+                    refreshDrawer(archived);
+                }
+            }).create();
+        chatActionsDialog.setCanceledOnTouchOutside(true); chatActionsDialog.show();
     }
     private void closeDrawer() {
         if(drawer==null || drawerClosing)return;

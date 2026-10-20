@@ -111,9 +111,17 @@ public final class BonsaiApp extends Application {
         prefs.edit().putLong("chat",id).apply(); error=""; notifyUi();
     }
     void deleteCurrentChat() {
-        if (busy) return;
-        if(currentChat != 0) store.deleteChat(currentChat);
-        newChat();
+        deleteChat(currentChat);
+    }
+    void deleteChat(long id) {
+        if (busy || id==0) return;
+        store.deleteChat(id);
+        if(currentChat==id) newChat(); else notifyUi();
+    }
+    void archiveChat(long id,boolean archived) {
+        if (busy || id==0) return;
+        store.archiveChat(id,archived);
+        if(archived && currentChat==id) newChat(); else notifyUi();
     }
     private boolean begin(String label) {
         if (busy) return false;
