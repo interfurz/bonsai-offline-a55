@@ -15,6 +15,7 @@ Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die Q2_0-Kopie
 Implementiert:
 
 - Chatansicht mit Antwortstreaming, Abbrechen, seitlicher Chatliste und lokalem SQLite-Verlauf.
+- Einen Chat im Seitenmenü lange drücken: **Löschen**, **Archivieren**, **Abbrechen**. Tippen außerhalb schließt das Menü ebenfalls. Archivierte Verläufe bleiben unter **Archivierte Chats** erreichbar und lassen sich dort per langem Drücken wiederherstellen. Löschen erfordert eine Bestätigung.
 - Import einer lokalen GGUF-Datei über den Android-Dateiauswahldialog. Die App erstellt eine private Kopie; ein abgebrochener Import ersetzt das alte Modell nicht.
 - JNI-Anbindung an den originalen PrismML-Fork mit PQ2_0/PTQ1_0 und Bonsai-2-Transformationen.
 - CPU als Ausgangspunkt, 4 Threads, 4.096 Tokens Kontext, maximal 512 Antworttokens. Thinking deaktiviert.

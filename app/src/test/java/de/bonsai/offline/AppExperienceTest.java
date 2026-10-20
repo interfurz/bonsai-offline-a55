@@ -1,6 +1,7 @@
 package de.bonsai.offline;
 
 import android.app.Dialog;
+import android.app.AlertDialog;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.view.View;
@@ -29,6 +30,83 @@ public class AppExperienceTest {
         return null;
     }
     private static Object field(Object o,String name) throws Exception {Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}
+    private static View described(View v,String description) {
+        if(description.contentEquals(v.getContentDescription()==null?"":v.getContentDescription()))return v;
+        if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){View found=described(((ViewGroup)v).getChildAt(i),description);if(found!=null)return found;}
+        return null;
+    }
+    private static AlertDialog actions(MainActivity activity,String title) throws Exception {
+        View root=activity.getWindow().getDecorView();
+        if(field(activity,"drawer")==null)described(root,"Chatverlauf öffnen").performClick();
+        assertTrue(find(root,title).performLongClick());
+        return org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    }
+    private static void choose(AlertDialog dialog,int index) {
+        dialog.getListView().performItemClick(null,index,index);
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    }
+    @Test public void longPressMenuCancelsWithoutChangingChats() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            long id=app.store.createChat("Menütest");app.selectChat(id);
+            AlertDialog menu=actions(a,"Menütest");
+            assertEquals(3,menu.getListView().getAdapter().getCount());
+            assertEquals("Löschen",menu.getListView().getAdapter().getItem(0));
+            assertEquals("Archivieren",menu.getListView().getAdapter().getItem(1));
+            assertEquals("Abbrechen",menu.getListView().getAdapter().getItem(2));
+            screenshot(menu.getWindow().getDecorView(),"chat-actions");
+            choose(menu,2);assertFalse(menu.isShowing());
+            menu=actions(a,"Menütest");
+            android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,-10,-10,0);
+            try { assertTrue(menu.onTouchEvent(outside)); } finally { outside.recycle(); }
+            assertFalse(menu.isShowing());assertEquals(id,app.currentChat);
+            assertEquals(1,app.store.chats().size());assertTrue(app.store.chats(true).isEmpty());
+        }
+    }
+    @Test public void archiveAndRestoreSelectedChatFromDrawer() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            long id=app.store.createChat("Archivtest");app.store.add(id,"assistant","Bleibt erhalten","");app.selectChat(id);
+            choose(actions(a,"Archivtest"),1);
+            assertEquals(0,app.currentChat);assertEquals(0,app.prefs.getLong("chat",-1));
+            assertTrue(app.messages.isEmpty());assertTrue(app.store.chats().isEmpty());
+            assertEquals("Bleibt erhalten",app.store.messages(id).get(0).text);
+            View root=a.getWindow().getDecorView();assertNull(find(root,"Archivtest"));
+            find(root,"Archivierte Chats").performClick();
+            AlertDialog menu=actions(a,"Archivtest");
+            assertEquals("Wiederherstellen",menu.getListView().getAdapter().getItem(1));choose(menu,1);
+            assertEquals(id,app.store.chats().get(0).id);assertTrue(app.store.chats(true).isEmpty());
+        }
+    }
+    @Test public void deletingAnotherChatKeepsCurrentConversationAndRequiresConfirmation() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            long current=app.store.createChat("Aktiver Verlauf"),other=app.store.createChat("Anderer Verlauf");
+            app.store.add(current,"assistant","Aktuelle Antwort","");app.store.add(other,"assistant","Andere Antwort","");app.selectChat(current);
+            choose(actions(a,"Anderer Verlauf"),0);
+            AlertDialog confirmation=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(2,app.store.chats().size());
+            choose(actions(a,"Anderer Verlauf"),0);
+            confirmation=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            assertEquals(current,app.currentChat);assertEquals("Aktuelle Antwort",app.messages.get(0).text);
+            assertEquals(1,app.store.chats().size());assertTrue(app.store.messages(other).isEmpty());
+        }
+    }
+    @Test public void chatChangesRespectBusyStateAndClearOnlyTheSelectedConversation() {
+        BonsaiApp app=(BonsaiApp)org.robolectric.RuntimeEnvironment.getApplication();
+        long current=app.store.createChat("Aktuell"),other=app.store.createChat("Anderer Chat");
+        app.store.add(current,"assistant","Hallo","");app.selectChat(current);
+        app.busy=true;app.deleteChat(current);app.archiveChat(current,true);
+        assertEquals(2,app.store.chats().size());assertEquals(current,app.currentChat);
+        app.busy=false;app.archiveChat(other,true);
+        assertEquals(current,app.currentChat);assertEquals("Hallo",app.messages.get(0).text);
+        app.deleteChat(current);
+        assertEquals(0,app.currentChat);assertTrue(app.messages.isEmpty());assertEquals(0,app.prefs.getLong("chat",-1));
+        assertTrue(app.store.messages(current).isEmpty());assertEquals(other,app.store.chats(true).get(0).id);
+    }
     private static void screenshot(View root,String name) throws Exception {
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
         int w=824,h=1784;root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
