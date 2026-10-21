@@ -155,6 +155,23 @@ public class AppExperienceTest {
             assertTrue(((View)field(a,"page")).getWidth()<=DesignTokens.CONTENT_WIDTH);
         }
     }
+    @Test @Config(qualifiers="w375dp-h812dp-night-mdpi")
+    public void illustratedSuggestionsFillDraftAndKeepComposerReachable() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;app.notifyUi();
+            View root=a.getWindow().getDecorView();screenshot(root,"ready-dark-prompts");
+            TextView suggestion=find(root,"Einfach verstehen");assertNotNull(suggestion);
+            assertTrue(suggestion.performClick());
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");
+            assertEquals("Erkläre mir ein schwieriges Thema einfach: ",input.getText().toString());
+            assertTrue(((View)field(a,"send")).isEnabled());
+            find(root,"Eine Idee entwickeln").performClick();
+            assertEquals("Hilf mir, eine Idee weiterzuentwickeln: ",input.getText().toString());
+            View composer=(View)field(a,"composerGroup");int[] location=new int[2];composer.getLocationOnScreen(location);
+            assertTrue("Composer stays on screen",location[1]>=0&&location[1]+composer.getHeight()<=root.getHeight());
+            for(TextView tab:(TextView[])field(a,"tabs"))assertNotNull(tab.getCompoundDrawables()[1]);
+        }
+    }
     @Test public void inputValidationAndStreamingPreserveDraftAndText() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;app.notifyUi();
@@ -184,7 +201,8 @@ public class AppExperienceTest {
         int old=r.getConfiguration().uiMode;
         for(int mode:new int[]{android.content.res.Configuration.UI_MODE_NIGHT_NO,android.content.res.Configuration.UI_MODE_NIGHT_YES}){
             android.content.res.Configuration c=new android.content.res.Configuration(r.getConfiguration());c.uiMode=mode;r.updateConfiguration(c,r.getDisplayMetrics());DesignTokens t=new DesignTokens(r);
-            for(int bg:new int[]{t.background,t.surface})for(int fg:new int[]{t.text,t.muted,t.primary,t.error,t.warning})assertTrue("Text contrast below AA",contrast(fg,bg)>=4.5);
+            for(int bg:new int[]{t.background,t.surface,t.raised})for(int fg:new int[]{t.text,t.muted,t.primary,t.error,t.warning})assertTrue("Text contrast below AA",contrast(fg,bg)>=4.5);
+            assertTrue("Badge text contrast below AA",contrast(t.primary,t.accentSurface)>=4.5);
             assertTrue(contrast(t.action,t.onPrimary)>=4.5);assertTrue(contrast(t.border,t.surface)>=3);
         }
         android.content.res.Configuration c=new android.content.res.Configuration(r.getConfiguration());c.uiMode=old;r.updateConfiguration(c,r.getDisplayMetrics());

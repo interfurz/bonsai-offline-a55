@@ -65,3 +65,33 @@ Die Screenshots zeigen deterministische UI-Testzustände; insbesondere „Modell
 | ![Einstieg in Burgunder und Pflaume](ui/welcome-light.png) | ![Chat im dunklen Pflaume-Theme](ui/ready-dark.png) |
 
 Weitere Ansichten: [Modell](ui/model-light.png), [Leistung](ui/performance-light.png), [375 dp und 200 % Schrift](ui/large-text-dark.png).
+
+
+## Detailreichere native Oberfläche
+
+Die Burgunder-/Pflaume-Farbwelt erhält drei zusätzliche Flächentokens (`raised`,
+`accentSurface`, `subtleBorder`) für Eingabe, Badges und feine Kartenkonturen.
+`UiArtwork.java` zeichnet ein Bonsai-Motiv und ein einheitliches Icon-Set direkt
+mit Android Canvas. Es gibt keine Bilddownloads oder zusätzlichen Bibliotheken.
+Das dekorative Motiv ist aus dem Accessibility-Baum ausgeschlossen.
+
+- Der Einstieg zeigt das Bonsai-Motiv, einen Datenschutzhinweis und eine
+  gegliederte Importkarte. Bei geladenem Modell ist das Motiv kompakter.
+- Die zwei Prompt-Vorlagen haben Icons, Kurzbeschreibungen und Richtungspfeile;
+  Antippen setzt weiterhin einen bearbeitbaren Entwurf ein.
+- Die Hauptnavigation kombiniert Icons mit den vorhandenen Textlabels. Die aktive
+  Seite hat eine eigene Akzentfläche; Fokus- und Druckfeedback bleiben erhalten.
+- Modellstatus, aktuelle Thread-/Kontextwerte und Antwort-Einstellungen sind
+  visuell gruppiert. Die Leistungsansicht erklärt den Ablauf in drei nummerierten
+  Schritten und zeigt weiterhin ausschließlich vorhandene Messwerte.
+- Autoren und Antwortaktionen im Chat sowie der Verlauf erhalten passende Icons.
+
+Die Eingabe und Hauptaktionen bleiben außerhalb der scrollenden Inhalte.
+Große Systemschrift darf Karten vergrößern; Text wird nicht auf feste Höhen
+beschnitten. Die neuen Farbflächen sind in die Kontrastprüfung aufgenommen.
+Ein zusätzlicher UI-Test prüft beide Prompt-Vorlagen, den Sendestatus und die
+sichtbare Eingabe auf einem 375-dp-Display.
+
+Prüfung dieser Ergänzung: **50 Robolectric-/JUnit-Tests, 0 Fehler, 0 übersprungen**.
+Die aktualisierten Bilder unter `docs/ui/` wurden aus diesen Tests übernommen
+und visuell kontrolliert. Sie zeigen Testzustände und keine echte Modellinferenz.
