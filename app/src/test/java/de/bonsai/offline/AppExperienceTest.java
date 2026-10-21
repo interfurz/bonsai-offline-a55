@@ -2,6 +2,7 @@ package de.bonsai.offline;
 
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.view.View;
@@ -37,7 +38,7 @@ public class AppExperienceTest {
     }
     private static AlertDialog actions(MainActivity activity,String title) throws Exception {
         View root=activity.getWindow().getDecorView();
-        if(field(activity,"drawer")==null)described(root,"Chatverlauf öffnen").performClick();
+        if(field(activity,"drawer")==null)described(root,"Menü öffnen").performClick();
         assertTrue(find((View)field(activity,"drawer"),title).performLongClick());
         return org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     }
@@ -111,24 +112,50 @@ public class AppExperienceTest {
         assertEquals(0,app.currentChat);assertTrue(app.messages.isEmpty());assertEquals(0,app.prefs.getLong("chat",-1));
         assertTrue(app.store.messages(current).isEmpty());assertEquals(other,app.store.chats(true).get(0).id);
     }
-    private static void screenshot(View root,String name) throws Exception {
+    private static void idleUi(){org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}
+    private static View openSection(MainActivity activity,String label) throws Exception {
+        Dialog current=(Dialog)field(activity,"sectionDialog");if(current!=null){current.dismiss();idleUi();}
+        View root=activity.getWindow().getDecorView();
+        if(field(activity,"drawer")==null)described(root,"Menü öffnen").performClick();
+        find((View)field(activity,"drawer"),label).performClick();
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
+        Dialog dialog=(Dialog)field(activity,"sectionDialog");assertNotNull(dialog);assertTrue(dialog.isShowing());
+        assertNull(field(activity,"drawer"));assertEquals(label,dialog.getWindow().getAttributes().getTitle().toString());
+        assertSame("Chat stays mounted behind the popup",field(activity,"chatPage"),((ViewGroup)field(activity,"screenHost")).getChildAt(0));
+        return dialog.getWindow().getDecorView();
+    }
+    private static void screenshot(View root,String name) throws Exception { screenshot(root,null,name); }
+    private static void screenshot(MainActivity activity,String name) throws Exception {
+        screenshot(activity.getWindow().getDecorView(),(Dialog)field(activity,"sectionDialog"),name);
+    }
+    private static void screenshot(View root,Dialog popup,String name) throws Exception {
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
         int w=root.getResources().getDisplayMetrics().widthPixels,h=root.getResources().getDisplayMetrics().heightPixels;root.measure(View.MeasureSpec.makeMeasureSpec(w,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(h,View.MeasureSpec.EXACTLY));root.layout(0,0,w,h);
-        Bitmap image=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);root.draw(new Canvas(image));
+        Bitmap image=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(image);root.draw(canvas);
+        if(popup!=null){
+            // Robolectric has no system compositor; draw each native window at its configured size.
+            android.view.Window window=popup.getWindow();View decor=window.getDecorView();
+            int pw=window.getAttributes().width,ph=window.getAttributes().height;
+            decor.measure(View.MeasureSpec.makeMeasureSpec(pw,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(ph,View.MeasureSpec.EXACTLY));decor.layout(0,0,pw,ph);
+            canvas.drawColor(0x8c000000);canvas.save();canvas.translate((w-pw)/2f,(h-ph)/2f);decor.draw(canvas);canvas.restore();
+        }
         File folder=new File("build/ui-captures");folder.mkdirs();try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){image.compress(Bitmap.CompressFormat.PNG,100,out);}image.recycle();
     }
     @Test public void welcomeAndPerformanceAreNavigable() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();View root=a.getWindow().getDecorView();
+            assertEquals(0,field(a,"activeScreen"));assertNull(field(a,"sectionDialog"));assertNull(described(root,"Hauptnavigation"));
             assertNotNull(find(root,"Gute Gedanken"));assertNotNull(find(root,"Modell importieren"));
             assertFalse(((View)field(a,"send")).isEnabled());screenshot(root,"welcome-light");
             android.widget.EditText input=(android.widget.EditText)field(a,"input");input.setText("Mein Entwurf");
-            TextView[] tabs=(TextView[])field(a,"tabs");tabs[2].performClick();
-            assertTrue(tabs[2].isSelected());assertNotNull(find(root,"Passend zu deinem Gerät"));
-            assertTrue(find(root,"Modell öffnen").isEnabled());screenshot(root,"performance-light");
-            find(root,"Modell öffnen").performClick();assertTrue(tabs[1].isSelected());
-            assertNotNull(find(root,"Antworten anpassen"));screenshot(root,"model-light");
-            a.onBackPressed();assertTrue(tabs[0].isSelected());assertEquals("Mein Entwurf",input.getText().toString());
+            View popup=openSection(a,"Leistung");Dialog dialog=(Dialog)field(a,"sectionDialog");
+            assertEquals(2,field(a,"activeScreen"));assertNotNull(find(popup,"Passend zu deinem Gerät"));
+            assertTrue(find(popup,"Modell öffnen").isEnabled());screenshot(a,"performance-light");
+            find(popup,"Modell öffnen").performClick();assertEquals(1,field(a,"activeScreen"));
+            assertSame("Switch popup content without stacking windows",dialog,field(a,"sectionDialog"));
+            assertNotNull(find(popup,"Antworten anpassen"));screenshot(a,"model-light");
+            described(popup,"Pop-up schließen").performClick();idleUi();assertNull(field(a,"sectionDialog"));assertEquals(0,field(a,"activeScreen"));
+            assertEquals("Mein Entwurf",input.getText().toString());assertNotNull(find(root,"Gute Gedanken"));
         }
     }
     @Test @Config(qualifiers="w375dp-h812dp-night-mdpi")
@@ -136,15 +163,17 @@ public class AppExperienceTest {
         org.robolectric.RuntimeEnvironment.setFontScale(2f);
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();View root=a.getWindow().getDecorView();
-            screenshot(root,"welcome-dark-375-large-text");
-            TextView[] tabs=(TextView[])field(a,"tabs");
-            for(int i=0;i<tabs.length;i++){
-                tabs[i].performClick();screenshot(root,"large-text-tab-"+i);
-                int[] location=new int[2];tabs[i].getLocationOnScreen(location);
-                assertTrue("Tab must remain on screen",location[1]>=0&&location[1]+tabs[i].getHeight()<=root.getHeight());
-                assertTrue(tabs[i].getHeight()>=48);
-                assertFalse("Tab label must not be ellipsized",tabs[i].getLayout().getEllipsisCount(0)>0);
-                assertEquals("Tab names stay on one line at 200% text",1,tabs[i].getLineCount());
+            screenshot(root,"large-text-chat");
+            described(root,"Menü öffnen").performClick();screenshot(root,"large-text-menu");
+            for(String label:new String[]{"Modell","Leistung"}){
+                View popup=openSection(a,label);screenshot(a,"large-text-"+label);
+                View close=described(popup,"Pop-up schließen");assertNotNull(close);assertTrue(close.getHeight()>=48);
+                android.graphics.Rect bounds=new android.graphics.Rect();close.getDrawingRect(bounds);((ViewGroup)popup).offsetDescendantRectToMyCoords(close,bounds);
+                assertTrue("Popup close stays reachable",bounds.top>=0&&bounds.bottom<=popup.getHeight());
+                TextView action=(TextView)(label.equals("Modell")?find(popup,"Modell importieren"):field(a,"performanceStart"));
+                action.getDrawingRect(bounds);((ViewGroup)popup).offsetDescendantRectToMyCoords(action,bounds);
+                assertTrue("Primary action stays reachable",bounds.top>=0&&bounds.bottom<=popup.getHeight());
+                a.onBackPressed();idleUi();assertNull(field(a,"sectionDialog"));
             }
         } finally { org.robolectric.RuntimeEnvironment.setFontScale(1f); }
     }
@@ -153,6 +182,54 @@ public class AppExperienceTest {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();View root=a.getWindow().getDecorView();screenshot(root,"tablet-light");
             assertTrue(((View)field(a,"page")).getWidth()<=DesignTokens.CONTENT_WIDTH);
+            openSection(a,"Modell");screenshot(a,"tablet-model-popup");
+            assertEquals(DesignTokens.CONTENT_WIDTH,((Dialog)field(a,"sectionDialog")).getWindow().getAttributes().width);
+        }
+    }
+    @Test @Config(qualifiers="w375dp-h812dp-night-mdpi")
+    public void illustratedSuggestionsFillDraftAndKeepComposerReachable() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;app.notifyUi();
+            View root=a.getWindow().getDecorView();screenshot(root,"ready-dark-prompts");
+            TextView suggestion=find(root,"Einfach verstehen");assertNotNull(suggestion);
+            assertTrue(suggestion.performClick());
+            android.widget.EditText input=(android.widget.EditText)field(a,"input");
+            assertEquals("Erkläre mir ein schwieriges Thema einfach: ",input.getText().toString());
+            assertTrue(((View)field(a,"send")).isEnabled());
+            find(root,"Eine Idee entwickeln").performClick();
+            assertEquals("Hilf mir, eine Idee weiterzuentwickeln: ",input.getText().toString());
+            View composer=(View)field(a,"composerGroup");int[] location=new int[2];composer.getLocationOnScreen(location);
+            assertTrue("Composer stays on screen",location[1]>=0&&location[1]+composer.getHeight()<=root.getHeight());
+            assertNull(described(root,"Hauptnavigation"));
+        }
+    }
+    @Test public void popupRecreationAndDismissalPreserveConversationAndDraft() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.messages.add(new ChatStore.Message(1,"assistant","Meine gespeicherte Antwort",""));app.notifyUi();
+            ((android.widget.EditText)field(a,"input")).setText("Mein ungesendeter Entwurf");
+            openSection(a,"Modell");Dialog before=(Dialog)field(a,"sectionDialog");controller.recreate();a=controller.get();
+            Dialog reopened=(Dialog)field(a,"sectionDialog");assertFalse(before.isShowing());assertTrue(reopened.isShowing());assertEquals(1,field(a,"activeScreen"));
+            assertEquals("Mein ungesendeter Entwurf",((android.widget.EditText)field(a,"input")).getText().toString());
+            assertNotNull(find(a.getWindow().getDecorView(),"Meine gespeicherte Antwort"));
+            reopened.onBackPressed();idleUi();assertNull(field(a,"sectionDialog"));assertEquals(0,field(a,"activeScreen"));
+            openSection(a,"Leistung");Dialog performance=(Dialog)field(a,"sectionDialog");
+            android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,-10,-10,0);
+            try{assertTrue(performance.onTouchEvent(outside));}finally{outside.recycle();}
+            idleUi();assertNull(field(a,"sectionDialog"));assertEquals("Mein ungesendeter Entwurf",((android.widget.EditText)field(a,"input")).getText().toString());
+        }
+    }
+    @Test @Config(shadows=BackgroundInferenceTest.Engine.class)
+    public void popupShowsLiveBusyFeedbackAndCancel() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.prefs.edit().putBoolean("notificationsAsked",true).apply();
+            openSection(a,"Modell");Dialog popup=(Dialog)field(a,"sectionDialog");
+            app.busy=true;app.status="Modell wird geladen";app.notifyUi();
+            assertSame(popup,field(a,"sectionDialog"));assertEquals(View.VISIBLE,((View)field(a,"popupStatusCard")).getVisibility());
+            assertEquals("Modell wird geladen",((TextView)field(a,"popupState")).getText().toString());
+            ((View)field(a,"popupAction")).performClick();assertTrue(app.cancelled);
+            app.busy=false;app.error="Datei nicht lesbar";app.notifyUi();
+            assertNotNull(find(popup.getWindow().getDecorView(),"Vorgang nicht abgeschlossen"));
         }
     }
     @Test public void inputValidationAndStreamingPreserveDraftAndText() throws Exception {
@@ -184,7 +261,8 @@ public class AppExperienceTest {
         int old=r.getConfiguration().uiMode;
         for(int mode:new int[]{android.content.res.Configuration.UI_MODE_NIGHT_NO,android.content.res.Configuration.UI_MODE_NIGHT_YES}){
             android.content.res.Configuration c=new android.content.res.Configuration(r.getConfiguration());c.uiMode=mode;r.updateConfiguration(c,r.getDisplayMetrics());DesignTokens t=new DesignTokens(r);
-            for(int bg:new int[]{t.background,t.surface})for(int fg:new int[]{t.text,t.muted,t.primary,t.error,t.warning})assertTrue("Text contrast below AA",contrast(fg,bg)>=4.5);
+            for(int bg:new int[]{t.background,t.surface,t.raised})for(int fg:new int[]{t.text,t.muted,t.primary,t.error,t.warning})assertTrue("Text contrast below AA",contrast(fg,bg)>=4.5);
+            assertTrue("Badge text contrast below AA",contrast(t.primary,t.accentSurface)>=4.5);
             assertTrue(contrast(t.action,t.onPrimary)>=4.5);assertTrue(contrast(t.border,t.surface)>=3);
         }
         android.content.res.Configuration c=new android.content.res.Configuration(r.getConfiguration());c.uiMode=old;r.updateConfiguration(c,r.getDisplayMetrics());
@@ -195,8 +273,8 @@ public class AppExperienceTest {
         java.lang.reflect.Method durationScale=android.animation.ValueAnimator.class.getDeclaredMethod("setDurationScale",float.class);
         durationScale.setAccessible(true);durationScale.invoke(null,0f);
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
-            MainActivity a=controller.get();TextView[] tabs=(TextView[])field(a,"tabs");tabs[1].performClick();
-            View screen=((ViewGroup)field(a,"screenHost")).getChildAt(0);
+            MainActivity a=controller.get();openSection(a,"Modell");
+            View screen=(View)field(a,"popupHost");
             assertEquals(1f,screen.getAlpha(),0f);assertEquals(0f,screen.getTranslationX(),0f);assertEquals(0f,screen.getTranslationY(),0f);
         } finally {durationScale.invoke(null,1f);}
     }
@@ -320,7 +398,7 @@ public class AppExperienceTest {
     @Test public void checksumApprovalSurvivesNativeModelPageRecreation() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
-            ((TextView[])field(a,"tabs"))[1].performClick();
+            openSection(a,"Modell");
             BonsaiApp.ModelApproval request=new BonsaiApp.ModelApproval(
                 new ModelIntegrity.Mismatch(ModelIntegrity.Q2_NAME,4,"0".repeat(64),ModelIntegrity.Q2_SHA),false);
             app.modelApproval=request;app.error=request.mismatch.getMessage();app.notifyUi();
@@ -331,7 +409,7 @@ public class AppExperienceTest {
             controller.recreate();MainActivity next=controller.get();
             AlertDialog reopened=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
             assertFalse(first.isShowing());assertNotSame(first,reopened);assertTrue(reopened.isShowing());
-            assertSame(request,app.modelApproval);assertTrue(((TextView[])field(next,"tabs"))[1].isSelected());
+            assertSame(request,app.modelApproval);assertEquals(1,field(next,"activeScreen"));assertTrue(((Dialog)field(next,"sectionDialog")).isShowing());
             reopened.cancel();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             assertNull(app.modelApproval);assertEquals("",app.error);
         }
@@ -345,7 +423,7 @@ public class AppExperienceTest {
             app.prefs.edit().putString("modelName","other-Q4_K_M.gguf").putBoolean("gpu",false)
                 .putBoolean("cpuCompatibility",false).putString("optimizedFor","old-profile").putInt("batchThreads",8).putInt("microBatch",128)
                 .putBoolean("notificationsAsked",true).apply();
-            app.loaded=true;((TextView[])field(a,"tabs"))[1].performClick();View root=a.getWindow().getDecorView();
+            app.loaded=true;View root=openSection(a,"Modell");
             find(root,"Beispielmodell").performClick();
             android.content.Intent download=org.robolectric.Shadows.shadowOf(a).getNextStartedActivity();
             assertEquals(android.content.Intent.ACTION_VIEW,download.getAction());assertEquals(ModelIntegrity.downloadUrl(),download.getDataString());
@@ -362,7 +440,7 @@ public class AppExperienceTest {
             app.worker.submit(()->{}).get(5,java.util.concurrent.TimeUnit.SECONDS);
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
             assertTrue(app.error,app.loaded);assertTrue(app.cpuCompatibility);assertTrue(BackgroundInferenceTest.Engine.loads>0);
-            ((TextView[])field(a,"tabs"))[2].performClick();
+            root=openSection(a,"Leistung");
             assertNotNull(find(root,"jedem Temperaturstatus"));assertNotNull(find(root,"Hintergrund weiter"));
             assertTrue(((View)field(a,"performanceStart")).isEnabled());
         }
