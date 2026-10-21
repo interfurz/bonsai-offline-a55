@@ -70,6 +70,7 @@ final class UiArtwork {
         private final DesignTokens t;
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path branch=new Path();
+        public BonsaiScene(Context context) { this(context,new DesignTokens(context.getResources())); }
         BonsaiScene(Context context,DesignTokens tokens) {
             super(context);t=tokens;setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         }

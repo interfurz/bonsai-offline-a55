@@ -95,3 +95,10 @@ sichtbare Eingabe auf einem 375-dp-Display.
 Prüfung dieser Ergänzung: **50 Robolectric-/JUnit-Tests, 0 Fehler, 0 übersprungen**.
 Die aktualisierten Bilder unter `docs/ui/` wurden aus diesen Tests übernommen
 und visuell kontrolliert. Sie zeigen Testzustände und keine echte Modellinferenz.
+
+Auch `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug` ist
+erfolgreich: ARM64-CPU-Debug-APK gebaut, Lint ohne Fehler. Die sieben verbleibenden
+Warnungen betreffen die SDK-abhängige Manifest-Eigenschaft, die ChromeOS-ABI und
+bereits vorhandene deutsche Texte außerhalb der Übersetzungsressourcen.
+Geprüft mit JDK 17, SDK 35 und NDK 28.2.13676358. Ein physischer A55-Test und
+Vulkan-Laufzeitverhalten wurden nicht geprüft.
