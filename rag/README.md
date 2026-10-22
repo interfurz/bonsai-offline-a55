@@ -1,5 +1,10 @@
 # Offline-Wissenssuche (Schema v1)
 
+Die Erweiterung für Millionen Vektoren steht in [IVF.md](IVF.md): Indexformat,
+K-means-Bau, konfigurierbares nprobe/RRF, Recall-Vergleich sowie Host- und
+Geräte-Benchmark. Die folgenden Befehle beschreiben weiterhin den kompatiblen
+ursprünglichen Vollscan.
+
 Aus dem Repository-Stamm ausführen, Python >=3.10. Keine Downloads beim Import
 oder in Tests. Die 50 eingecheckten, selbst verfassten Miniartikel sind **keine
 Wikipedia-Extraktion**; `fixture://` kennzeichnet diese Testdaten. Der Hash-Encoder

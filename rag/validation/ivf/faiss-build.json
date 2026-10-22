@@ -1,0 +1,10 @@
+{
+  "count": 50,
+  "clusters": 4,
+  "requested_clusters": 4,
+  "scale": 0.007874015718698502,
+  "backend": "faiss-cpu",
+  "bytes": 20992,
+  "training_rows": 50,
+  "seed": 42
+}

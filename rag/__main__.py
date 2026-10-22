@@ -25,13 +25,16 @@ def main():
     retrieval.add_argument("query")
     retrieval.add_argument("--vectors")
     retrieval.add_argument("--top-k", type=int, default=3)
+    retrieval.add_argument("--ivf")
+    retrieval.add_argument("--nprobe", type=int, default=16)
+    retrieval.add_argument("--rrf-k", type=int, default=60)
     args = parser.parse_args()
     if args.command == "ingest":
         build(args.source, args.database, args.limit, not args.no_android_fts4)
     elif args.command == "embed":
         embed(args.database, args.vectors, args.model, args.reference, args.batch, args.device)
     else:
-        print(json.dumps(search(args.database, args.query, args.vectors, args.top_k), ensure_ascii=False, indent=2))
+        print(json.dumps(search(args.database, args.query, args.vectors, args.top_k, ivf=args.ivf, nprobe=args.nprobe, rrf_k=args.rrf_k), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
