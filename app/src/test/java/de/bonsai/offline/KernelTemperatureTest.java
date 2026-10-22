@@ -81,6 +81,8 @@ public class KernelTemperatureTest {
         static final String PROBE="{\"signature\":[1,2,3,4],\"top_tokens\":[1,2,3,4],\"fingerprint\":\"test-fixture-only\",\"score_ms\":100,\"tokens_per_second\":10}";
         static int probes,heatOnProbe;
         @Implementation protected static void __staticInitializer__() { }
+        @Implementation protected static void clearCache(long handle) {}
+        @Implementation protected static void commitTurn(long handle,byte[][] roles,byte[][] contents) {}
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { }
         @Implementation protected static void referenceCpu(boolean enabled) { }
@@ -92,7 +94,7 @@ public class KernelTemperatureTest {
             if(++probes==heatOnProbe)setThermal(PowerManager.THERMAL_STATUS_SEVERE);
             return BonsaiApp.utf8(PROBE);
         }
-        @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback) {
+        @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback,byte[] grammar,int reasoningBudget) {
             callback.onBytes(BonsaiApp.utf8("Synthetic test reply"));
             return BonsaiApp.utf8("{\"tokens_per_second\":1,\"output_tokens\":1,\"first_token_ms\":1,\"stopped\":false,\"limit_reached\":false}");
         }

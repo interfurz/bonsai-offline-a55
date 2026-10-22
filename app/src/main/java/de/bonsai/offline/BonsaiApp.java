@@ -114,14 +114,20 @@ public final class BonsaiApp extends Application {
         worker.execute(()->KernelOptimizer.run(this,handle,compare));
     }
     void finishOptimization(String issue) { complete(issue); }
+    boolean gbnfTools() { return prefs.getBoolean("gbnfTools",false); }
     int maxTokens() { return prefs.getInt("maxTokens", 512); }
     boolean gpu() { return BuildConfig.VULKAN_BUILD && prefs.getBoolean("gpu", false); }
+    private void resetConversationCache() {
+        if(handle!=0)worker.execute(()->NativeEngine.clearCache(handle));
+    }
     void newChat() {
         if (busy) return;
+        resetConversationCache();
         currentChat=0; messages.clear(); prefs.edit().putLong("chat",0).apply(); error=""; notifyUi();
     }
     void selectChat(long id) {
         if (busy) return;
+        resetConversationCache();
         currentChat=id; messages.clear(); messages.addAll(store.messages(id));
         prefs.edit().putLong("chat",id).apply(); error=""; notifyUi();
     }
@@ -145,6 +151,7 @@ public final class BonsaiApp extends Application {
         ChatStore.Message answer=messages.get(messages.size()-1);
         if(!"user".equals(question.role)||!"assistant".equals(answer.role))return;
         // Keep the original conversation intact; a variant owns its own history.
+        resetConversationCache();
         currentChat=store.forkBeforeLastTurn(currentChat);
         prefs.edit().putLong("chat",currentChat).apply();
         messages.clear();messages.addAll(store.messages(currentChat));
@@ -314,24 +321,34 @@ public final class BonsaiApp extends Application {
         long userId=store.add(chat,"user",input,"");
         messages.add(new ChatStore.Message(userId,"user",input,""));
         List<ChatStore.Message> history=new ArrayList<>(messages);
-        ChatStore.Message answer=new ChatStore.Message(0,"assistant","",""); messages.add(answer); notifyUi();
+        ChatStore.Message answer=new ChatStore.Message(0,"assistant","","");messages.add(answer);notifyUi();
         final int limit=maxTokens();
+        final boolean grammarEnabled=gbnfTools();
         worker.execute(() -> {
-            ByteArrayOutputStream output=new ByteArrayOutputStream(); String issue="", detail="";
+            String text="", issue="", detail="";
+            final int[] reasoningBudget={600};
             try {
-                byte[][] roles=new byte[history.size()+1][], texts=new byte[history.size()+1][];
-                roles[0]=utf8("system"); texts[0]=utf8("Du bist ein hilfreicher Assistent. Antworte auf Deutsch, sofern die Person keine andere Sprache wünscht.");
-                for(int i=0;i<history.size();i++) { roles[i+1]=utf8(history.get(i).role); texts[i+1]=utf8(history.get(i).text); }
-                JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,chunk -> {
-                    output.write(chunk,0,chunk.length); String value=new String(output.toByteArray(),StandardCharsets.UTF_8);
-                    main.post(() -> { answer.text=value; if(!cancelled) status="Antwort wird geschrieben …"; notifyUi(); });
-                }),StandardCharsets.UTF_8));
+                ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts,grammar)->{
+                    ReplyStream output=new ReplyStream(grammarEnabled,value->main.post(()->{
+                        if(!cancelled) { answer.text=value;status="Antwort wird geschrieben …";notifyUi(); }
+                    }));
+                    JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
+                        output,grammar,grammarEnabled?0:reasoningBudget[0]),StandardCharsets.UTF_8));
+                    reasoningBudget[0]=Math.max(0,reasoningBudget[0]-stats.optInt("reasoning_tokens",0));
+                    return new ToolLoop.Result(output.text(),stats);
+                },()->cancelled,grammarEnabled);
+                text=ReasoningText.strip(result.text);
+                byte[][] committedRoles=new byte[history.size()+2][], committedTexts=new byte[history.size()+2][];
+                committedRoles[0]=utf8("system");committedTexts[0]=utf8(ToolLoop.systemPrompt(grammarEnabled));
+                for(int i=0;i<history.size();i++) { committedRoles[i+1]=utf8(history.get(i).role);committedTexts[i+1]=utf8(history.get(i).text); }
+                committedRoles[history.size()+1]=utf8("assistant");committedTexts[history.size()+1]=utf8(text);
+                NativeEngine.commitTurn(handle,committedRoles,committedTexts);
+                JSONObject stats=result.stats;
                 final double speed=stats.getDouble("tokens_per_second");
                 main.post(()->liveTokensPerSecond=speed);
-                detail=String.format(Locale.GERMAN,"%.1f Tokens/s · %d Tokens · %.1f s bis zum ersten Token%s",stats.getDouble("tokens_per_second"),stats.getInt("output_tokens"),stats.getDouble("first_token_ms")/1000,
+                detail=String.format(Locale.GERMAN,"%.1f Tokens/s · %d Tokens · %.1f s bis zum ersten Token%s",stats.getDouble("tokens_per_second"),stats.getInt("output_tokens"),stats.optDouble("first_visible_token_ms",stats.getDouble("first_token_ms"))/1000,
                     stats.getBoolean("stopped") ? " · abgebrochen" : stats.getBoolean("limit_reached") ? " · Antwortlimit erreicht" : "");
             } catch(Exception | LinkageError e) { issue=reason(e); detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort"; }
-            String text=new String(output.toByteArray(),StandardCharsets.UTF_8);
             try {
                 if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
                 else store.removeMessage(userId);  // Do not leave an unanswered user turn in model history.
@@ -397,6 +414,7 @@ public final class BonsaiApp extends Application {
                     String label="Modelltest "+(i+1)+" / 2 · ohne bisherigen Chat";
                     main.post(()->{status=label;notifyUi();});
                     ByteArrayOutputStream text=new ByteArrayOutputStream();
+                    NativeEngine.clearCache(handle);
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,
                         new byte[][]{utf8("system"),utf8("user")},
                         new byte[][]{utf8("Du bist ein hilfreicher Assistent. Antworte auf Deutsch, sofern die Person keine andere Sprache wünscht."),utf8(questions[i])},
@@ -441,11 +459,13 @@ public final class BonsaiApp extends Application {
                 main.post(()->{benchmarkProgress="Aufwärmdurchlauf …";if(!cancelled)status=benchmarkProgress;notifyUi();});
                 byte[][] roles={utf8("user")}, texts={utf8(prompt)};
                 // Warm-up is deliberately excluded from reported timing statistics.
+                NativeEngine.clearCache(handle);
                 NativeEngine.generate(handle,roles,texts,32,42,chunk -> {});
                 for(int i=0;i<3 && !cancelled;i++) {
                     String progress="Messlauf "+(i+1)+" von 3 …";
                     main.post(() -> { benchmarkProgress=progress; if(!cancelled) status=progress; notifyUi(); });
                     ByteArrayOutputStream answer=new ByteArrayOutputStream();
+                    NativeEngine.clearCache(handle);
                     JSONObject run=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,128,42,chunk -> answer.write(chunk,0,chunk.length)),StandardCharsets.UTF_8));
                     run.put("run",i+1).put("answer",new String(answer.toByteArray(),StandardCharsets.UTF_8)); runs.put(run);
                 }

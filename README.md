@@ -22,7 +22,7 @@ Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die Q2_0-Kopie
 
 Implementiert:
 
-- Chatansicht mit Antwortstreaming, Abbrechen, seitlicher Chatliste und lokalem SQLite-Verlauf.
+- Chatansicht mit Antwortstreaming, Abbrechen, seitlicher Chatliste und lokalem SQLite-Verlauf. Tool-Runden und Reasoning bleiben intern.
 - Einen Chat im Seitenmenü lange drücken: **Löschen**, **Archivieren**, **Abbrechen**. Tippen außerhalb schließt das Menü ebenfalls. Archivierte Verläufe bleiben unter **Archivierte Chats** erreichbar und lassen sich dort per langem Drücken wiederherstellen. Löschen erfordert eine Bestätigung.
 - Import einer lokalen GGUF-Datei über den Android-Dateiauswahldialog. Die App erstellt eine private Kopie; ein abgebrochener Import ersetzt das alte Modell nicht.
 - JNI-Anbindung an den originalen PrismML-Fork mit PQ2_0/PTQ1_0 und Bonsai-2-Transformationen.
@@ -31,7 +31,43 @@ Implementiert:
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 - Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
-Die Wissensdatenbanken, RAG, Tool Calling, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Der Chatverlauf ist kein semantisches Langzeitgedächtnis. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
+Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Wissensdatenbanken, RAG, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Das Gedächtnis ist keine semantische Suche. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
+
+## Inkrementeller Kontext und Reasoning
+
+Der normale Chat behält denselben KV-Cache über mehrere Turns. Bei jeder Generierung wird der Prompt neu gerendert und tokenisiert, das gemeinsame Token-Präfix mit dem tatsächlich dekodierten Cache bestimmt und nur der abweichende Suffix entfernt und neu dekodiert. Bei einem vollständig vorhandenen Prompt wird nötigenfalls das letzte Token wiederholt, um passende Logits zu erhalten. Der System-Prompt bleibt zwischen Turns unverändert. Datum/Uhrzeit, falls das Modell-Template sie verwendet, werden pro Modellladung fixiert und ändern den Prompt nicht bei jeder Nachricht.
+
+`<think>…</think>` bleibt nur während der aktuellen Generierung im Kontext. Die native Streaming-Filterung verarbeitet auch über Token-/Chunkgrenzen geteilte Tags und zeigt ausschließlich Text außerhalb des Reasonings. Für eine Nutzerfrage stehen über alle Tool-Runden zusammen ungefähr **600 Reasoning-Tokens** zur Verfügung. Beim Erreichen des Budgets wird `</think>` in den laufenden Kontext eingefügt und mit der Endantwort fortgefahren. Die eingestellte maximale Antwortlänge begrenzt den sichtbaren Antwortteil; Platz für Reasoning und Abschluss wird zusätzlich innerhalb des bestehenden `n_ctx` reserviert. Thinking bleibt im Template standardmäßig deaktiviert; das Budget begrenzt trotzdem auftretendes Reasoning. GBNF-Tool-Grammatiken erlauben keine Thinking-Blöcke und benötigen dafür keine Reserve.
+
+Nach Ende der Generierung wird der Cache auf den kanonisch gerenderten Verlauf mit ausschließlich finalem Assistant-Text abgeglichen. Dadurch muss nach einem Thinking-Block dessen ersetzter Suffix einmal mit dem finalen Text dekodiert werden; das unveränderte Präfix bleibt erhalten. Nach Tool-Runden entfernt ein abschließender Abgleich auch die internen Aufrufe/Ergebnisse aus dem Cache des sichtbaren Chats. Neue Assistant-Nachrichten werden ohne Reasoning gespeichert; ältere Assistant-Zeilen werden beim Lesen bereinigt. Wörtliche Tags in User-Nachrichten werden erhalten.
+
+Passt der Verlauf einschließlich Antwortbudget nicht mehr in den Kontext, werden die ältesten vollständigen Turns aus dem **Modellkontext** entfernt. System-Prompt, aktuelle Frage und ihre Tool-Runden bleiben erhalten. SQLite-Verläufe werden dabei nicht gelöscht. Nach dem einmaligen Neuaufbau des geänderten Suffixes arbeitet das verbleibende Fenster wieder inkrementell. Eine einzelne zu große aktuelle Frage wird mit einer Fehlermeldung abgewiesen. **Neuer Chat**, Chatwechsel und neue Antwortvarianten leeren den Cache auf dem Inferenz-Worker. Abbruch und Decode-Fehler verwerfen den Cache ebenfalls, damit keine unvollständigen Reasoning-Zustände weiterverwendet werden. Benchmarks und Modellprüfungen starten weiterhin ausdrücklich mit kaltem Cache.
+
+Es gibt weiterhin nur einen Modellkontext/KV-Cache mit unveränderter Kontextlänge und F16-K/V-Konfiguration. Zusätzlich wird eine auf die Kontextlänge begrenzte Liste von Token-IDs geführt (bei 4096 Tokens etwa 16 KiB); es werden keine KV-Snapshots und keine Reasoning-Transkripte gespeichert. Native Statistiken enthalten unter anderem `reused_prompt_tokens`, `decoded_prompt_tokens`, `dropped_turns`, `reasoning_tokens`, `reasoning_capped`, `cached_tokens`, `kv_positions` und `cleanup_ms`. Die UI verwendet die Zeit bis zum ersten sichtbaren Texttoken.
+
+[Prüfungen und Grenzen der KV-Änderung](VALIDATION-KV-CACHE.md). Cache-Wiederverwendung reduziert erneutes Prefill; gleichbleibende Tokens/s auf dem A55 sind damit nicht zugesichert. Längere Aufmerksamkeit und thermische Drosselung bleiben mögliche Ursachen für langsameren Decode.
+
+## Lokale Tools im Chat
+
+Der System-Prompt beschreibt ein einzelnes, vollständiges Tool-Format:
+
+```text
+<tool>{"name":"calc","args":{"expr":"2*(3+4)"}}</tool>
+<tool>{"name":"merken","args":{"key":"name","value":"Alex"}}</tool>
+<tool>{"name":"abrufen","args":{"key":"name"}}</tool>
+```
+
+Nach jeder Generierung prüft Java die komplette Antwort per Regex und validiert Name und Argumente. Ein eigener Java-Parser berechnet `+ - * / % ^`, Klammern, Dezimalzahlen, wissenschaftliche Schreibweise, `pi`, `e` und die Funktionen `sqrt`, `abs`, `sin`, `cos`, `tan`, `log` und `log10`. Winkel sind in Radiant; Division durch null, nicht endliche Ergebnisse und übermäßig lange oder tiefe Ausdrücke werden abgewiesen. Es gibt keine zusätzliche Bibliothek oder Netzwerkverbindung.
+
+`merken` speichert auf Wunsch der Person einen Text unter einem Schlüssel oder ersetzt dessen bisherigen Wert. `abrufen` liest genau diesen Schlüssel und meldet fehlende Einträge ausdrücklich. Beispiel: „Merke dir unter dem Schlüssel name: Ich heiße Alex.“ In einem neuen Chat: „Rufe den Schlüssel name ab. Wie heiße ich?“ Die Tabelle `memory` ist chatübergreifend und bleibt beim Löschen eines Chats erhalten. Schlüssel sind auf 128, Werte auf 4000 Zeichen begrenzt. Es gibt keine automatische Suche nach unbekannten Schlüsseln. Die SQLite-Migration von Version 1 oder 2 auf 3 erhält bestehende Chats und Archive. Eine Deinstallation löscht auch das Gedächtnis.
+
+Eine Antwort verwendet maximal **drei Modellgenerierungen**, also höchstens zwei Tool-Ausführungen und eine abschließende Antwort. Tool-Aufruf und JSON-Ergebnis werden nur für diesen Durchlauf intern an den Modellverlauf angehängt; Ergebnisse verwenden für kompatible Chat-Templates die Rolle `user`. Im UI und gespeicherten Chat stehen nur Frage und Endantwort. Die Endantwort wird live gestreamt, sobald ihr Format erkannt ist; Tool-Aufrufe und interne GBNF-Markierungen erscheinen dabei nicht im UI. Fehler der Tools gehen an das Modell zurück; gemischte oder unvollständige Tool-Tags, abgeschnittene Aufrufe und weitere Aufrufe nach dem Limit führen zu einer sichtbaren Fehlermeldung statt einer Tool-Ausgabe im Chat. Abbrechen verhindert weitere Runden; bereits ausgeführte Speicheroperationen bleiben bestehen.
+
+Unter **Modell → Antworten anpassen → GBNF für Tool-Aufrufe (experimentell)** lässt sich die Formatvorgabe zusätzlich im nativen Sampler erzwingen. Standardmäßig ist die Option ausgeschaltet. Mit **Einstellungen speichern** gilt sie ab der nächsten Chatnachricht; ein Neuladen des Modells ist dafür nicht nötig. Während einer laufenden Berechnung ist der Schalter gesperrt. Benchmark, Optimierung und Modellprüfung verwenden weiterhin keine Grammatik.
+
+Bei aktivem GBNF erlaubt die Grammatik entweder genau einen der drei Tool-Aufrufe mit JSON-Stringargumenten oder eine intern mit `<final>…</final>` markierte Textantwort. Die App entfernt diese Markierungen vor Anzeige und Speicherung. In der dritten Runde ist nur noch eine Endantwort zulässig. Abgeschnittene Markierungen werden als Fehler gemeldet. Der optionale UTF-8-Grammatikparameter wird an `NativeEngine.generate` übergeben; `llama_sampler_init_grammar` steht vor den bisherigen Samplern. Eine fehlerhafte Grammatik führt zu einem Fehler statt zum stillen Abschalten der Vorgabe. Ausdrucks- und Speichergrenzen werden weiterhin in Java geprüft.
+
+Die Formatbefolgung und Antwortqualität des echten Bonsai-Modells müssen noch auf dem Gerät geprüft werden, etwa mit „Berechne 173 * 249 mit calc“ und den obigen Gedächtnisbeispielen, jeweils mit aus- und eingeschaltetem GBNF.
 
 ## Quellcode aus GitHub
 
@@ -137,6 +173,17 @@ java scripts/ParseJava.java
 Der erste Aufruf prüft XML/Manifest, JNI-Namen, Versionsbindung und UTF-8-Streaming über sämtliche Zeichengrenzen von Umlauten, Emoji und anderen mehrbyteigen Zeichen. Dafür muss ein C++17-Compiler installiert sein. Der zweite Aufruf prüft die Java-Syntax mit einem JDK, aber ohne Android-Typauflösung.
 
 Die Prüfungen für 0.4.0 einschließlich Gradle-/NDK-Build, Android-Tests und echten 4B-Modelltests stehen in [VALIDATION-0.4.0.md](VALIDATION-0.4.0.md). Ein physischer A55-Nachtest bleibt erforderlich. `VALIDATION.md` dokumentiert den älteren Projektstand.
+
+Der native GBNF-Test prüft die tatsächlich aus Java exportierten Grammatiken mit dem gebundenen PrismML-Parser sowie die Reihenfolge der Sampler. Er benötigt keine Modellgewichte:
+
+```bash
+mkdir -p build/grammar-export
+javac -d build/grammar-export app/src/main/java/de/bonsai/offline/ToolGrammar.java tests/ExportToolGrammar.java
+java -cp build/grammar-export de.bonsai.offline.ExportToolGrammar build/grammar-export
+cmake -S app/src/main/cpp -B build/grammar-check -DBONSAI_GRAMMAR_TESTS=ON -DBONSAI_HOST_SMOKE=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/grammar-check --target bonsai-grammar-test --parallel 2
+./build/grammar-check/bonsai-grammar-test build/grammar-export
+```
 
 ## Technische Quellen
 

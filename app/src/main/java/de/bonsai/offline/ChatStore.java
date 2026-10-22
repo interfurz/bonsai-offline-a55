@@ -23,17 +23,32 @@ final class ChatStore extends SQLiteOpenHelper {
         final String title;
         Chat(long id, String title) { this.id=id; this.title=title; }
     }
-    ChatStore(Context c) { super(c, "chats.sqlite", null, 2); }
+    ChatStore(Context c) { super(c, "chats.sqlite", null, 3); }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE chats(id INTEGER PRIMARY KEY, title TEXT NOT NULL, updated INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE, role TEXT NOT NULL, text TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE INDEX messages_chat ON messages(chat_id,id)");
+        createMemory(db);
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
-        if(oldVersion==1 && newVersion==2) {
-            db.execSQL("ALTER TABLE chats ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
-        } else throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<1 || newVersion>3) throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<2) db.execSQL("ALTER TABLE chats ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
+        if(oldVersion<3) createMemory(db);
+    }
+    private static void createMemory(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE memory(key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated INTEGER NOT NULL)");
+    }
+    void remember(String key,String value) {
+        ContentValues v=new ContentValues();
+        v.put("key",key); v.put("value",value); v.put("updated",System.currentTimeMillis());
+        if(getWritableDatabase().insertWithOnConflict("memory",null,v,SQLiteDatabase.CONFLICT_REPLACE)==-1)
+            throw new IllegalStateException("Erinnerung konnte nicht gespeichert werden.");
+    }
+    String recall(String key) {
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT value FROM memory WHERE key=?",new String[]{key})) {
+            return c.moveToFirst()?c.getString(0):null;
+        }
     }
     long createChat(String title) {
         ContentValues v=new ContentValues(); v.put("title", title); v.put("updated",System.currentTimeMillis());
@@ -52,11 +67,20 @@ final class ChatStore extends SQLiteOpenHelper {
     List<Message> messages(long chat) {
         List<Message> result=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery("SELECT id,role,text,detail FROM messages WHERE chat_id=? ORDER BY id",new String[]{Long.toString(chat)})) {
-            while(c.moveToNext()) result.add(new Message(c.getLong(0),c.getString(1),c.getString(2),c.getString(3)));
+            while(c.moveToNext()) {
+                String role=c.getString(1),text=c.getString(2);
+                result.add(new Message(c.getLong(0),role,"assistant".equals(role)?ReasoningText.strip(text):text,c.getString(3)));
+            }
+        }
+        // Repair older assistant messages lazily without altering user quotes or requiring a schema change.
+        for(Message m:result)if("assistant".equals(m.role)) {
+            ContentValues v=new ContentValues();v.put("text",m.text);
+            getWritableDatabase().update("messages",v,"id=? AND text<>?",new String[]{Long.toString(m.id),m.text});
         }
         return result;
     }
     long add(long chat,String role,String text,String detail) {
+        if("assistant".equals(role))text=ReasoningText.strip(text);
         SQLiteDatabase db=getWritableDatabase();
         ContentValues v=new ContentValues(); v.put("chat_id",chat); v.put("role",role); v.put("text",text); v.put("detail",detail);
         db.beginTransaction();

@@ -31,6 +31,8 @@ public class BackgroundInferenceTest {
         static volatile boolean referenceMode, divergent;
         static int loads,unloads;
         @Implementation protected static void __staticInitializer__() {}
+        @Implementation protected static void clearCache(long handle) {}
+        @Implementation protected static void commitTurn(long handle,byte[][] roles,byte[][] contents) {}
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { stopped=false; }
         @Implementation protected static void stop(long handle) { stopped=true; finish.countDown(); }
@@ -44,7 +46,7 @@ public class BackgroundInferenceTest {
         @Implementation protected static byte[] probe(long handle, int steps) {
             return ((!referenceMode && divergent)?"{\"signature\":[100,200],\"top_tokens\":[9,9]}":"{\"signature\":[1,2],\"top_tokens\":[1,2]}").getBytes(StandardCharsets.UTF_8);
         }
-        @Implementation protected static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, NativeEngine.Stream stream) throws Exception {
+        @Implementation protected static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, NativeEngine.Stream stream,byte[] grammar,int reasoningBudget) throws Exception {
             started.countDown();
             if(!finish.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("Test worker timed out");
             if(fail) throw new IllegalStateException("Test inference failure");

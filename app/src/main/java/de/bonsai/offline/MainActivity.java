@@ -495,6 +495,9 @@ public final class MainActivity extends Activity {
         TextView threadLabel=settingLabel("CPU-Threads");controls.addView(threadLabel);Spinner threads=spinner(new String[]{"2","4","6","8"},app.threads()/2-1);labelSpinner(threadLabel,threads);controls.addView(threads);
         TextView lengthLabel=settingLabel("Maximale Antwortlänge");controls.addView(lengthLabel);Spinner length=spinner(new String[]{"128 Tokens","256 Tokens","512 Tokens","1.024 Tokens","2.048 Tokens"},app.maxTokens()==128?0:app.maxTokens()==256?1:app.maxTokens()==1024?3:app.maxTokens()==2048?4:2);labelSpinner(lengthLabel,length);controls.addView(length);
         TextView engineLabel=settingLabel("Rechenbackend");controls.addView(engineLabel);Spinner engine=spinner(BuildConfig.VULKAN_BUILD?new String[]{"CPU","Vulkan · experimentell"}:new String[]{"CPU"},app.gpu()?1:0);labelSpinner(engineLabel,engine);controls.addView(engine);
+        CheckBox grammar=new CheckBox(this);grammar.setText("GBNF für Tool-Aufrufe (experimentell)");
+        grammar.setTextColor(TEXT);grammar.setChecked(app.gbnfTools());grammar.setEnabled(!app.busy);controls.addView(grammar);
+        controls.addView(settingLabel("Erzwingt im Chat ein gültiges Tool-Format. Bei unzuverlässigen Tool-Aufrufen einschalten. Gilt ab der nächsten Nachricht, ohne das Modell neu zu laden."));
         CheckBox compatible=new CheckBox(this); compatible.setText("CPU-Kompatibilitätsmodus");
         compatible.setTextColor(TEXT); compatible.setChecked(app.prefs.getBoolean("cpuCompatibility",false)); compatible.setEnabled(!app.busy); controls.addView(compatible);
         controls.addView(settingLabel("Bei Zeichensalat: CPU und Kompatibilitätsmodus wählen, übernehmen und einen neuen Chat starten. Der Modus nutzt skalare Bonsai-Quantisierungskernel und kann langsamer sein."));
@@ -507,7 +510,7 @@ public final class MainActivity extends Activity {
             int c=new int[]{2048,4096,8192}[context.getSelectedItemPosition()],t=new int[]{2,4,6,8}[threads.getSelectedItemPosition()],l=new int[]{128,256,512,1024,2048}[length.getSelectedItemPosition()];boolean gpu=engine.getSelectedItemPosition()==1;
             boolean changed=c!=app.context()||t!=app.threads()||gpu!=app.gpu()||compatible.isChecked()!=app.prefs.getBoolean("cpuCompatibility",false);
             if(changed)app.prefs.edit().remove("optimizedFor").remove("batchThreads").remove("microBatch").apply();
-            app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).putBoolean("cpuCompatibility",compatible.isChecked()).apply();
+            app.prefs.edit().putInt("context",c).putInt("threads",t).putInt("maxTokens",l).putBoolean("gpu",gpu).putBoolean("cpuCompatibility",compatible.isChecked()).putBoolean("gbnfTools",grammar.isChecked()).apply();
             if(compatible.isChecked()&&!gpu)app.prefs.edit().putInt("microBatch",1).apply();
             if(!app.modelFile().isFile())pickModel();else if(changed||!app.loaded)app.loadModel();else Toast.makeText(this,"Einstellungen gespeichert",Toast.LENGTH_SHORT).show();
         });

@@ -40,6 +40,9 @@ def main():
         binary=Path(temp)/"utf8-test"
         subprocess.run([compiler,"-std=c++17","-Wall","-Wextra","-Werror",str(ROOT/"tests/utf8_stream_test.cpp"),"-o",str(binary)],check=True)
         subprocess.run([str(binary)],check=True)
+        state_binary=Path(temp)/"conversation-state-test"
+        subprocess.run([compiler,"-std=c++17","-Wall","-Wextra","-Werror",str(ROOT/"tests/conversation_state_test.cpp"),"-o",str(state_binary)],check=True)
+        subprocess.run([str(state_binary)],check=True)
     print("These are host checks only. APK build and A55 hardware validation are separate.")
 
 
