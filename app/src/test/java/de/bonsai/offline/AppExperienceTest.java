@@ -318,6 +318,74 @@ public class AppExperienceTest {
             assertNull(field(a,"drawer"));assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,((View)field(a,"page")).getImportantForAccessibility());
         }
     }
+    @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
+    public void nativeGlowTracksWorkCompletionErrorsAndCancellation() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.loaded=true;app.notifyUi();
+            PulsingBorder glow=(PulsingBorder)field(a,"composerAura");
+            assertEquals(PulsingBorder.State.IDLE,glow.getState());
+            assertNotNull(described(a.getWindow().getDecorView(),"Modell und Einstellungen öffnen"));
+            app.messages.add(new ChatStore.Message(1,"user","Wie entsteht eine gute Idee?",""));
+            ChatStore.Message answer=new ChatStore.Message(2,"assistant","","");app.messages.add(answer);
+            app.busy=true;app.status="Bonsai denkt nach …";app.notifyUi();
+            assertEquals(PulsingBorder.State.GENERATING,glow.getState());
+            TextView live=(TextView)field(a,"liveAnswer");
+            answer.text="Eine gute Idee beginnt mit einer guten Frage.";app.notifyUi();
+            assertSame(live,field(a,"liveAnswer"));screenshot(a,"glow-generating-dark");
+            app.busy=false;app.notifyUi();
+            assertEquals(PulsingBorder.State.DONE,glow.getState());
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));
+            assertEquals(PulsingBorder.State.IDLE,glow.getState());
+            app.busy=true;app.notifyUi();app.busy=false;app.error="Testfehler";app.notifyUi();
+            assertEquals("Errors never show a success glow",PulsingBorder.State.IDLE,glow.getState());
+            app.error="";app.busy=true;app.cancelled=false;app.notifyUi();
+            app.cancelled=true;app.busy=false;app.notifyUi();
+            assertEquals("Cancellation never shows a success glow",PulsingBorder.State.IDLE,glow.getState());
+        }
+    }
+    @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
+    public void completedGlowCanBeCapturedInItsOwnNativeWindow() throws Exception {
+        // Native offscreen captures of successive states may reuse stale text RenderNodes.
+        // Capture completion in a fresh Activity, independently of the generating image.
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.loaded=true;
+            app.messages.add(new ChatStore.Message(1,"user","Wie entsteht eine gute Idee?",""));
+            app.messages.add(new ChatStore.Message(2,"assistant","Eine gute Idee beginnt mit einer guten Frage.",""));
+            app.busy=true;app.notifyUi();app.busy=false;app.notifyUi();
+            assertEquals(PulsingBorder.State.DONE,((PulsingBorder)field(a,"composerAura")).getState());
+            screenshot(a,"glow-done-dark");
+        }
+    }
+    @Test public void nativeGlowStopsWhenHiddenOrMotionIsDisabled() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();PulsingBorder glow=(PulsingBorder)field(a,"composerAura");
+            controller.windowFocusChanged(true);glow.setActive(true);
+            assertTrue(glow.isFrameScheduled());
+            glow.setVisibility(View.GONE);assertFalse(glow.isFrameScheduled());
+            glow.setVisibility(View.VISIBLE);assertTrue(glow.isFrameScheduled());
+            described(a.getWindow().getDecorView(),"Menü öffnen").performClick();
+            assertFalse("Underlying chat does not animate behind the drawer",glow.isFrameScheduled());
+            assertFalse(((PulsingBorder)field(a,"welcomeAura")).isFrameScheduled());
+            a.onBackPressed();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
+            assertTrue(glow.isFrameScheduled());
+            controller.pause().stop();assertFalse(glow.isFrameScheduled());
+            controller.start().resume().visible().windowFocusChanged(true);
+            assertTrue(glow.isFrameScheduled());
+            java.lang.reflect.Method durationScale=android.animation.ValueAnimator.class.getDeclaredMethod("setDurationScale",float.class);
+            durationScale.setAccessible(true);durationScale.invoke(null,0f);
+            try {
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100));
+                assertFalse(glow.isFrameScheduled());
+                glow.setState(PulsingBorder.State.GENERATING);
+                screenshot(a,"glow-reduced-motion");assertFalse(glow.isFrameScheduled());
+            } finally {durationScale.invoke(null,1f);}
+            org.robolectric.shadows.ShadowPowerManager power=org.robolectric.Shadows.shadowOf((android.os.PowerManager)a.getSystemService(android.content.Context.POWER_SERVICE));
+            power.setIsPowerSaveMode(true);glow.setActive(true);assertFalse(glow.isFrameScheduled());
+            power.setIsPowerSaveMode(false);glow.setActive(true);assertTrue(glow.isFrameScheduled());
+        }
+    }
     @Test public void tunedProfilesAreInvalidatedBySettingsAndHaveUniqueCandidates() {
         BonsaiApp a=(BonsaiApp)org.robolectric.RuntimeEnvironment.getApplication();
         a.prefs.edit().putString("optimizedFor",a.profileIdentity()).commit();assertTrue(a.optimized());
