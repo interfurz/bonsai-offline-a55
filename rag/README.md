@@ -1,5 +1,9 @@
 # Offline-Wissenssuche (Schema v1)
 
+Der skalierbare, wiederaufnehmbare Wikipedia-Import ist in [WIKIPEDIA.md](WIKIPEDIA.md)
+beschrieben: Windows-Installation, Markdown/Chunking, Herkunftsdaten, Prozesspool,
+Checkpoints sowie kleine Beispieldatenbank und gemessene Host-Benchmarks.
+
 Die Erweiterung für Millionen Vektoren steht in [IVF.md](IVF.md): Indexformat,
 K-means-Bau, konfigurierbares nprobe/RRF, Recall-Vergleich sowie Host- und
 Geräte-Benchmark. Die folgenden Befehle beschreiben weiterhin den kompatiblen
@@ -15,7 +19,7 @@ ist nur für die technische Prüfung gedacht, nicht für semantische Suchqualit�
 ```sh
 python3 -m venv rag/.venv
 . rag/.venv/bin/activate
-pip install -r rag/requirements.txt
+pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt
 python3 -m unittest discover -s rag/tests -v
 mkdir -p rag/output
 python3 -m rag ingest rag/data/articles.jsonl rag/output/knowledge.sqlite
@@ -31,17 +35,23 @@ python3 -m rag.compare rag/output/knowledge.sqlite rag/output/vectors.i8 \
 mit denselben `ingest`/`embed`-Befehlen erzeugt (Ziel
 `app/src/test/resources/rag/`, ohne `--reference`). Vor dem Regenerieren die alten
 Ausgaben entfernen. Die Pipeline überschreibt vorhandene Ausgaben absichtlich
-nicht. Bei einem abgebrochenen Lauf die unvollständigen Ausgaben löschen und
-neu starten; erst vollständig erzeugte Dateien zusammen auf das Gerät kopieren.
+nicht. Bei einem abgebrochenen Import mit `ingest --resume` fortsetzen. Embedding-Ausgaben
+unterstützen weiterhin keine Wiederaufnahme. Erst vollständig erzeugte Dateien
+zusammen auf das Gerät kopieren.
 
-## Echter Lauf auf dem Laptop / RTX 4060
+## Kleiner Modelltest auf dem Laptop / RTX 4060
 
 Den aktuellen deutschen **pages-articles-multistream.xml.bz2**-Dump manuell von
 <https://dumps.wikimedia.org/dewiki/> laden, Prüfsumme kontrollieren und Namen,
 Datum sowie Prüfsumme für die spätere Bewertung aufbewahren. Kein automatischer
 Dump-Download. XML und bz2 werden sequentiell verarbeitet; `--limit 50` beendet
 den Parser nach 50 Hauptnamensraum-Artikeln, ohne den vollen Dump einzulesen.
-Weiterleitungen und andere Namensräume werden übersprungen.
+Andere Namensräume werden übersprungen; Weiterleitungen bleiben als Artikel-/Alias-
+Metadaten erhalten und erzeugen keine duplizierten Inhaltschunks.
+Die folgenden Embedding-Befehle verwenden einen eigenständigen, begrenzten Testkorpus.
+Nach dem Embedding lässt sich diese DB nicht mehr per Import erweitern. Für den
+vollständigen Lauf eine neue DB verwenden und den Import vor dem Embedding abschließen;
+Wiederaufnahme einer noch nicht vektorisierten DB ist in [WIKIPEDIA.md](WIKIPEDIA.md) erklärt.
 
 ```sh
 pip install -r rag/requirements-embeddings.txt
@@ -56,7 +66,7 @@ python3 -m rag search rag/output/wiki.sqlite 'Wie entsteht Sauerstoff in Pflanze
   --vectors rag/output/wiki.i8
 python3 -m rag.compare rag/output/wiki.sqlite rag/output/wiki.i8 \
   rag/output/wiki.f32 /daten/testfragen.json > rag/output/wiki-comparison.json
-# Für den vollständigen Dump --limit weglassen; eigene neue Ausgabepfade benutzen.
+# Für den späteren Voll-Lauf eine neue DB verwenden; siehe WIKIPEDIA.md.
 ```
 
 Standard ist `google/embeddinggemma-2`, text-only mit Float32 und deaktivierten
@@ -76,23 +86,21 @@ Quantisierung. Für eine isolierte INT8-Bewertung wäre zusätzlich eine
 Bei Speichermangel `--batch` reduzieren. CUDA-/RTX- und Voll-Dump-Läufe sind
 getrennt von den Host-Tests zu validieren.
 
-Chunking erfolgt nach Überschriftenhierarchie. Kleine angrenzende Abschnitte
-werden unter ca. 80 geschätzten Tokens zusammengeführt; Abschnitte über ca. 800
-werden weiter geteilt und ein kurzer Rest nach Möglichkeit ausbalanciert.
-Budgetschätzung: `ceil(UTF-8-Bytes / 4)`, **nicht** der Bonsai-/Gemma-Tokenizer.
-Wikicode wird mit mwparserfromhell von Vorlagen, Referenzen und Datei-/Kategorie-
-Links bereinigt. Tabellen, mathematische Notation und komplexe Vorlagen können
-Information verlieren; vor einem produktiven Import Stichproben prüfen.
-Wikipedia-Lizenz, Attribution und Versionsgeschichte müssen bei einer
-Weiterverteilung berücksichtigt werden; Artikel-URLs sind keine vollständige
-Lizenz- oder Revisionsdokumentation.
+Chunking erfolgt nach Überschriftenhierarchie mit separater Einleitung, kurzem
+Abschnitts-Merging und ca. 800 geschätzten Tokens als Obergrenze. Die Schätzung
+`ceil(UTF-8-Bytes / 4)` ist kein Modell-Tokenizer. Die Markdown-Konvertierung behält
+komprimierte Wikitext-Originale und Revisions-/Lizenzinformationen. Details,
+Informationsverluste und Attributionsgrenzen stehen in [WIKIPEDIA.md](WIKIPEDIA.md).
 
 ## Gemeinsames Dateiformat
 
 SQLite `user_version=1`:
 
-- `chunks(id, article_id, title, heading, source, text_zlib)`; IDs deterministisch
-  nach Importreihenfolge, nicht über verschiedene Dumps hinweg stabil.
+- `chunks(id, article_id, title, heading, source, text_zlib)`; positive inhaltsbasierte
+  int64-IDs, stabil bei gleicher Konvertierung und gleichem Inhalt, unabhängig von
+  Importreihenfolge/Workerzahl. IDs sind nicht fortlaufend. Alte DBs bleiben lesbar.
+- Zusätzlich `articles`, `redirects`, `chunk_metadata`, `ingest_errors` und Import-
+  Metadaten für Originaltexte, Herkunft, stabile SHA256-Schlüssel und Checkpoints.
 - `text_zlib`: UTF-8, zlib-Stream (Java `InflaterInputStream`).
 - `chunks_fts`: FTS5, `content=''`, unicode61; ROWID entspricht Chunk-ID.
 - `chunks_fts4`: FTS4-Kompatibilitätsindex für Android-Systeme ohne FTS5.

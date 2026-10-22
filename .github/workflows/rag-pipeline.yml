@@ -1,0 +1,45 @@
+name: RAG text pipeline
+
+on:
+  pull_request:
+    paths:
+      - 'rag/**'
+      - '.github/workflows/rag-pipeline.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'rag/**'
+      - '.github/workflows/rag-pipeline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  small-fixtures:
+    name: Small offline fixtures (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: 'rag/requirements*.txt'
+      - name: Install text and test dependencies
+        run: python -m pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt
+      - name: Test existing RAG and Wikipedia pipeline
+        run: python -m unittest discover -s rag/tests -v
+      - name: Import small XML with spawn workers
+        run: python -m rag ingest rag/data/wikipedia/complex.xml rag/output/ci.sqlite --workers 2 --limit 1 --commit-every 1
+      - name: Resume and finish small XML
+        run: python -m rag ingest rag/data/wikipedia/complex.xml rag/output/ci.sqlite --resume --workers 2
+      - name: Search without embeddings
+        run: python -m rag search rag/output/ci.sqlite Lichtreaktion
