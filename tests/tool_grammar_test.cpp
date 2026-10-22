@@ -43,6 +43,22 @@ int main(int argc,char ** argv) {
             require(matches(tools,call),std::string("Rejected valid tool: ")+call);
             require(!matches(final,call),"Final round must reject tools");
         }
+        for(const auto & call:{
+                R"(<tool>{"name":"wikidata","args":{"op":"resolve","entity":"Einstein"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"facts","entity":"Japan","property":"Hauptstadt"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"path","entity":"Q937","property":"P19/P17/P36"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"greater","entity":"Q11344","property":"P1086","value":"50","unit":"1"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"largest","entity":"Q11344","property":"P1086","unit":"1"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"count","entity":"Q634","property":"P397","value":"Q2537"}}</tool>)"}) {
+            require(matches(tools,call),std::string("Rejected Wikidata tool: ")+call);
+            require(!matches(final,call),"Final round must reject Wikidata");
+        }
+        for(const auto & invalid:{
+                R"(<tool>{"name":"wikidata","args":{"op":"sql","entity":"DROP TABLE entity"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"facts","entity":"Japan"}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"resolve","entity":17}}</tool>)",
+                R"(<tool>{"name":"wikidata","args":{"op":"facts","entity":"Japan","property":"P36","sql":"x"}}</tool>)"})
+            require(!matches(tools,invalid),std::string("Accepted invalid Wikidata call: ")+invalid);
         for(const auto & invalid:{"Hallo", "<final>unvollständig", "<final>x</final>suffix", "<final>x</final></final>",
                                  R"GBNF(<tool>{"name":"unknown","args":{}}</tool>)GBNF",
                                  R"GBNF(<tool>{'name':'calc','args':{'expr':'1+1'}}</tool>)GBNF",

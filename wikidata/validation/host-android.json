@@ -1,0 +1,11 @@
+{
+  "environment": "Linux host / Robolectric native SQLite; not A55",
+  "database_bytes": 53248,
+  "queries": 20,
+  "warmup": 3,
+  "p50_ms": 2.707789,
+  "p95_ms": 4.003697,
+  "java_used_heap_before": 329252864,
+  "java_used_heap_after": 331874304,
+  "heap_note": "JVM heap snapshots, includes Robolectric; not peak or Android RSS"
+}

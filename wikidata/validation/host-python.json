@@ -1,0 +1,88 @@
+{
+  "environment": {
+    "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "python": "3.12.14",
+    "sqlite": "3.53.1",
+    "machine": "x86_64"
+  },
+  "scope": "Small authored fixture; host Python/SQLite only. No network or model inference. Not A55.",
+  "dump_bytes": 32363,
+  "database_bytes": 53248,
+  "build_seconds": 0.021629047000033097,
+  "python_traced_peak_bytes": 360485,
+  "process_peak_rss_bytes": 15466496,
+  "memory_note": "Linux subprocess lifetime peak RSS; Python tracemalloc excludes SQLite C allocations",
+  "counts": {
+    "entity": 46,
+    "term": 143,
+    "statement": 33
+  },
+  "queries": {
+    "capital": {
+      "p50_ms": 0.0039310000000000005,
+      "p95_ms": 0.005508,
+      "results": [
+        [
+          1490
+        ]
+      ],
+      "plan": [
+        [
+          3,
+          0,
+          38,
+          "SEARCH statement USING INDEX statement_forward (subject=? AND property=? AND rank>?)"
+        ]
+      ]
+    },
+    "birthplace_country_capital": {
+      "p50_ms": 0.003971000000000001,
+      "p95_ms": 0.004867,
+      "results": [
+        [
+          64
+        ]
+      ],
+      "plan": [
+        [
+          8,
+          0,
+          39,
+          "SEARCH a USING INDEX statement_forward (subject=? AND property=?)"
+        ],
+        [
+          17,
+          0,
+          39,
+          "SEARCH b USING INDEX statement_forward (subject=? AND property=?)"
+        ],
+        [
+          26,
+          0,
+          39,
+          "SEARCH c USING INDEX statement_forward (subject=? AND property=?)"
+        ]
+      ]
+    },
+    "atomic_number_over_50": {
+      "p50_ms": 0.0035954999999999997,
+      "p95_ms": 0.004106,
+      "results": [
+        [
+          131,
+          "+53"
+        ]
+      ],
+      "plan": [
+        [
+          4,
+          0,
+          37,
+          "SEARCH statement USING INDEX statement_number (property=? AND unit=? AND number>?)"
+        ]
+      ]
+    }
+  },
+  "runs_per_query": 100,
+  "warmup": 3
+}

@@ -1,0 +1,19 @@
+test_budget_existing_output_and_invalid_configuration (test_pipeline.PipelineTests.test_budget_existing_output_and_invalid_configuration) ... ok
+test_checkpoint_source_and_config_are_immutable (test_pipeline.PipelineTests.test_checkpoint_source_and_config_are_immutable) ... ok
+test_class_filters_exclusions_and_no_deprecated_data_loss (test_pipeline.PipelineTests.test_class_filters_exclusions_and_no_deprecated_data_loss) ... ok
+test_corrupt_compressed_input_does_not_publish (test_pipeline.PipelineTests.test_corrupt_compressed_input_does_not_publish) ... ok
+test_explicit_error_tolerance_and_line_limit (test_pipeline.PipelineTests.test_explicit_error_tolerance_and_line_limit) ... ok
+test_failures_rollback_entity_and_offset_together (test_pipeline.PipelineTests.test_failures_rollback_entity_and_offset_together) ... ok
+test_gzip_bz2_and_resume_mid_second_pass_match_fresh_build (test_pipeline.PipelineTests.test_gzip_bz2_and_resume_mid_second_pass_match_fresh_build) ... ok
+test_ids_and_cross_language_normalization (test_pipeline.PipelineTests.test_ids_and_cross_language_normalization) ... ok
+test_page_budget_aborts_without_publishing (test_pipeline.PipelineTests.test_page_budget_aborts_without_publishing) ... ok
+test_query_plans_use_name_forward_reverse_and_numeric_indices (test_pipeline.PipelineTests.test_query_plans_use_name_forward_reverse_and_numeric_indices) ... ok
+test_selection_second_pass_fetches_earlier_endpoints_and_properties (test_pipeline.PipelineTests.test_selection_second_pass_fetches_earlier_endpoints_and_properties) ... ok
+test_special_snaks_bce_and_unindexed_large_numbers_are_preserved (test_pipeline.PipelineTests.test_special_snaks_bce_and_unindexed_large_numbers_are_preserved) ... ok
+test_truncated_dump_does_not_publish (test_pipeline.PipelineTests.test_truncated_dump_does_not_publish) ... ok
+test_typed_facts_aliases_descriptions_and_source_details (test_pipeline.PipelineTests.test_typed_facts_aliases_descriptions_and_source_details) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.151s
+
+OK

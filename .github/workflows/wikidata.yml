@@ -1,0 +1,45 @@
+name: Offline Wikidata pipeline
+on:
+  push:
+    paths: ['wikidata/**', 'app/src/**/Wikidata*', 'app/src/test/resources/wikidata/**', 'app/src/main/java/de/bonsai/offline/Tool*.java', 'tests/tool_grammar_test.cpp', '.github/workflows/wikidata.yml']
+  pull_request:
+    paths: ['wikidata/**', 'app/src/**/Wikidata*', 'app/src/test/resources/wikidata/**', 'app/src/main/java/de/bonsai/offline/Tool*.java', 'tests/tool_grammar_test.cpp', '.github/workflows/wikidata.yml']
+permissions:
+  contents: read
+jobs:
+  small-dump:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s wikidata/tests -v
+      - name: Verify shared Android fixture content across SQLite versions
+        run: python3 -m wikidata.fixtures --check
+      - run: python3 -m wikidata.benchmark --output work/wikidata-benchmark.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wikidata-small-fixture-benchmark
+          path: work/wikidata-benchmark.json
+  native-tool-grammar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python3 scripts/fetch_runtime.py
+      - name: Compile and execute the real grammar parser and CPU regression checks
+        run: |
+          cmake -S app/src/main/cpp -B build/wikidata-host -DBONSAI_HOST_SMOKE=ON -DBONSAI_GRAMMAR_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/wikidata-host --target bonsai-grammar-test bonsai-reference-test --parallel 2
+          mkdir -p work/grammar-export
+          javac -d work/grammar-export app/src/main/java/de/bonsai/offline/ToolGrammar.java tests/ExportToolGrammar.java
+          java -cp work/grammar-export de.bonsai.offline.ExportToolGrammar work/grammar-export
+          build/wikidata-host/bonsai-grammar-test work/grammar-export
+          build/wikidata-host/bonsai-reference-test
