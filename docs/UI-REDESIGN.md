@@ -57,8 +57,24 @@ und wandernde lokale Highlights erzeugen den Effekt. Farbwechsel werden über
 | Done | kurzer grüner / cyanfarbener Saum | erfolgreicher Abschluss |
 
 Done geht nach 1,8 Sekunden in Idle über. Fehler und Abbruch lösen keinen Erfolgssaum aus.
-Modell-/Leistungs-Pop-ups teilen den Zustand der Chatbar. Neuer Chat und Import
-bekommen schwächere Akzente, damit die Hauptfläche ruhig bleibt.
+Die Beleuchtung ist in der gesamten App verteilt und teilt denselben Zustand:
+
+- **Bildschirmränder:** Zwei weiche, langsam wandernde Farbfelder. Die Mitte der
+  Lesefläche bleibt dunkel; im hellen Theme ist die Deckkraft zusätzlich reduziert.
+- **Neueste Antwort:** Eine schmale Lichtlinie am linken Rand; ältere Antworten
+  und der Text selbst bleiben ruhig. Das Streaming verwendet dieselbe TextView.
+- **Modell und Leistung:** Sanfte Konturen um die Status-/Ergebniskarte und die
+  jeweilige Hauptaktion, zusätzlich zu einem dezenten Lichtfeld im Pop-up.
+- **Seitenleiste:** Eigenes Lichtfeld, zurückhaltend beleuchteter aktueller Chat
+  und die Aktion für einen neuen Chat.
+- **Chatbar:** Der stärkste Randakzent. Die übrigen Konturen verwenden nur
+  25–60 % ihrer Stärke; Formulare und normale Menüeinträge haben keine Dauerkontur.
+
+`PulsingBorder` bietet die Modi BORDER, AMBIENT und RAIL. Ein gemeinsamer
+30-fps-Callback versorgt alle sichtbaren Effekte. Die Activity verwaltet getrennte
+Gruppen für Hauptansicht, Chatinhalt, Pop-up und Seitenleiste. Ersetzte Inhalte
+werden aus dem Taktgeber und der Zustandsverteilung entfernt. Je Hauptansicht
+animieren höchstens vier Lichtflächen gleichzeitig.
 
 Die Bildrate ist auf ungefähr 30 fps begrenzt. Pfade, Shader und Matrizen werden
 wiederverwendet; der Frame-Loop allokiert keine Zeichnungsobjekte. Animationen
@@ -73,7 +89,10 @@ und Pop-ups pausieren die Effekte des verdeckten Chats.
 Streaming, Kopieren, Antwortvarianten, Fehler, Theme-Kontraste, 200 % Schrift,
 schmale Displays und Tablet-Breite. Zusätzliche Prüfungen decken die drei
 Effektzustände, Rückkehr zu Idle, Fehler/Abbruch, verdeckte Ansichten,
-Activity-Lebenszyklus, reduzierte Bewegung und Energiesparen ab.
+Activity-Lebenszyklus, reduzierte Bewegung und Energiesparen ab. Die Erweiterung
+prüft außerdem gemeinsame Effektzustände über Chat und Pop-ups, das Pausieren
+verdeckter Flächen, das Freigeben ersetzter Karten und die Navigation des
+beleuchteten aktuellen Chats.
 
 Native Robolectric-Renderaufnahmen; die dargestellten Inhalte und der Modellstatus
 sind Testvorgaben und kein Nachweis einer Geräte-Inferenz:
@@ -84,10 +103,13 @@ sind Testvorgaben und kein Nachweis einer Geräte-Inferenz:
 
 Weitere Ansichten: [Seitenleiste](ui/sidebar-dark.png), [Modell](ui/model-light.png),
 [Leistung](ui/performance-light.png), [Einstieg hell](ui/welcome-light.png),
-[große Schrift](ui/large-text-dark.png), [Abschluss](ui/glow-done-dark.png).
+[große Schrift](ui/large-text-dark.png), [Abschluss](ui/glow-done-dark.png),
+[Modell mit dynamischem Licht](ui/app-light-model-dark.png),
+[laufende Leistungsmessung](ui/app-light-performance-dark.png) und
+[aktueller Chat in der Seitenleiste](ui/app-light-sidebar-dark.png).
 
 Validierung: `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug`
-erfolgreich: **132 Tests, 0 Fehler**, ARM64-CPU-Debug-APK und Lint ohne Fehler
+erfolgreich: **135 Tests, 0 Fehler**, ARM64-CPU-Debug-APK und Lint ohne Fehler
 (acht bestehende Warnungen zu Konfiguration und deutschen Inline-Texten).
 Ein physischer A55-Test für Bildrate, Tastatur, TalkBack und parallele echte
 Modellinferenz bleibt erforderlich. Es ist kein Gerät angeschlossen.
