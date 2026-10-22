@@ -22,7 +22,7 @@ Alle Motive wurden in allen drei Größen geprüft; die 16-dp-Versionen bleiben 
 
 `icon_colors.xml` in `values` und `values-night` definiert ausschließlich Icon-Farbrollen. Sonstige DesignTokens, Texte, Navigation und Funktionen bleiben erhalten. Hauptaktionen: #1B1B20 / #F5F5F7; Metadaten: #62626E / #A6A6B0; ausgewählter Eintrag: #6540B5 / #C4ADFF; auf Action-Buttons: #FFFFFF. XML nutzt neutrales Schwarz als übertönbare Maskenfarbe, ohne Zustandsfarben oder globale festgelegte Tints. SVG nutzt `currentColor`.
 
-Plus ist geliefert und im Loader verfügbar; es wurde kein neuer Plus-Button erfunden. Archiv und Verlauf werden an bestehenden Einträgen gezeigt. Book/Idee sitzen an den vorhandenen Vorschlägen. Die Blatt-/Bonsai-Identität sowie bestehende Schild- und Richtungspfeil-Zusatzsymbole bleiben außerhalb dieses Auftrags.
+Plus sitzt am vorhandenen Einstellungen-Button der neuen Chatbar; seine Funktion bleibt erhalten. Archiv und Verlauf werden an bestehenden Einträgen gezeigt. Book/Idee sitzen an den vorhandenen Vorschlägen. Die Blatt-/Bonsai-Identität sowie bestehende Schild- und Richtungspfeil-Zusatzsymbole bleiben außerhalb dieses Auftrags.
 
 ## Reproduzieren
 

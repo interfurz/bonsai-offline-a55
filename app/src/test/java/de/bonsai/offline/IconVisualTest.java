@@ -56,14 +56,14 @@ public class IconVisualTest {
     private void surfaces(boolean dark)throws Exception{
         String theme=dark?"dark":"light";
         try(ActivityController<MainActivity> ctl=Robolectric.buildActivity(MainActivity.class).setup().visible()){
-            MainActivity a=ctl.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.loaded=true;app.notifyUi();idle();capture(a,"suggestions-"+theme);
+            MainActivity a=ctl.get();BonsaiApp app=(BonsaiApp)a.getApplication();app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.status="Bereit";app.loaded=true;app.notifyUi();idle();capture(a,"suggestions-"+theme);
             long chat=app.store.createChat("Gedanken zum Wald");app.store.add(chat,"user","Wie speichert ein Wald Wasser?","");
             app.store.add(chat,"assistant","Wurzeln, Humus und Moose nehmen Regen auf und geben ihn langsam wieder ab.","11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token");app.selectChat(chat);app.loaded=true;app.notifyUi();
             ((android.widget.EditText)field(a,"input")).setText("Erkläre mir mehr dazu");capture(a,"chat-actions-"+theme);
             View root=a.getWindow().getDecorView();assertTarget(described(root,"Nachricht senden"));assertTarget(described(root,"Antwort kopieren"));
             TextView detail=(TextView)field(a,"liveDetail");assertEquals("11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token",detail.getContentDescription().toString());
-            app.busy=true;app.notifyUi();capture(a,"chat-stop-"+theme);assertTarget(described(root,"Vorgang abbrechen"));
-            app.busy=false;app.notifyUi();described(root,"Menü öffnen").performClick();capture(a,"sidebar-"+theme);
+            app.busy=true;app.status="Bonsai denkt nach …";app.notifyUi();capture(a,"chat-stop-"+theme);assertTarget(described(root,"Vorgang abbrechen"));
+            app.busy=false;app.status="Bereit";app.notifyUi();described(root,"Menü öffnen").performClick();capture(a,"sidebar-"+theme);
             assertTarget(described(root,"Menü schließen"));
             find((View)field(a,"drawer"),"Archivierte Chats").performClick();capture(a,"archive-"+theme);
             described(root,"Menü schließen").performClick();idle();
