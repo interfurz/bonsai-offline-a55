@@ -1,5 +1,7 @@
 # Bonsai Offline 0.4.5 — lokale Wissenssuche und Cache-Diagnosen
 
+**Download:** [Signierte APK](https://github.com/interfurz/bonsai-offline-a55/raw/fe9b02b46c1bd1ecc6ff24af40be464338e77057/v0.4.5/Bonsai-Offline-0.4.5-arm64-CPU-Vulkan.apk) · [SHA256SUMS.txt](https://github.com/interfurz/bonsai-offline-a55/raw/fe9b02b46c1bd1ecc6ff24af40be464338e77057/v0.4.5/SHA256SUMS.txt) · [Buildnachweis](https://github.com/interfurz/bonsai-offline-a55/raw/fe9b02b46c1bd1ecc6ff24af40be464338e77057/v0.4.5/build-info.json)
+
 ARM64-Release mit CPU und Vulkan, Paket `de.bonsai.offline.debug`, Versionscode 12,
 Debugging ausgeschaltet. Enthält die nach `main` integrierten PRs #8 bis #11:
 
@@ -35,13 +37,16 @@ Erinnerungen, Einstellungen und Modellkopien würden gelöscht. Es wird keine
 automatische Migration oder Schlüsselrotation behauptet.
 
 Keystore und Passwörter werden ausschließlich lokal verwendet und gehören
-nicht zu Git, CI oder Release-Assets. Download und Prüfsumme stehen unter Assets.
+nicht zu Git, CI oder Release-Assets. APK, Prüfsumme und Buildnachweis sind oben verlinkt und liegen im bestehenden
+`downloads`-Zweig. Der direkte Release-Asset-Upload wurde von GitHub mit
+HTTP 401 zurückgewiesen. Bei diesem privaten Repository ist ein berechtigtes
+GitHub-Login für den Download erforderlich.
 Weitere Hinweise: [SIGNIEREN.md](https://github.com/interfurz/bonsai-offline-a55/blob/main/SIGNIEREN.md).
 
 ## Prüfungen und Grenzen
 
-Die geprüften Commit-/Build-/Signaturdaten stehen in `build-info.json` unter
-Assets. Signatur, Paket-/Versions-/Debugflags, 16-KiB-ZIP-/ELF-Ausrichtung sowie
+Die geprüften Commit-/Build-/Signaturdaten stehen im oben verlinkten
+`build-info.json`. Signatur, Paket-/Versions-/Debugflags, 16-KiB-ZIP-/ELF-Ausrichtung sowie
 unveränderte APK-Dateiinhalte nach Signierung sind erfolgreich geprüft.
 Die APK ist 68.084.780 Byte groß; ihre SHA256 steht in `SHA256SUMS.txt`.
 

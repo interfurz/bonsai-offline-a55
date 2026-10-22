@@ -113,5 +113,12 @@
     "matching_update_signing_identity": true,
     "device_update_tested": false,
     "historical_apk_url": "https://github.com/interfurz/bonsai-offline-a55/raw/refs/heads/downloads/v0.3.0/Bonsai-Offline-0.3.0-arm64-CPU-Vulkan.apk"
+  },
+  "distribution": {
+    "method": "GitHub downloads branch, linked from v0.4.5 release body",
+    "branch": "downloads",
+    "directory": "v0.4.5",
+    "release_url": "https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.4.5",
+    "release_asset_upload": "not available: uploads.github.com returned 401 Bad credentials; no assets uploaded"
   }
 }
