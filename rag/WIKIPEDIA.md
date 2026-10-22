@@ -11,12 +11,16 @@ Python 3.10 oder neuer mit SQLite FTS5/FTS4 installieren, vorzugsweise 64 Bit.
 Im Repository-Stamm in PowerShell:
 
 ```powershell
+$env:PYTHONUTF8 = "1"
 py -3.12 -m venv rag/.venv-wiki
 rag/.venv-wiki/Scripts/python.exe -m pip install -r rag/requirements.txt
 rag/.venv-wiki/Scripts/python.exe -m unittest discover -s rag/tests -p test_wikipedia.py -v
 rag/.venv-wiki/Scripts/python.exe -m rag ingest rag/data/wikipedia/complex.xml rag/output/example.sqlite --workers 2
 rag/.venv-wiki/Scripts/python.exe -m rag search rag/output/example.sqlite Lichtreaktion
 ```
+
+Die UTF-8-Umgebungsvariable hält auch ältere RAG-Hilfstools und umgeleitete
+CLI-Ausgaben unabhängig von der Windows-Codepage.
 
 Für alle bestehenden RAG-/IVF-Tests zusätzlich
 `pip install -r rag/requirements-ivf.txt`; für RSS-Messungen und den zugehörigen

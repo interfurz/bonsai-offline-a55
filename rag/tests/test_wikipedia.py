@@ -1,5 +1,6 @@
 """Small, self-authored MediaWiki fixtures; no downloads/models/device needed."""
 import bz2
+import gc
 from contextlib import closing
 import json
 import sqlite3
@@ -30,6 +31,9 @@ class WikipediaTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        # Legacy search/embed helpers leave connections to cyclic GC. Do not
+        # change their implementation in this importer-only branch.
+        self.addCleanup(gc.collect)
         self.root = Path(self.temp.name)
         self.database = self.root / "wiki.sqlite"
 

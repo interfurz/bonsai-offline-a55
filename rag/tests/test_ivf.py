@@ -1,3 +1,5 @@
+from contextlib import closing
+import gc
 import json
 from pathlib import Path
 import sqlite3
@@ -19,6 +21,9 @@ class IvfTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        # Legacy search/embed helpers leave connections to cyclic GC. Do not
+        # change their implementation in this importer-only branch.
+        self.addCleanup(gc.collect)
         self.directory = Path(self.temp.name)
         self.db = self.directory / 'knowledge.sqlite'
         self.reference = self.directory / 'reference.f32'
@@ -31,7 +36,7 @@ class IvfTests(unittest.TestCase):
         index = IvfIndex(self.index)
         self.assertEqual((50, 8), (index.count, index.clusters))
         self.assertEqual(1, HEADER.unpack(self.index.read_bytes()[:HEADER.size])[1])
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db:
             expected_ids = {row[0] for row in db.execute("SELECT id FROM chunks")}
         self.assertEqual(expected_ids, set(index.ids.tolist()))
         self.assertEqual(50, int(index.offsets[-1]))

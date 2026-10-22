@@ -1,3 +1,4 @@
+from contextlib import closing
 import importlib.util
 import sqlite3
 import tempfile
@@ -24,5 +25,5 @@ class IngestBenchmarkTests(unittest.TestCase):
             self.assertGreater(report["articles_per_second"], 0)
             self.assertGreater(report["input_mib_per_second"], 0)
             self.assertGreater(report["original_zlib_bytes"], 0)
-            with sqlite3.connect(database) as db:
+            with closing(sqlite3.connect(database)) as db:
                 self.assertEqual(report["chunks"], db.execute("SELECT count(*) FROM chunks").fetchone()[0])

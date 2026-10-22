@@ -1,3 +1,5 @@
+from contextlib import closing
+import gc
 import bz2
 import json
 import sqlite3
@@ -59,6 +61,9 @@ class SearchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        # Legacy search/embed helpers leave connections to cyclic GC. Do not
+        # change their implementation in this importer-only branch.
+        self.addCleanup(gc.collect)
         self.db = Path(self.temp.name) / "knowledge.sqlite"
         self.vectors = Path(self.temp.name) / "vectors.i8"
         self.reference = Path(self.temp.name) / "reference.f32"
@@ -66,7 +71,7 @@ class SearchTests(unittest.TestCase):
         embed(self.db, self.vectors, "hash-v1", self.reference, batch=7)
 
     def test_fifty_articles_schema_compression_and_id_mapping(self):
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db:
             self.assertEqual(50, db.execute("SELECT count(DISTINCT article_id) FROM chunks").fetchone()[0])
             self.assertEqual(1, db.execute("PRAGMA user_version").fetchone()[0])
             self.assertIn("Hauptstadt", zlib.decompress(db.execute("SELECT text_zlib FROM chunks WHERE article_id='1'").fetchone()[0]).decode())
@@ -88,7 +93,7 @@ class SearchTests(unittest.TestCase):
                                          text="Photosynthese Pflanzen Lichtenergie. " * 600)))
         database = Path(self.temp.name) / "long.sqlite"
         build(source, database)
-        with sqlite3.connect(database) as db:
+        with closing(sqlite3.connect(database)) as db:
             self.assertGreater(db.execute("SELECT count(*) FROM chunks").fetchone()[0], 1)
         hits = search(database, "Photosynthese")
         self.assertEqual(3, len(hits))

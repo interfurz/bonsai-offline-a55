@@ -1,41 +1,41 @@
 test_small_benchmark_measures_actual_process_memory_speed_and_size (test_ingest_benchmark.IngestBenchmarkTests.test_small_benchmark_measures_actual_process_memory_speed_and_size) ... ok
-test_all_clusters_equal_integer_full_scan_with_ties (test_ivf.IvfTests.test_all_clusters_equal_integer_full_scan_with_ties) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5346.6 articles/s
+test_all_clusters_equal_integer_full_scan_with_ties (test_ivf.IvfTests.test_all_clusters_equal_integer_full_scan_with_ties) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5445.7 articles/s
 ok
-test_benchmark_measures_small_synthetic_without_downloads (test_ivf.IvfTests.test_benchmark_measures_small_synthetic_without_downloads) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5609.3 articles/s
+test_benchmark_measures_small_synthetic_without_downloads (test_ivf.IvfTests.test_benchmark_measures_small_synthetic_without_downloads) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6126.6 articles/s
 ok
-test_builder_accepts_empty_float_source_and_never_overwrites (test_ivf.IvfTests.test_builder_accepts_empty_float_source_and_never_overwrites) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6620.9 articles/s
+test_builder_accepts_empty_float_source_and_never_overwrites (test_ivf.IvfTests.test_builder_accepts_empty_float_source_and_never_overwrites) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6324.9 articles/s
 ok
-test_hundred_question_quality_report_is_computed (test_ivf.IvfTests.test_hundred_question_quality_report_is_computed) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5400.2 articles/s
+test_hundred_question_quality_report_is_computed (test_ivf.IvfTests.test_hundred_question_quality_report_is_computed) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6357.7 articles/s
 ok
-test_hybrid_configurable_rrf_and_query_validation (test_ivf.IvfTests.test_hybrid_configurable_rrf_and_query_validation) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 4849.7 articles/s
+test_hybrid_configurable_rrf_and_query_validation (test_ivf.IvfTests.test_hybrid_configurable_rrf_and_query_validation) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6304.2 articles/s
 ok
-test_layout_global_scale_ids_and_read_only_mapping (test_ivf.IvfTests.test_layout_global_scale_ids_and_read_only_mapping) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6697.5 articles/s
+test_layout_global_scale_ids_and_read_only_mapping (test_ivf.IvfTests.test_layout_global_scale_ids_and_read_only_mapping) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5878.6 articles/s
 ok
-test_missing_corrupt_offsets_header_and_truncation_fail (test_ivf.IvfTests.test_missing_corrupt_offsets_header_and_truncation_fail) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5669.4 articles/s
+test_missing_corrupt_offsets_header_and_truncation_fail (test_ivf.IvfTests.test_missing_corrupt_offsets_header_and_truncation_fail) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6503.0 articles/s
 ok
-test_small_corpus_clusters_clamped_and_empty_clusters_supported (test_ivf.IvfTests.test_small_corpus_clusters_clamped_and_empty_clusters_supported) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6765.5 articles/s
+test_small_corpus_clusters_clamped_and_empty_clusters_supported (test_ivf.IvfTests.test_small_corpus_clusters_clamped_and_empty_clusters_supported) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6493.3 articles/s
 ok
 test_clean_wiki_markup (test_pipeline.ChunkingTests.test_clean_wiki_markup) ... ok
 test_heading_paths_and_small_sections_merge (test_pipeline.ChunkingTests.test_heading_paths_and_small_sections_merge) ... ok
 test_large_sibling_sections_keep_distinct_heading_paths (test_pipeline.ChunkingTests.test_large_sibling_sections_keep_distinct_heading_paths) ... ok
 test_large_unicode_and_unbroken_sections_split_without_loss (test_pipeline.ChunkingTests.test_large_unicode_and_unbroken_sections_split_without_loss) ... ok
 test_xml_limit_namespace_redirect_and_bzip_stream (test_pipeline.ChunkingTests.test_xml_limit_namespace_redirect_and_bzip_stream) ... ok
-test_comparison_reports_actual_host_measurements (test_pipeline.SearchTests.test_comparison_reports_actual_host_measurements) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5888.2 articles/s
+test_comparison_reports_actual_host_measurements (test_pipeline.SearchTests.test_comparison_reports_actual_host_measurements) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6451.2 articles/s
 ok
-test_empty_lexical_query_and_escaped_fts_syntax (test_pipeline.SearchTests.test_empty_lexical_query_and_escaped_fts_syntax) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6687.5 articles/s
+test_empty_lexical_query_and_escaped_fts_syntax (test_pipeline.SearchTests.test_empty_lexical_query_and_escaped_fts_syntax) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6294.7 articles/s
 ok
-test_fifty_articles_schema_compression_and_id_mapping (test_pipeline.SearchTests.test_fifty_articles_schema_compression_and_id_mapping) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5363.1 articles/s
+test_fifty_articles_schema_compression_and_id_mapping (test_pipeline.SearchTests.test_fifty_articles_schema_compression_and_id_mapping) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6558.3 articles/s
 ok
-test_fts_and_hybrid_return_source_and_relevant_hit (test_pipeline.SearchTests.test_fts_and_hybrid_return_source_and_relevant_hit) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6484.9 articles/s
+test_fts_and_hybrid_return_source_and_relevant_hit (test_pipeline.SearchTests.test_fts_and_hybrid_return_source_and_relevant_hit) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6520.7 articles/s
 ok
-test_long_text_is_bounded_and_index_ids_stay_unique (test_pipeline.SearchTests.test_long_text_is_bounded_and_index_ids_stay_unique) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 5824.1 articles/s
-[complete] page=1 articles=1 redirects=0 chunks=7 errors=0 274.5 articles/s
+test_long_text_is_bounded_and_index_ids_stay_unique (test_pipeline.SearchTests.test_long_text_is_bounded_and_index_ids_stay_unique) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6547.9 articles/s
+[complete] page=1 articles=1 redirects=0 chunks=7 errors=0 258.6 articles/s
 ok
-test_missing_invalid_and_limits (test_pipeline.SearchTests.test_missing_invalid_and_limits) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6534.9 articles/s
+test_missing_invalid_and_limits (test_pipeline.SearchTests.test_missing_invalid_and_limits) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6524.9 articles/s
 ok
-test_model_backend_applies_task_prompts_and_rejects_mismatch (test_pipeline.SearchTests.test_model_backend_applies_task_prompts_and_rejects_mismatch) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6422.1 articles/s
+test_model_backend_applies_task_prompts_and_rejects_mismatch (test_pipeline.SearchTests.test_model_backend_applies_task_prompts_and_rejects_mismatch) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6293.6 articles/s
 ok
-test_rrf_and_corrupt_vectors (test_pipeline.SearchTests.test_rrf_and_corrupt_vectors) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6852.3 articles/s
+test_rrf_and_corrupt_vectors (test_pipeline.SearchTests.test_rrf_and_corrupt_vectors) ... [complete] page=50 articles=50 redirects=0 chunks=50 errors=0 6448.4 articles/s
 ok
 test_checked_in_example_is_searchable_and_matches_fixture (test_wikipedia.WikipediaTests.test_checked_in_example_is_searchable_and_matches_fixture) ... ok
 test_complex_markup_to_markdown_and_omitted_subtrees (test_wikipedia.WikipediaTests.test_complex_markup_to_markdown_and_omitted_subtrees) ... ok
@@ -55,6 +55,6 @@ test_stable_ids_under_reordering_workers_and_unrelated_edits (test_wikipedia.Wik
 test_template_and_nowiki_headings_do_not_split (test_wikipedia.WikipediaTests.test_template_and_nowiki_headings_do_not_split) ... ok
 
 ----------------------------------------------------------------------
-Ran 38 tests in 1.955s
+Ran 38 tests in 2.595s
 
 OK
