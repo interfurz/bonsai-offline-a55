@@ -8,8 +8,9 @@ Die aktualisierte Grundlage ist `main` bei
 `1753b1fd2f13ab4196bd99517d21629311acdb20`, einschließlich der gemergten
 PRs #12 (EmbeddingGemma 2), #13 (Wikipedia), #14 (Wikidata), #15 (native
 Chatoberfläche mit Lichtzuständen) und #17 (Icon-Familie).
-Die angezeigte Appversion bleibt 0.4.5. Die veröffentlichte
-0.4.5-APK und `BUILD-INFO.json` beziehen sich dagegen auf `39b1391…`, also auf einen
+Für den gewünschten Release wird die Appversion auf **0.5**, Versionscode **13**,
+angehoben. Die ältere veröffentlichte
+0.4.5-APK und deren Buildnachweis beziehen sich dagegen auf `39b1391…`, also auf einen
 älteren Stand **ohne** diesen Encoder. Quellstand, Appversion und ausgelieferte APK
 müssen bei jeder Validierung getrennt erfasst werden.
 
@@ -790,7 +791,7 @@ Robolectric-Fixture, kein 7-GB-A55-Benchmark.
 | Paket-/Updateplatz reicht nicht | Importfehler trotz passendem Endbudget | Quellen-, Alt-/Neugenerations-, WAL-/Tempbedarf vorab prüfen; alte Version bis Commit behalten | M1.3/M6.2 |
 | Android-Prozessende / Samsung-Energieverwaltung | Berechnung endet, verlorener Zwischenstand, WakeLock-Leck | Dienst-/Abbruchtests auf A55; keine automatische Wiederaufnahme behaupten; DB-Transaktionen prüfen | M0.4/M6.3 |
 | Quellen-/Modell-/Datensatzlizenzen | Weitergabe ohne nötige Attribution/Versionsbelege | Quelle/Revision/Lizenz/Autorhinweise mitliefern; Wikipedia/Wikibooks/Wiktionary und Stack Exchange je Snapshot prüfen; Wikidata-/Tabellenrechte gesondert | M1.1/M3/M4 |
-| Unterschiedliche App-Signaturen | Update verweigert, Deinstallation löscht private Daten | 0.4.5 kompatibel zur 0.3.0-Signatur laut Artefaktprüfung, inkompatibel zu 0.4.3/0.4.4; reale Update-/Exporttests statt Neuinstallationsempfehlung | M6.3 |
+| Unterschiedliche App-Signaturen | Update verweigert, Deinstallation löscht private Daten | 0.5 nutzt den Release-Schlüssel von 0.4.3/0.4.4; 0.4.5/0.3.0 verwenden den anderen Original-Debug-Schlüssel. Reale Update-/Exporttests statt Neuinstallationsempfehlung | M6.3 |
 | Schema-/Appmigration | Chats/Memory oder Paketzuordnung gehen verloren | Chat-Schema 3 unabhängig von Wissenspaketen versionieren; alte reale Fixtures und Rollback testen | M5.3/M6.2 |
 | Ungestützte Quellenantwort / Tool-Instruktionen | Zitat existiert, stützt aber die Aussage nicht; Quellentext lenkt Modell | Manuelle Evidenzprüfung, Nichttreffer-/Prompt-Injection-Fälle, begrenzte Tools, Warnungen sichtbar | M1.4/M5.1 |
 | Unvollständiger Wissensgraph | Teilbestandszählung wird als Weltwissen ausgegeben | Abdeckung und Dumpstand im Ergebnis, feste Graph-/Zeit-/Ergebnislimits | M4.1 |
@@ -801,7 +802,11 @@ Robolectric-Fixture, kein 7-GB-A55-Benchmark.
 Paketname der verteilten App ist `de.bonsai.offline.debug`, auch im nicht
 debuggbaren Release. Zertifikat 0.4.5/ursprüngliche 0.3.0:
 `ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db`.
-0.4.3/0.4.4 haben eine andere Identität. Ein neues Debug-APK mit lokal erzeugtem
+0.5 verwendet auf ausdrücklichen Wunsch wieder die Identität von 0.4.3/0.4.4:
+`d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d`.
+Die tatsächlich heruntergeladene 0.4.4-APK wurde zum Vergleich mit `apksigner`
+geprüft. Version 0.5 ist damit signaturseitig kein direktes Update von 0.4.5/0.3.0.
+Ein neues Debug-APK mit lokal erzeugtem
 Keystore ist daher kein beliebiges Update. `run-as` hängt am Debuggable-Flag,
 nicht am Paketsuffix. Ohne Export/Backup keine Deinstallation für einen Test
 fordern; `allowBackup=false` verhindert, dass man sich auf Systembackup verlässt.

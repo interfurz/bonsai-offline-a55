@@ -59,6 +59,12 @@ gemäß [SIGNIEREN.md](SIGNIEREN.md) durchführen. Keine Deinstallation und kein
 Für ein inkompatibles Zertifikat zuerst einen geprüften Export-/Migrationsweg
 bereitstellen; ein beliebiges neu signiertes Debug-APK ist kein Ersatz.
 
+Für den angeforderten Folgerelease gilt Appversion **0.5**, Versionscode **13**.
+Der bereitgestellte Release-Keystore entspricht der geprüften 0.4.4-Signatur
+(`d45ceaf8…`), nicht der 0.4.5-/0.3.0-Signatur (`ce1a585c…`). Den tatsächlichen
+APK-/Buildhash des veröffentlichten v0.5-Artefakts in das Sitzungsmanifest
+übernehmen; die neue Versionsnummer allein ist weiterhin kein Gerätebeleg.
+
 ### Drei ausführbare Teststufen
 
 | Stufe | Was geht? | Was darf daraus nicht abgeleitet werden? |
