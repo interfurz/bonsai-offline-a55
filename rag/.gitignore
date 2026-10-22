@@ -4,3 +4,4 @@ output/
 *.sqlite
 *.i8
 *.f32
+*.ivf
