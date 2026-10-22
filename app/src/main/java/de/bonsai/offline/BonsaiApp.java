@@ -46,7 +46,7 @@ public final class BonsaiApp extends Application {
     ChatStore store;
     long currentChat;
     final List<ChatStore.Message> messages = new ArrayList<>();
-    Runnable listener;
+    Runnable listener, streamListener;
     InferenceService inferenceService;
     volatile boolean cancelled;
     boolean busy, loaded;
@@ -96,6 +96,7 @@ public final class BonsaiApp extends Application {
         new File(getFilesDir(), "model.gguf.part").delete();
     }
     void notifyUi() { if (listener != null) listener.run(); }
+    void notifyStreamUi() { if(streamListener!=null)streamListener.run();else notifyUi(); }
     File modelFile() { return new File(getFilesDir(), "model.gguf"); }
     String modelName() { return prefs.getString("modelName", "GGUF-Modell"); }
     int context() { return prefs.getInt("context", 4096); }
@@ -226,7 +227,7 @@ public final class BonsaiApp extends Application {
     private NativeEngine.Stream generationProgress() {
         final long epoch=progressEpoch;
         return new InferenceProgress((line,fraction)->main.post(()->{
-            if(busy && !cancelled && epoch==progressEpoch) { generationLine=line;prefillFraction=fraction;notifyUi(); }
+            if(busy && !cancelled && epoch==progressEpoch) { generationLine=line;prefillFraction=fraction;notifyStreamUi(); }
         }));
     }
     private void verifyModel(String name,long bytes,String sha) {
@@ -371,7 +372,7 @@ public final class BonsaiApp extends Application {
                     ReplyStream output=new ReplyStream(grammarEnabled,value->{
                         metrics.visible(value);
                         main.post(()->{
-                        if(!cancelled) { answer.text=value;status="Antwort wird geschrieben …";notifyUi(); }
+                        if(!cancelled) { answer.text=value;status="Antwort wird geschrieben …";notifyStreamUi(); }
                     });},generationProgress());
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
                         output,grammar,grammarEnabled?0:reasoningBudget[0]),StandardCharsets.UTF_8));

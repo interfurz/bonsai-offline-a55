@@ -295,6 +295,54 @@ public class AppExperienceTest {
             screenshot(a.getWindow().getDecorView(),"conversation-error");
         }
     }
+    @Test public void streamingUpdatesOnlyChangedAnswerWithoutRebindingOtherControls() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            app.loaded=true;app.prefs.edit().putBoolean("notificationsAsked",true).apply();
+            app.messages.add(new ChatStore.Message(1,"user","Frage",""));
+            ChatStore.Message answer=new ChatStore.Message(2,"assistant","Hallo","");app.messages.add(answer);
+            app.busy=true;app.status="Antwort wird geschrieben …";app.notifyUi();
+            TextView body=(TextView)field(a,"liveAnswer"),subtitle=(TextView)field(a,"subtitle");
+            int[] answerWrites={0},headerWrites={0};
+            body.addTextChangedListener(countWrites(answerWrites));subtitle.addTextChangedListener(countWrites(headerWrites));
+            CharSequence original=body.getText();
+            for(int i=0;i<20;i++)app.notifyStreamUi();
+            assertSame("Unchanged text must keep its buffer and selection",original,body.getText());
+            assertEquals(0,answerWrites[0]);
+            for(int i=0;i<20;i++){answer.text+=" Wort";app.notifyStreamUi();}
+            assertEquals(answer.text,body.getText().toString());assertEquals(20,answerWrites[0]);
+            assertEquals("Streaming must not rebind the header",0,headerWrites[0]);
+            controller.pause().stop();assertNull(app.listener);assertNull(app.streamListener);
+            answer.text+=" im Hintergrund";app.notifyStreamUi();
+            assertEquals("Stopped activities must not receive streamed text",20,answerWrites[0]);
+            controller.start().resume().visible();
+            assertEquals(answer.text,((TextView)field(a,"liveAnswer")).getText().toString());
+        }
+    }
+    private static android.text.TextWatcher countWrites(int[] count) {
+        return new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s,int start,int length,int after) {}
+            public void onTextChanged(CharSequence s,int start,int before,int count) {}
+            public void afterTextChanged(android.text.Editable text) {count[0]++;}
+        };
+    }
+    @Test public void decorativeFramesPauseForInferenceAndResumeAfterCompletion() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
+            controller.windowFocusChanged(true);
+            PulsingBorder composer=(PulsingBorder)field(a,"composerAura"),ambient=(PulsingBorder)field(a,"ambientBackdrop");
+            assertTrue(composer.isFrameScheduled());assertTrue(ambient.isFrameScheduled());
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.busy=true;app.notifyUi();
+            assertEquals(PulsingBorder.State.GENERATING,composer.getState());
+            assertFalse("Decorative redraws compete with inference",composer.isFrameScheduled());
+            assertFalse(ambient.isFrameScheduled());
+            controller.windowFocusChanged(false);controller.windowFocusChanged(true);
+            assertFalse("Focus changes must not restart effects during inference",composer.isFrameScheduled());
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));
+            assertFalse(ambient.isFrameScheduled());
+            app.busy=false;app.notifyUi();assertTrue(composer.isFrameScheduled());assertTrue(ambient.isFrameScheduled());
+        }
+    }
     @Test public void regeneratedVariantPreservesOriginalAndCopiesOnlyEarlierTurns(){
         BonsaiApp app=(BonsaiApp)org.robolectric.RuntimeEnvironment.getApplication();ChatStore store=app.store;
         long original=store.createChat("Original");store.add(original,"user","Frage 1","");store.add(original,"assistant","Antwort 1","Messung");store.add(original,"user","Frage 2","");store.add(original,"assistant","Antwort 2","");
@@ -402,7 +450,8 @@ public class AppExperienceTest {
             } finally {durationScale.invoke(null,1f);}
             org.robolectric.shadows.ShadowPowerManager power=org.robolectric.Shadows.shadowOf((android.os.PowerManager)a.getSystemService(android.content.Context.POWER_SERVICE));
             power.setIsPowerSaveMode(true);glow.setActive(true);assertFalse(glow.isFrameScheduled());
-            power.setIsPowerSaveMode(false);glow.setActive(true);assertTrue(glow.isFrameScheduled());
+            power.setIsPowerSaveMode(false);glow.setActive(true);assertFalse(glow.isFrameScheduled());
+            glow.setState(PulsingBorder.State.IDLE);assertTrue(glow.isFrameScheduled());
         }
     }
     @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
@@ -419,10 +468,11 @@ public class AppExperienceTest {
             assertEquals(PulsingBorder.Mode.RAIL,answer.getMode());
             assertEquals(PulsingBorder.State.GENERATING,backdrop.getState());
             assertEquals(PulsingBorder.State.GENERATING,answer.getState());
-            assertTrue(backdrop.isFrameScheduled());assertTrue(answer.isFrameScheduled());
+            assertFalse(backdrop.isFrameScheduled());assertFalse(answer.isFrameScheduled());
             View modelPopup=openSection(a,"Modell");
             PulsingBorder model=(PulsingBorder)field(a,"modelAura");
             assertEquals(PulsingBorder.State.GENERATING,model.getState());
+            assertFalse("New pop-up surfaces also pause during inference",model.isFrameScheduled());
             assertEquals(PulsingBorder.State.GENERATING,((PulsingBorder)field(a,"primaryAura")).getState());
             assertFalse("The covered app backdrop pauses",backdrop.isFrameScheduled());
             assertFalse("The covered answer pauses",answer.isFrameScheduled());
@@ -431,6 +481,7 @@ public class AppExperienceTest {
             assertFalse("Removed model surfaces leave the shared frame clock",model.isFrameScheduled());
             PulsingBorder performance=(PulsingBorder)field(a,"performanceAura");
             assertEquals(PulsingBorder.State.GENERATING,performance.getState());
+            assertFalse(performance.isFrameScheduled());
             app.busy=false;app.notifyUi();
             assertEquals(PulsingBorder.State.DONE,performance.getState());
             assertEquals(PulsingBorder.State.DONE,((PulsingBorder)field(a,"primaryAura")).getState());

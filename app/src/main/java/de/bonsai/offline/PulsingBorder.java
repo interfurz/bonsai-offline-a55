@@ -87,7 +87,9 @@ final class PulsingBorder extends FrameLayout {
     boolean isFrameScheduled(){return scheduled;}
     void setState(State next) {
         if(state==next)return;
-        previous=state;state=next;transition=shouldRunFrames()&&motionEnabled()?0:1;invalidate();schedule();
+        previous=state;state=next;transition=shouldRunFrames()&&motionEnabled()?0:1;
+        if(!shouldRunFrames())stop();
+        invalidate();schedule();
     }
     void setActive(boolean enabled) {
         active=enabled;nextPowerCheck=0;
@@ -99,7 +101,8 @@ final class PulsingBorder extends FrameLayout {
         return ValueAnimator.areAnimatorsEnabled()&&!powerSave;
     }
     private boolean shouldRunFrames() {
-        return active&&isAttachedToWindow()&&isShown()&&getWindowVisibility()==VISIBLE&&hasWindowFocus();
+        // Keep the work colours, but leave CPU/GPU time to inference and benchmarks.
+        return state!=State.GENERATING&&active&&isAttachedToWindow()&&isShown()&&getWindowVisibility()==VISIBLE&&hasWindowFocus();
     }
     private void schedule() {
         if(!scheduled&&shouldRunFrames()&&motionEnabled()) {
@@ -176,7 +179,7 @@ final class PulsingBorder extends FrameLayout {
             paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(density);paint.setColor(tokens.subtleBorder);
             canvas.drawPath(perimeter,paint);
         }
-        boolean animate=motionEnabled();float mix=animate?transition:1;
+        boolean animate=shouldRunFrames()&&motionEnabled();float mix=animate?transition:1;
         if(mode==Mode.AMBIENT){
             if(mix<1)drawAmbient(canvas,previous,1-mix);
             drawAmbient(canvas,state,mix);

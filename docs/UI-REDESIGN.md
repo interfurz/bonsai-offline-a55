@@ -53,7 +53,7 @@ und wandernde lokale Highlights erzeugen den Effekt. Farbwechsel werden über
 | Zustand | Darstellung | Auslöser |
 |---|---|---|
 | Idle | langsames Blau / Violett / Cyan | bereit oder Entwurf |
-| Generating | kräftigeres Cyan / Magenta / Koralle / Amber | laufende Arbeit |
+| Generating | statisches Cyan / Magenta / Koralle / Amber | laufende Arbeit |
 | Done | kurzer grüner / cyanfarbener Saum | erfolgreicher Abschluss |
 
 Done geht nach 1,8 Sekunden in Idle über. Fehler und Abbruch lösen keinen Erfolgssaum aus.
@@ -71,7 +71,10 @@ Die Beleuchtung ist in der gesamten App verteilt und teilt denselben Zustand:
   25–60 % ihrer Stärke; Formulare und normale Menüeinträge haben keine Dauerkontur.
 
 `PulsingBorder` bietet die Modi BORDER, AMBIENT und RAIL. Ein gemeinsamer
-30-fps-Callback versorgt alle sichtbaren Effekte. Die Activity verwaltet getrennte
+30-fps-Callback versorgt die sichtbaren Effekte im Leerlauf und nach Abschluss.
+Während laufender Berechnungen pausiert er vollständig; die Arbeitsfarben bleiben
+sichtbar. So konkurrieren dekorative CPU-/GPU-Zeichnungen nicht mit Inferenz,
+Modellladen oder Benchmarks. Die Activity verwaltet getrennte
 Gruppen für Hauptansicht, Chatinhalt, Pop-up und Seitenleiste. Ersetzte Inhalte
 werden aus dem Taktgeber und der Zustandsverteilung entfernt. Je Hauptansicht
 animieren höchstens vier Lichtflächen gleichzeitig.
@@ -82,6 +85,13 @@ pausieren bei verlorener Fenstersichtbarkeit/-fokussierung, abgehängten Views,
 gestoppter Activity, deaktivierten Systemanimationen und Energiesparmodus.
 Der Energiezustand wird höchstens einmal pro Sekunde abgefragt. Hinter Sidebar
 und Pop-ups pausieren die Effekte des verdeckten Chats.
+
+Text-, Thinking- und Prefill-Updates aktualisieren nur die laufende Antwort und
+Fortschrittsanzeigen. Kopfzeile, Modell-/Leistungskarten und Sendeaktionen werden
+bei Zustandsänderungen aktualisiert. Unveränderter Antworttext behält seinen
+Textpuffer und seine Auswahl; Textmodus und Metadaten werden nur bei Änderungen
+neu gesetzt. Der Sekunden-Timer aktualisiert nur den Status. Scroll-Aufträge
+werden zusammengefasst und beim Stoppen der Activity entfernt.
 
 ## Prüfung und Vorschauen
 
