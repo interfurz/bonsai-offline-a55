@@ -259,7 +259,7 @@ public final class MainActivity extends Activity {
             if(activeScreen==1&&(phaseChanged||modelChanged))refreshPopupContent();
         }else if(liveAnswer!=null&&!app.messages.isEmpty()){
             ChatStore.Message m=app.messages.get(app.messages.size()-1);liveAnswer.setText(m.text.isEmpty()?"Bonsai denkt nach …":m.text);
-            if(liveDetail!=null)liveDetail.setText(m.detail);
+            if(liveDetail!=null)setAnswerDetail(liveDetail,m.detail);
         }
         if(app.modelApproval!=null&&!app.busy)showError();
         if(autoScroll&&!app.messages.isEmpty())scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));
@@ -361,17 +361,52 @@ public final class MainActivity extends Activity {
         TextView body=text(m.text.isEmpty()?"Bonsai denkt nach …":m.text,DesignTokens.TYPE_BODY,TEXT);body.setTextIsSelectable(true);addSpaced(box,body,8);
         LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user)bounds.leftMargin=dp(24);
         if(!user){
-            TextView detail=text(m.detail,DesignTokens.TYPE_META,MUTED);addSpaced(box,detail,8);
+            TextView detail=text("",DesignTokens.TYPE_META,MUTED);setAnswerDetail(detail,m.detail);addSpaced(box,detail,8);
             if(!m.text.isEmpty()&&!app.busy){
-                TextView copy=menuItem("Antwort kopieren");copy.setTextColor(MUTED);decorateAction(copy,"copy");copy.setOnClickListener(v->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bonsai",m.text));Toast.makeText(this,"Antwort kopiert",Toast.LENGTH_SHORT).show();});box.addView(copy);
-                if(m==app.messages.get(app.messages.size()-1)){
-                    TextView retry=menuItem("Neu generieren");decorateAction(retry,"refresh");retry.setEnabled(app.loaded);retry.setOnClickListener(v->{autoScroll=true;app.regenerateLastAnswer();});box.addView(retry);
-                    box.addView(text("Eine neue Variante wird als eigener Chat gespeichert.",DesignTokens.TYPE_META,MUTED));
+                LinearLayout actions=row();
+                android.widget.ImageButton copy=answerAction(R.drawable.ic_answer_copy,"Antwort kopieren",v->{
+                    ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bonsai",m.text));
+                    Toast.makeText(this,"Antwort kopiert",Toast.LENGTH_SHORT).show();
+                });actions.addView(copy);
+                if(m==app.messages.get(app.messages.size()-1)) {
+                    android.widget.ImageButton retry=answerAction(R.drawable.ic_answer_retry,"Neu generieren",v->{autoScroll=true;app.regenerateLastAnswer();});
+                    retry.setTooltipText("Neu generieren – speichert die Variante als eigenen Chat");
+                    retry.setContentDescription("Neu generieren – Variante als eigenen Chat speichern");
+                    retry.setEnabled(app.loaded);retry.setAlpha(app.loaded?1f:.38f);
+                    LinearLayout.LayoutParams space=new LinearLayout.LayoutParams(dp(48),dp(48));space.leftMargin=dp(8);actions.addView(retry,space);
                 }
+                addSpaced(box,actions,4);
             }
             if(m==app.messages.get(app.messages.size()-1)){liveAnswer=body;liveDetail=detail;}
         }
         chat.addView(box,bounds);
+    }
+
+    private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
+        android.graphics.drawable.Drawable drawable=getDrawable(resource).mutate();drawable.setTint(MUTED);
+        drawable.setBounds(0,0,dp(size),dp(size));return drawable;
+    }
+    private android.widget.ImageButton answerAction(int resource,String label,View.OnClickListener listener) {
+        android.widget.ImageButton button=new android.widget.ImageButton(this);
+        button.setImageDrawable(answerGlyph(resource,28));button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        button.setPadding(dp(10),dp(10),dp(10),dp(10));button.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));
+        button.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
+        button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(listener);return button;
+    }
+    private void setAnswerDetail(TextView view,String detail) {
+        view.setVisibility(detail.trim().isEmpty()?View.GONE:View.VISIBLE);
+        view.setContentDescription(detail);view.setTooltipText(detail);
+        android.text.SpannableStringBuilder content=new android.text.SpannableStringBuilder();
+        String[] parts=detail.split("\\s*·\\s*");
+        int[] icons={R.drawable.ic_answer_speed,R.drawable.ic_answer_count,R.drawable.ic_answer_time};
+        for(int i=0;i<parts.length;i++) {
+            if(parts[i].trim().isEmpty())continue;
+            if(content.length()>0)content.append("   ");
+            int at=content.length();content.append("\uFFFC");
+            content.setSpan(new android.text.style.ImageSpan(answerGlyph(i<icons.length?icons[i]:R.drawable.ic_answer_info,16),android.text.style.ImageSpan.ALIGN_BASELINE),at,at+1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            content.append("\u00A0").append(parts[i].replace(" bis zum ersten Token","").replace(' ','\u00A0'));
+        }
+        view.setText(content);
     }
 
     private void pickModel() {
