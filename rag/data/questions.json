@@ -1,0 +1,7 @@
+[
+  {"query":"Was ist die Hauptstadt von Deutschland?", "article_ids":["1"]},
+  {"query":"Wie funktioniert Photosynthese bei Pflanzen?", "article_ids":["2"]},
+  {"query":"Was ist der natürliche Satellit der Erde?", "article_ids":["3"]},
+  {"query":"Welche chemische Formel hat Wasser?", "article_ids":["4"]},
+  {"query":"Wohin mündet der Rhein?", "article_ids":["6"]}
+]

@@ -7,10 +7,11 @@ final class ToolGrammar {
         +"Gib ausschließlich <final>deine Antwort als normalen Text</final> aus. "
         +"Kein JSON und keine Anführungszeichen um die Endantwort. Die Markierungen werden von der App entfernt.";
     private static final String RULES="""
-        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | remember | recall) ws "}" ws "</tool>"
+        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | remember | recall | search) ws "}" ws "</tool>"
         calc ::= "\\"calc\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"expr\\"" ws ":" ws json-string ws "}"
         remember ::= "\\"merken\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "," ws "\\"value\\"" ws ":" ws json-string ws "}"
         recall ::= "\\"abrufen\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "}"
+        search ::= "\\"suche\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"query\\"" ws ":" ws json-string ws "}"
         json-string ::= "\\"" char* "\\""
         char ::= [^"\\\\\\x00-\\x1F] | "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F]{4})
         ws ::= [ \\t\\n\\r]*

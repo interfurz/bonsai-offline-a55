@@ -16194,3 +16194,12 @@ public licenses.
 Creative Commons may be contacted at creativecommons.org.
 
 
+
+
+===== Google Material Symbols Rounded — answer footer icons =====
+Copyright Google LLC. Licensed under the Apache License, Version 2.0.
+Source: https://github.com/google/material-design-icons/tree/master/symbols/web
+Icons: content_copy, refresh, speed, numbers, timer, info (24px, rounded).
+The original SVG path data is used in Android VectorDrawable resources with a viewBox translation.
+License: https://www.apache.org/licenses/LICENSE-2.0
+The full Apache License 2.0 is included elsewhere in this notice file.

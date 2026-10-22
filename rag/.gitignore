@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+output/
+*.sqlite
+*.i8
+*.f32
+*.ivf

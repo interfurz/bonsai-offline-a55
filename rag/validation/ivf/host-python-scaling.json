@@ -1,0 +1,435 @@
+{
+  "scope": "host only; vector retrieval; encoding/FTS/RRF excluded; NumPy int32 scan; one BLAS thread",
+  "synthetic": "Gaussian unit vectors in balanced arbitrary partitions; NOT trained k-means; no quality claim",
+  "cache": "full pass before IVF; warm OS page cache expected; cold-cache measurements not attempted",
+  "python": "3.12.14",
+  "numpy": "2.3.5",
+  "machine": "x86_64",
+  "seed": 42,
+  "runs": [
+    {
+      "count": 1000000,
+      "clusters": 4096,
+      "nprobe": 16,
+      "index_bytes": 268230656,
+      "open_validate_ms": 4.603744,
+      "warmup": 2,
+      "queries": 10,
+      "repeats": 1,
+      "top_k": 20,
+      "summary": {
+        "full": {
+          "centroid_ms": {
+            "p50": 0.0003005,
+            "p95": 0.0003255
+          },
+          "scan_ms": {
+            "p50": 181.9428825,
+            "p95": 187.02391255
+          },
+          "total_ms": {
+            "p50": 182.0796255,
+            "p95": 187.15018755
+          },
+          "scanned": {
+            "p50": 1000000.0,
+            "p95": 1000000.0
+          }
+        },
+        "ivf": {
+          "centroid_ms": {
+            "p50": 0.4788275,
+            "p95": 0.54328265
+          },
+          "scan_ms": {
+            "p50": 0.7280795,
+            "p95": 0.76695775
+          },
+          "total_ms": {
+            "p50": 1.2327955,
+            "p95": 1.3377451
+          },
+          "scanned": {
+            "p50": 3906.0,
+            "p95": 3907.0
+          }
+        }
+      },
+      "rows": [
+        {
+          "mode": "full",
+          "query": 2,
+          "centroid_ms": 0.00032,
+          "scan_ms": 185.571846,
+          "total_ms": 185.70212,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 3,
+          "centroid_ms": 0.000301,
+          "scan_ms": 182.769042,
+          "total_ms": 182.899736,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 4,
+          "centroid_ms": 0.00031,
+          "scan_ms": 186.032933,
+          "total_ms": 186.159351,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 5,
+          "centroid_ms": 0.00032,
+          "scan_ms": 183.900577,
+          "total_ms": 184.032483,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 6,
+          "centroid_ms": 0.000291,
+          "scan_ms": 181.116723,
+          "total_ms": 181.259515,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 7,
+          "centroid_ms": 0.000261,
+          "scan_ms": 187.834714,
+          "total_ms": 187.960872,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 8,
+          "centroid_ms": 0.00033,
+          "scan_ms": 181.075842,
+          "total_ms": 181.209872,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 9,
+          "centroid_ms": 0.00028,
+          "scan_ms": 180.87955,
+          "total_ms": 181.00678,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 0,
+          "centroid_ms": 0.000261,
+          "scan_ms": 179.139118,
+          "total_ms": 179.262512,
+          "scanned": 1000000
+        },
+        {
+          "mode": "full",
+          "query": 1,
+          "centroid_ms": 0.0003,
+          "scan_ms": 178.42849,
+          "total_ms": 178.572825,
+          "scanned": 1000000
+        },
+        {
+          "mode": "ivf",
+          "query": 2,
+          "centroid_ms": 0.547325,
+          "scan_ms": 0.734804,
+          "total_ms": 1.333355,
+          "scanned": 3904
+        },
+        {
+          "mode": "ivf",
+          "query": 3,
+          "centroid_ms": 0.538342,
+          "scan_ms": 0.71841,
+          "total_ms": 1.297562,
+          "scanned": 3906
+        },
+        {
+          "mode": "ivf",
+          "query": 4,
+          "centroid_ms": 0.523118,
+          "scan_ms": 0.780532,
+          "total_ms": 1.341337,
+          "scanned": 3905
+        },
+        {
+          "mode": "ivf",
+          "query": 5,
+          "centroid_ms": 0.512473,
+          "scan_ms": 0.744468,
+          "total_ms": 1.293616,
+          "scanned": 3907
+        },
+        {
+          "mode": "ivf",
+          "query": 6,
+          "centroid_ms": 0.480335,
+          "scan_ms": 0.713072,
+          "total_ms": 1.223562,
+          "scanned": 3906
+        },
+        {
+          "mode": "ivf",
+          "query": 7,
+          "centroid_ms": 0.475047,
+          "scan_ms": 0.710849,
+          "total_ms": 1.209781,
+          "scanned": 3904
+        },
+        {
+          "mode": "ivf",
+          "query": 8,
+          "centroid_ms": 0.47049,
+          "scan_ms": 0.750367,
+          "total_ms": 1.242029,
+          "scanned": 3907
+        },
+        {
+          "mode": "ivf",
+          "query": 9,
+          "centroid_ms": 0.459554,
+          "scan_ms": 0.733072,
+          "total_ms": 1.213607,
+          "scanned": 3906
+        },
+        {
+          "mode": "ivf",
+          "query": 0,
+          "centroid_ms": 0.475067,
+          "scan_ms": 0.723087,
+          "total_ms": 1.217753,
+          "scanned": 3907
+        },
+        {
+          "mode": "ivf",
+          "query": 1,
+          "centroid_ms": 0.47732,
+          "scan_ms": 0.717067,
+          "total_ms": 1.213557,
+          "scanned": 3907
+        }
+      ],
+      "generation_or_reuse_ms": 0.030765999781579012
+    },
+    {
+      "count": 5000000,
+      "clusters": 4096,
+      "nprobe": 16,
+      "index_bytes": 1324228608,
+      "open_validate_ms": 6.54196,
+      "warmup": 2,
+      "queries": 10,
+      "repeats": 1,
+      "top_k": 20,
+      "summary": {
+        "full": {
+          "centroid_ms": {
+            "p50": 0.000325,
+            "p95": 0.00037199999999999993
+          },
+          "scan_ms": {
+            "p50": 691.247539,
+            "p95": 702.6375156500001
+          },
+          "total_ms": {
+            "p50": 691.3975175,
+            "p95": 702.78756315
+          },
+          "scanned": {
+            "p50": 5000000.0,
+            "p95": 5000000.0
+          }
+        },
+        "ivf": {
+          "centroid_ms": {
+            "p50": 0.4824935,
+            "p95": 0.6008073999999999
+          },
+          "scan_ms": {
+            "p50": 2.653991,
+            "p95": 2.6782483
+          },
+          "total_ms": {
+            "p50": 3.177646,
+            "p95": 3.32050545
+          },
+          "scanned": {
+            "p50": 19530.5,
+            "p95": 19532.55
+          }
+        }
+      },
+      "rows": [
+        {
+          "mode": "full",
+          "query": 2,
+          "centroid_ms": 0.00032,
+          "scan_ms": 703.790786,
+          "total_ms": 703.937535,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 3,
+          "centroid_ms": 0.00034,
+          "scan_ms": 695.96265,
+          "total_ms": 696.124382,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 4,
+          "centroid_ms": 0.00033,
+          "scan_ms": 701.227963,
+          "total_ms": 701.382042,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 5,
+          "centroid_ms": 0.00032,
+          "scan_ms": 691.266245,
+          "total_ms": 691.425422,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 6,
+          "centroid_ms": 0.00034,
+          "scan_ms": 691.770642,
+          "total_ms": 691.90362,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 7,
+          "centroid_ms": 0.00035,
+          "scan_ms": 691.228833,
+          "total_ms": 691.369613,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 8,
+          "centroid_ms": 0.00039,
+          "scan_ms": 688.665825,
+          "total_ms": 688.805493,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 9,
+          "centroid_ms": 0.000291,
+          "scan_ms": 680.95077,
+          "total_ms": 681.087083,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 0,
+          "centroid_ms": 0.00027,
+          "scan_ms": 681.675179,
+          "total_ms": 681.815678,
+          "scanned": 5000000
+        },
+        {
+          "mode": "full",
+          "query": 1,
+          "centroid_ms": 0.000281,
+          "scan_ms": 681.889467,
+          "total_ms": 682.028565,
+          "scanned": 5000000
+        },
+        {
+          "mode": "ivf",
+          "query": 2,
+          "centroid_ms": 0.53067,
+          "scan_ms": 2.643275,
+          "total_ms": 3.25064,
+          "scanned": 19530
+        },
+        {
+          "mode": "ivf",
+          "query": 3,
+          "centroid_ms": 0.535287,
+          "scan_ms": 2.664707,
+          "total_ms": 3.254385,
+          "scanned": 19529
+        },
+        {
+          "mode": "ivf",
+          "query": 4,
+          "centroid_ms": 0.520685,
+          "scan_ms": 2.68006,
+          "total_ms": 3.249918,
+          "scanned": 19531
+        },
+        {
+          "mode": "ivf",
+          "query": 5,
+          "centroid_ms": 0.654415,
+          "scan_ms": 2.676034,
+          "total_ms": 3.374604,
+          "scanned": 19530
+        },
+        {
+          "mode": "ivf",
+          "query": 6,
+          "centroid_ms": 0.471411,
+          "scan_ms": 2.670065,
+          "total_ms": 3.179304,
+          "scanned": 19531
+        },
+        {
+          "mode": "ivf",
+          "query": 7,
+          "centroid_ms": 0.469089,
+          "scan_ms": 2.674802,
+          "total_ms": 3.175988,
+          "scanned": 19531
+        },
+        {
+          "mode": "ivf",
+          "query": 8,
+          "centroid_ms": 0.486614,
+          "scan_ms": 2.634112,
+          "total_ms": 3.151101,
+          "scanned": 19528
+        },
+        {
+          "mode": "ivf",
+          "query": 9,
+          "centroid_ms": 0.478212,
+          "scan_ms": 2.63325,
+          "total_ms": 3.138963,
+          "scanned": 19529
+        },
+        {
+          "mode": "ivf",
+          "query": 0,
+          "centroid_ms": 0.468908,
+          "scan_ms": 2.632259,
+          "total_ms": 3.127035,
+          "scanned": 19532
+        },
+        {
+          "mode": "ivf",
+          "query": 1,
+          "centroid_ms": 0.478373,
+          "scan_ms": 2.640411,
+          "total_ms": 3.142388,
+          "scanned": 19533
+        }
+      ],
+      "generation_or_reuse_ms": 0.02929399988715886
+    }
+  ]
+}

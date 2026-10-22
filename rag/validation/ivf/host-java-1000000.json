@@ -1,0 +1,213 @@
+{
+  "summary": {
+    "ivf": {
+      "centroid_ms": {
+        "p50": 2.9871350000000003,
+        "p95": 4.338157899999999
+      },
+      "total_ms": {
+        "p50": 3.4283365,
+        "p95": 4.767049049999999
+      },
+      "scanned": {
+        "p50": 3906,
+        "p95": 3907
+      },
+      "scan_ms": {
+        "p50": 0.4265145,
+        "p95": 0.5486480999999999
+      }
+    },
+    "full": {
+      "centroid_ms": {
+        "p50": 6.81E-4,
+        "p95": 0.00344905
+      },
+      "total_ms": {
+        "p50": 170.8761695,
+        "p95": 267.30658315
+      },
+      "scanned": {
+        "p50": 1000000,
+        "p95": 1000000
+      },
+      "scan_ms": {
+        "p50": 170.810126,
+        "p95": 267.22635875
+      }
+    }
+  },
+  "repeats": 1,
+  "cache": "full pass before IVF; warm page cache expected; no cold-cache guarantee",
+  "count": 1000000,
+  "runtime": "OpenJDK 64-Bit Server VM",
+  "rows": [
+    {
+      "mode": "full",
+      "centroid_ms": 0.003526,
+      "total_ms": 232.783245,
+      "scanned": 1000000,
+      "query": 2,
+      "scan_ms": 232.640643
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 0.003355,
+      "total_ms": 251.370827,
+      "scanned": 1000000,
+      "query": 3,
+      "scan_ms": 251.304218
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 6.81E-4,
+      "total_ms": 145.579188,
+      "scanned": 1000000,
+      "query": 4,
+      "scan_ms": 145.449925
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 5.81E-4,
+      "total_ms": 171.669771,
+      "scanned": 1000000,
+      "query": 5,
+      "scan_ms": 171.60867
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 5.71E-4,
+      "total_ms": 169.713169,
+      "scanned": 1000000,
+      "query": 6,
+      "scan_ms": 169.630886
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 8.71E-4,
+      "total_ms": 162.278925,
+      "scanned": 1000000,
+      "query": 7,
+      "scan_ms": 162.200168
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 6.51E-4,
+      "total_ms": 273.054385,
+      "scanned": 1000000,
+      "query": 8,
+      "scan_ms": 272.971592
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 9.02E-4,
+      "total_ms": 260.281492,
+      "scanned": 1000000,
+      "query": 9,
+      "scan_ms": 260.204407
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 6.81E-4,
+      "total_ms": 136.424938,
+      "scanned": 1000000,
+      "query": 0,
+      "scan_ms": 136.340372
+    },
+    {
+      "mode": "full",
+      "centroid_ms": 5.71E-4,
+      "total_ms": 170.082568,
+      "scanned": 1000000,
+      "query": 1,
+      "scan_ms": 170.011582
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 2.827738,
+      "total_ms": 3.256186,
+      "scanned": 3904,
+      "query": 2,
+      "scan_ms": 0.426084
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 3.021446,
+      "total_ms": 3.477044,
+      "scanned": 3906,
+      "query": 3,
+      "scan_ms": 0.451803
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 3.88464,
+      "total_ms": 4.311907,
+      "scanned": 3905,
+      "query": 4,
+      "scan_ms": 0.422159
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 3.228724,
+      "total_ms": 3.863269,
+      "scanned": 3907,
+      "query": 5,
+      "scan_ms": 0.627885
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 2.952824,
+      "total_ms": 3.379629,
+      "scanned": 3906,
+      "query": 6,
+      "scan_ms": 0.42368
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 2.838023,
+      "total_ms": 3.279741,
+      "scanned": 3904,
+      "query": 7,
+      "scan_ms": 0.437632
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 3.567179,
+      "total_ms": 4.011699,
+      "scanned": 3907,
+      "query": 8,
+      "scan_ms": 0.440746
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 2.864733,
+      "total_ms": 3.296375,
+      "scanned": 3906,
+      "query": 9,
+      "scan_ms": 0.425643
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 4.709218,
+      "total_ms": 5.139438,
+      "scanned": 3907,
+      "query": 0,
+      "scan_ms": 0.426945
+    },
+    {
+      "mode": "ivf",
+      "centroid_ms": 2.847928,
+      "total_ms": 3.275734,
+      "scanned": 3907,
+      "query": 1,
+      "scan_ms": 0.420346
+    }
+  ],
+  "open_validate_ms": 29.553949,
+  "queries": 10,
+  "nprobe": 16,
+  "scope": "actual Java mmap scanner; vector-only; query encoding/FTS/RRF excluded",
+  "arch": "amd64",
+  "warmup": 2,
+  "clusters": 4096
+}

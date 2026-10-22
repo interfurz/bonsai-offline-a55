@@ -1,0 +1,602 @@
+[
+  {
+    "query": "Was weißt du über Berlin?",
+    "article_ids": [
+      "1"
+    ]
+  },
+  {
+    "query": "Erkläre Berlin und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "1"
+    ]
+  },
+  {
+    "query": "Was weißt du über Photosynthese?",
+    "article_ids": [
+      "2"
+    ]
+  },
+  {
+    "query": "Erkläre Photosynthese und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "2"
+    ]
+  },
+  {
+    "query": "Was weißt du über Mond?",
+    "article_ids": [
+      "3"
+    ]
+  },
+  {
+    "query": "Erkläre Mond und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "3"
+    ]
+  },
+  {
+    "query": "Was weißt du über Wasser?",
+    "article_ids": [
+      "4"
+    ]
+  },
+  {
+    "query": "Erkläre Wasser und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "4"
+    ]
+  },
+  {
+    "query": "Was weißt du über Bonsai?",
+    "article_ids": [
+      "5"
+    ]
+  },
+  {
+    "query": "Erkläre Bonsai und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "5"
+    ]
+  },
+  {
+    "query": "Was weißt du über Rhein?",
+    "article_ids": [
+      "6"
+    ]
+  },
+  {
+    "query": "Erkläre Rhein und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "6"
+    ]
+  },
+  {
+    "query": "Was weißt du über Donau?",
+    "article_ids": [
+      "7"
+    ]
+  },
+  {
+    "query": "Erkläre Donau und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "7"
+    ]
+  },
+  {
+    "query": "Was weißt du über Alpen?",
+    "article_ids": [
+      "8"
+    ]
+  },
+  {
+    "query": "Erkläre Alpen und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "8"
+    ]
+  },
+  {
+    "query": "Was weißt du über Hamburg?",
+    "article_ids": [
+      "9"
+    ]
+  },
+  {
+    "query": "Erkläre Hamburg und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "9"
+    ]
+  },
+  {
+    "query": "Was weißt du über München?",
+    "article_ids": [
+      "10"
+    ]
+  },
+  {
+    "query": "Erkläre München und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "10"
+    ]
+  },
+  {
+    "query": "Was weißt du über Sonne?",
+    "article_ids": [
+      "11"
+    ]
+  },
+  {
+    "query": "Erkläre Sonne und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "11"
+    ]
+  },
+  {
+    "query": "Was weißt du über Mars?",
+    "article_ids": [
+      "12"
+    ]
+  },
+  {
+    "query": "Erkläre Mars und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "12"
+    ]
+  },
+  {
+    "query": "Was weißt du über Jupiter?",
+    "article_ids": [
+      "13"
+    ]
+  },
+  {
+    "query": "Erkläre Jupiter und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "13"
+    ]
+  },
+  {
+    "query": "Was weißt du über Saturn?",
+    "article_ids": [
+      "14"
+    ]
+  },
+  {
+    "query": "Erkläre Saturn und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "14"
+    ]
+  },
+  {
+    "query": "Was weißt du über Venus?",
+    "article_ids": [
+      "15"
+    ]
+  },
+  {
+    "query": "Erkläre Venus und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "15"
+    ]
+  },
+  {
+    "query": "Was weißt du über Merkur?",
+    "article_ids": [
+      "16"
+    ]
+  },
+  {
+    "query": "Erkläre Merkur und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "16"
+    ]
+  },
+  {
+    "query": "Was weißt du über Erde?",
+    "article_ids": [
+      "17"
+    ]
+  },
+  {
+    "query": "Erkläre Erde und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "17"
+    ]
+  },
+  {
+    "query": "Was weißt du über Gravitation?",
+    "article_ids": [
+      "18"
+    ]
+  },
+  {
+    "query": "Erkläre Gravitation und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "18"
+    ]
+  },
+  {
+    "query": "Was weißt du über Elektron?",
+    "article_ids": [
+      "19"
+    ]
+  },
+  {
+    "query": "Erkläre Elektron und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "19"
+    ]
+  },
+  {
+    "query": "Was weißt du über Proton?",
+    "article_ids": [
+      "20"
+    ]
+  },
+  {
+    "query": "Erkläre Proton und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "20"
+    ]
+  },
+  {
+    "query": "Was weißt du über Neutron?",
+    "article_ids": [
+      "21"
+    ]
+  },
+  {
+    "query": "Erkläre Neutron und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "21"
+    ]
+  },
+  {
+    "query": "Was weißt du über Kohlenstoff?",
+    "article_ids": [
+      "22"
+    ]
+  },
+  {
+    "query": "Erkläre Kohlenstoff und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "22"
+    ]
+  },
+  {
+    "query": "Was weißt du über Sauerstoff?",
+    "article_ids": [
+      "23"
+    ]
+  },
+  {
+    "query": "Erkläre Sauerstoff und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "23"
+    ]
+  },
+  {
+    "query": "Was weißt du über Stickstoff?",
+    "article_ids": [
+      "24"
+    ]
+  },
+  {
+    "query": "Erkläre Stickstoff und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "24"
+    ]
+  },
+  {
+    "query": "Was weißt du über Eisen?",
+    "article_ids": [
+      "25"
+    ]
+  },
+  {
+    "query": "Erkläre Eisen und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "25"
+    ]
+  },
+  {
+    "query": "Was weißt du über Gold?",
+    "article_ids": [
+      "26"
+    ]
+  },
+  {
+    "query": "Erkläre Gold und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "26"
+    ]
+  },
+  {
+    "query": "Was weißt du über Silber?",
+    "article_ids": [
+      "27"
+    ]
+  },
+  {
+    "query": "Erkläre Silber und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "27"
+    ]
+  },
+  {
+    "query": "Was weißt du über Kupfer?",
+    "article_ids": [
+      "28"
+    ]
+  },
+  {
+    "query": "Erkläre Kupfer und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "28"
+    ]
+  },
+  {
+    "query": "Was weißt du über Zelle?",
+    "article_ids": [
+      "29"
+    ]
+  },
+  {
+    "query": "Erkläre Zelle und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "29"
+    ]
+  },
+  {
+    "query": "Was weißt du über DNA?",
+    "article_ids": [
+      "30"
+    ]
+  },
+  {
+    "query": "Erkläre DNA und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "30"
+    ]
+  },
+  {
+    "query": "Was weißt du über Herz?",
+    "article_ids": [
+      "31"
+    ]
+  },
+  {
+    "query": "Erkläre Herz und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "31"
+    ]
+  },
+  {
+    "query": "Was weißt du über Lunge?",
+    "article_ids": [
+      "32"
+    ]
+  },
+  {
+    "query": "Erkläre Lunge und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "32"
+    ]
+  },
+  {
+    "query": "Was weißt du über Leber?",
+    "article_ids": [
+      "33"
+    ]
+  },
+  {
+    "query": "Erkläre Leber und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "33"
+    ]
+  },
+  {
+    "query": "Was weißt du über Niere?",
+    "article_ids": [
+      "34"
+    ]
+  },
+  {
+    "query": "Erkläre Niere und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "34"
+    ]
+  },
+  {
+    "query": "Was weißt du über Gehirn?",
+    "article_ids": [
+      "35"
+    ]
+  },
+  {
+    "query": "Erkläre Gehirn und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "35"
+    ]
+  },
+  {
+    "query": "Was weißt du über Eiche?",
+    "article_ids": [
+      "36"
+    ]
+  },
+  {
+    "query": "Erkläre Eiche und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "36"
+    ]
+  },
+  {
+    "query": "Was weißt du über Buche?",
+    "article_ids": [
+      "37"
+    ]
+  },
+  {
+    "query": "Erkläre Buche und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "37"
+    ]
+  },
+  {
+    "query": "Was weißt du über Fichte?",
+    "article_ids": [
+      "38"
+    ]
+  },
+  {
+    "query": "Erkläre Fichte und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "38"
+    ]
+  },
+  {
+    "query": "Was weißt du über Kiefer?",
+    "article_ids": [
+      "39"
+    ]
+  },
+  {
+    "query": "Erkläre Kiefer und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "39"
+    ]
+  },
+  {
+    "query": "Was weißt du über Moos?",
+    "article_ids": [
+      "40"
+    ]
+  },
+  {
+    "query": "Erkläre Moos und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "40"
+    ]
+  },
+  {
+    "query": "Was weißt du über Biene?",
+    "article_ids": [
+      "41"
+    ]
+  },
+  {
+    "query": "Erkläre Biene und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "41"
+    ]
+  },
+  {
+    "query": "Was weißt du über Ameise?",
+    "article_ids": [
+      "42"
+    ]
+  },
+  {
+    "query": "Erkläre Ameise und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "42"
+    ]
+  },
+  {
+    "query": "Was weißt du über Schmetterling?",
+    "article_ids": [
+      "43"
+    ]
+  },
+  {
+    "query": "Erkläre Schmetterling und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "43"
+    ]
+  },
+  {
+    "query": "Was weißt du über Frosch?",
+    "article_ids": [
+      "44"
+    ]
+  },
+  {
+    "query": "Erkläre Frosch und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "44"
+    ]
+  },
+  {
+    "query": "Was weißt du über Forelle?",
+    "article_ids": [
+      "45"
+    ]
+  },
+  {
+    "query": "Erkläre Forelle und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "45"
+    ]
+  },
+  {
+    "query": "Was weißt du über Pinguin?",
+    "article_ids": [
+      "46"
+    ]
+  },
+  {
+    "query": "Erkläre Pinguin und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "46"
+    ]
+  },
+  {
+    "query": "Was weißt du über Fledermaus?",
+    "article_ids": [
+      "47"
+    ]
+  },
+  {
+    "query": "Erkläre Fledermaus und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "47"
+    ]
+  },
+  {
+    "query": "Was weißt du über Igel?",
+    "article_ids": [
+      "48"
+    ]
+  },
+  {
+    "query": "Erkläre Igel und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "48"
+    ]
+  },
+  {
+    "query": "Was weißt du über Fuchs?",
+    "article_ids": [
+      "49"
+    ]
+  },
+  {
+    "query": "Erkläre Fuchs und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "49"
+    ]
+  },
+  {
+    "query": "Was weißt du über Wolf?",
+    "article_ids": [
+      "50"
+    ]
+  },
+  {
+    "query": "Erkläre Wolf und seine wichtigsten Eigenschaften.",
+    "article_ids": [
+      "50"
+    ]
+  }
+]
