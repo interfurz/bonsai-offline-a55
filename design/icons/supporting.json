@@ -1,0 +1,12 @@
+[
+  {
+    "name": "ic_message",
+    "function": "Dekorative Nachrichtenmarkierung",
+    "kind": "message",
+    "paths": [
+      "M20.5 6.5V15.5Q20.5 18.5 17.5 18.5H12L8 21V18.5H6.5Q3.5 18.5 3.5 15.5V6.5Q3.5 3.5 6.5 3.5H17.5Q20.5 3.5 20.5 6.5Z",
+      "M8 8.5H16 M8 13H13"
+    ],
+    "filled": false
+  }
+]

@@ -61,7 +61,10 @@ public class IconVisualTest {
             app.store.add(chat,"assistant","Wurzeln, Humus und Moose nehmen Regen auf und geben ihn langsam wieder ab.","11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token");app.selectChat(chat);app.loaded=true;app.notifyUi();
             ((android.widget.EditText)field(a,"input")).setText("Erkläre mir mehr dazu");capture(a,"chat-actions-"+theme);
             View root=a.getWindow().getDecorView();assertTarget(described(root,"Nachricht senden"));assertTarget(described(root,"Antwort kopieren"));
-            TextView detail=(TextView)field(a,"liveDetail");assertEquals("11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token",detail.getContentDescription().toString());
+            TextView detail=(TextView)field(a,"liveDetail");
+            android.text.style.ImageSpan[] metrics=((android.text.Spanned)detail.getText()).getSpans(0,detail.length(),android.text.style.ImageSpan.class);
+            assertEquals(3,metrics.length);for(android.text.style.ImageSpan span:metrics)assertEquals(Math.round(16*a.getResources().getDisplayMetrics().density),span.getDrawable().getIntrinsicWidth());
+            assertEquals("11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token",detail.getContentDescription().toString());
             app.busy=true;app.status="Bonsai denkt nach …";app.notifyUi();capture(a,"chat-stop-"+theme);assertTarget(described(root,"Vorgang abbrechen"));
             app.busy=false;app.status="Bereit";app.notifyUi();described(root,"Menü öffnen").performClick();capture(a,"sidebar-"+theme);
             assertTarget(described(root,"Menü schließen"));
@@ -77,13 +80,13 @@ public class IconVisualTest {
     }
     @Test public void nativeLightSurfaces()throws Exception{surfaces(false);}
     @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi") public void nativeDarkSurfaces()throws Exception{surfaces(true);}
-    @Test public void contactSheetsAndRuntimeTint()throws Exception{
+    @Test @Config(qualifiers="w640dp-h1064dp-mdpi") public void contactSheetsAndRuntimeTint()throws Exception{
         android.content.Context context=org.robolectric.RuntimeEnvironment.getApplication();
         for(boolean dark:new boolean[]{false,true}){
             Bitmap b=Bitmap.createBitmap(640,1064,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(b);
             int bg=dark?0xff141419:0xfffafafc,fg=dark?0xfff5f5f7:0xff1b1b20,muted=dark?0xffa6a6b0:0xff62626e;
             c.drawColor(bg);Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);p.setColor(fg);p.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));p.setTextSize(28);c.drawText("BONSAI / ICONS",32,54,p);
-            p.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));p.setColor(muted);p.setTextSize(13);c.drawText("18 Originalmotive · 24er-Raster · 1,75er-Strich",32,84,p);
+            p.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));p.setColor(muted);p.setTextSize(13);c.drawText("18 Originalmotive · 16 dp optisch verstärkt · 24er-Master",32,84,p);
             for(int i=0;i<3;i++){p.setTextSize(12);c.drawText(new int[]{16,24,28}[i]+" dp",360+i*96,124,p);}
             for(int row=0;row<KINDS.length;row++){
                 int cy=156+row*44;p.setColor(fg);p.setTextSize(14);c.drawText(LABELS[row],32,cy+5,p);
@@ -92,9 +95,13 @@ public class IconVisualTest {
                     icon.setBounds(x,cy-size/2,x+size,cy+size/2);icon.draw(c);
                 }
             }
-            p.setColor(muted);p.setTextSize(12);c.drawText("Native Android VectorDrawables · 1 dp = 1 px in dieser Datei",32,994,p);c.drawText("SVG-Master: currentColor · Zustände und Lichtsäume: Container",32,1016,p);
+            p.setColor(muted);p.setTextSize(12);c.drawText("Native Android VectorDrawables · 1 dp = 1 px in dieser Datei",32,994,p);c.drawText("16 dp: 1,5 dp Strich · 24 dp: 1,75 dp · 28 dp: 2,04 dp",32,1016,p);
             write(b,"contact-"+(dark?"dark":"light"));
         }
+        Bitmap compact=Bitmap.createBitmap(16,16,Bitmap.Config.ARGB_8888);
+        BonsaiIcons.icon(context,"menu",0xff000000,16).draw(new Canvas(compact));
+        float coverage=0;for(int y=0;y<16;y++)coverage+=android.graphics.Color.alpha(compact.getPixel(8,y))/255f;
+        assertEquals("Three 1.5dp strokes must retain their actual optical weight at 16dp",4.5f,coverage,.25f);compact.recycle();
         for(String kind:KINDS){
             Bitmap b=Bitmap.createBitmap(48,48,Bitmap.Config.ARGB_8888);Drawable icon=BonsaiIcons.icon(context,kind,0xff00aa55,48);icon.draw(new Canvas(b));
             int count=0;for(int y=0;y<48;y++)for(int x=0;x<48;x++){int px=b.getPixel(x,y);if(android.graphics.Color.alpha(px)>128){assertTrue(android.graphics.Color.green(px)>android.graphics.Color.red(px));count++;}}

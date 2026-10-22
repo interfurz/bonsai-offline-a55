@@ -404,8 +404,7 @@ public final class MainActivity extends Activity {
     }
 
     private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
-        android.graphics.drawable.Drawable drawable=getDrawable(resource).mutate();drawable.setTint(iconColor(R.color.icon_secondary));
-        drawable.setBounds(0,0,dp(size),dp(size));return drawable;
+        return BonsaiIcons.drawable(this,resource,iconColor(R.color.icon_secondary),dp(size));
     }
     private android.widget.ImageButton answerAction(int resource,String label,View.OnClickListener listener) {
         android.widget.ImageButton button=new android.widget.ImageButton(this);
