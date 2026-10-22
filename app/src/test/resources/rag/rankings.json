@@ -1,0 +1,110 @@
+[
+  {
+    "query": "Was ist die Hauptstadt von Deutschland?",
+    "ids": [
+      1,
+      10,
+      33,
+      18,
+      17,
+      37,
+      14,
+      27,
+      29,
+      21,
+      25,
+      11,
+      13,
+      8,
+      23,
+      3,
+      38,
+      16,
+      24,
+      34
+    ]
+  },
+  {
+    "query": "Wie funktioniert Photosynthese bei Pflanzen?",
+    "ids": [
+      2,
+      16,
+      40,
+      5
+    ]
+  },
+  {
+    "query": "Was ist der natürliche Satellit der Erde?",
+    "ids": [
+      3,
+      17,
+      24,
+      49,
+      11,
+      13,
+      8,
+      50,
+      9,
+      25,
+      6,
+      18,
+      37,
+      44,
+      14,
+      27,
+      29,
+      16,
+      39,
+      30
+    ]
+  },
+  {
+    "query": "Welche chemische Formel hat Wasser?",
+    "ids": [
+      4,
+      1,
+      31,
+      45,
+      7,
+      40,
+      22,
+      2,
+      10,
+      17
+    ]
+  },
+  {
+    "query": "Wohin mündet der Rhein?",
+    "ids": [
+      6,
+      3,
+      24,
+      7,
+      49,
+      17,
+      16,
+      50,
+      9,
+      11,
+      13,
+      23,
+      2,
+      1,
+      10
+    ]
+  },
+  {
+    "query": "Wälder Bäume Sauerstoff",
+    "ids": [
+      23,
+      2,
+      4,
+      40,
+      5
+    ]
+  },
+  {
+    "query": "!!!",
+    "ids": []
+  }
+]
