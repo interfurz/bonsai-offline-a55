@@ -47,6 +47,10 @@ Lokal erfolgreich: **153 Release-/Robolectric-Tests**, keine Fehler und keine
 UTF-8, Reasoning und Präfixabgleich sowie Java-Syntax und alle 37 Icon-Paare
 bestanden.
 
+Der vollständige ARM64-CPU-Release-Build (`assembleRelease`) ist erfolgreich;
+Release-Lint meldet **0 Fehler und 8 Warnungen**. Die lokal gebaute APK ist
+unsigniert. Ein neuer Vulkan-Build und Gerätebenchmarks wurden nicht durchgeführt.
+
 ```bash
 python3 scripts/fetch_runtime.py
 ./gradlew --max-workers=2 :app:testReleaseUnitTest :app:assembleRelease :app:lintRelease
