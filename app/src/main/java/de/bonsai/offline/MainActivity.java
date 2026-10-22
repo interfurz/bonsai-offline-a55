@@ -721,11 +721,12 @@ public final class MainActivity extends Activity {
     private IconButton icon(String kind,String description,View.OnClickListener listener) {
         IconButton v=new IconButton(kind); v.setContentDescription(description); v.setOnClickListener(listener);
         v.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));v.setFocusable(true);
-        android.graphics.drawable.Drawable feedback=interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL);
-        if(kind.equals("send")||kind.equals("stop")) {
+        boolean action=kind.equals("send")||kind.equals("stop");
+        android.graphics.drawable.Drawable feedback=interactiveBackground(Color.TRANSPARENT,action?24:DesignTokens.RADIUS_SMALL);
+        if(action) {
             GradientDrawable circle=new GradientDrawable();circle.setShape(GradientDrawable.OVAL);circle.setColor(tokens.action);
             v.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
-                new android.graphics.drawable.InsetDrawable(circle,dp(6)),feedback}));
+                feedback,new android.graphics.drawable.InsetDrawable(circle,dp(6))}));
         } else v.setBackground(feedback);
         return v;
     }

@@ -2,6 +2,7 @@
 
 18 neu gezeichnete Motive für die bestehende native Java-App. Die 6 vorhandenen `ic_answer_*`-Namen bleiben erhalten. SVG und VectorDrawable verwenden dieselben Pfade.
 
+- [Geänderte Motive: Blitz und Info-i](updated-icons.png)
 - [Kontaktbogen, Hell und Dunkel, 16 / 24 / 28 dp (PDF)](Kontaktbogen.pdf)
 - [Kontaktbogen hell (native Android-Rasterung)](evidence/contact-light.png) · [dunkel](evidence/contact-dark.png)
 - [Vektor-Kontaktbogen hell](contact-light.svg) · [dunkel](contact-dark.svg)
@@ -12,7 +13,7 @@
 
 ## Konstruktion
 
-24 × 24, 1,75 Einheiten Outline, runde Enden und Verbindungen, ungefähr 2 Einheiten Rand. Das kompakte gefüllte Stopquadrat sitzt bewusst innerhalb der Outline-Motivfläche. Offene Symbole und Diagonalen sind optisch ausgerichtet. Keine Hintergründe, Schatten, Farbverläufe, Buchstaben oder eingebetteten Bilder in den Assets. „Information“ verwendet zwei Detailzeilen im Kreis statt eines Buchstabens. Neuer Chat ist eine Chatblase mit Plus; Chatverlauf dieselbe Grundsilhouette mit Textzeilen. Leistung: Balken; Geschwindigkeit: Tacho; Tokenanzahl: Stapel; Zeit: Uhr.
+24 × 24, 1,75 Einheiten Outline, runde Enden und Verbindungen, ungefähr 2 Einheiten Rand. Das kompakte gefüllte Stopquadrat sitzt bewusst innerhalb der Outline-Motivfläche. Offene Symbole und Diagonalen sind optisch ausgerichtet. Keine Hintergründe, Schatten, Farbverläufe oder eingebetteten Bilder in den Assets. „Information“ verwendet auf ausdrücklichen Änderungswunsch ein kleines geometrisches i im Kreis; es benötigt keine Schriftdatei. Neuer Chat ist eine Chatblase mit Plus; Chatverlauf dieselbe Grundsilhouette mit Textzeilen. Leistung: kleiner Outline-Blitz; Geschwindigkeit: Tacho; Tokenanzahl: Stapel; Zeit: Uhr.
 
 Alle Motive wurden in allen drei Größen geprüft; die 16-dp-Versionen bleiben mit denselben Pfaden lesbar. Daher keine separaten, auseinanderlaufenden Kleinvarianten.
 

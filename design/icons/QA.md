@@ -15,7 +15,7 @@ Geprüfte Oberflächen in Hell und Dunkel:
 - Vorhandene Einstiegsvorschläge: Buch und Idee (24 dp).
 - Modell- und Leistungs-Pop-up: Titelmotive und Schließen (24 dp); Metadatenbadge (16 dp).
 
-Die Motive bilden eine gemeinsame Outline-Familie; Details laufen im nativen 16-dp-Raster nicht zu. Der Chip bleibt das komplexeste Motiv, unterscheidet sich aber klar vom Tokenstapel. Plus und diagonales Schließen wirken leicht; Stop bleibt absichtlich kompakt gefüllt. Kopieren hat einen offenen hinteren Rahmen, wodurch die Überlagerung nicht zu schwer wird. Information wird ohne Buchstaben als Detailkreis dargestellt. Keine getrennte Kleinvariante erforderlich.
+Die Motive bilden eine gemeinsame Outline-Familie; Details laufen im nativen 16-dp-Raster nicht zu. Der Chip bleibt das komplexeste Motiv, unterscheidet sich aber klar vom Tokenstapel. Plus und diagonales Schließen wirken leicht; Stop bleibt absichtlich kompakt gefüllt. Kopieren hat einen offenen hinteren Rahmen, wodurch die Überlagerung nicht zu schwer wird. Information verwendet nach ausdrücklichem Änderungswunsch ein kleines geometrisches i im Kreis. Leistung verwendet einen kleinen Outline-Blitz. Keine getrennte Kleinvariante erforderlich.
 
 Die bestehenden echten Java-Lichtsäume aus PR #15 wurden in den nativen Aufnahmen mitgeprüft: ruhiger Saum an Kopfaktion/Pop-up, mehrfarbiger Saum bei laufender Arbeit und Abschlussfarbe. Die Icons haben eigene statische Vektorpfade und enthalten keine Shader, Blur-Filter oder Zustandsfarben. Die HTML-Vorschau besitzt zusätzlich einen klar als synthetisch bezeichneten Container zum Vergleichen der Farbrollen; sie ersetzt die native Prüfung nicht.
 
@@ -25,8 +25,8 @@ Die bestehenden echten Java-Lichtsäume aus PR #15 wurden in den nativen Aufnahm
 - Alle Assets lassen sich zur Laufzeit einfärben; Tint und Alpha wurden nativ geprüft.
 - Accessibility-Texte, Tooltip-Erklärungen und vollständige Metadatentexte bleiben erhalten.
 - Native UI-Tests prüfen mindestens 48 × 48 dp für Send/Stop, Antwortkopie und Schließen in Seitenleiste/Pop-ups. Vorhandene weitere Aktionstests bleiben bestehen.
-- Die Activity enthält keine Canvas-Iconzeichnungen mehr. SVG/XML sind saubere Vektoren ohne Raster, Buchstaben, Schatten, Hintergründe oder Verläufe.
-- Bestehende Projekt- und UI-Tests sind mit dem neuen Set gelaufen: 135 Tests, 0 Fehler. Abschließender APK-/Lint-Lauf läuft noch; das Ergebnis wird vor Freigabe ergänzt.
+- Die Activity enthält keine Canvas-Iconzeichnungen mehr. SVG/XML sind saubere Vektoren ohne Raster, Schatten, Hintergründe oder Verläufe; das Info-i ist die ausdrücklich gewünschte Ausnahme von der ursprünglichen Buchstabenregel.
+- Abschließender Lauf mit Blitz und Info-i: `:app:testDebugUnitTest :app:assembleDebug :app:lintDebug` erfolgreich, 135 Tests, 0 Fehler und 0 übersprungen; ARM64-Debug-APK gebaut; Lint ohne Fehler, acht bestehende Warnungen. Maschinenlesbare Zusammenfassung und Asset-Prüfsummen: [validation.json](validation.json).
 
 ## Grenzen
 

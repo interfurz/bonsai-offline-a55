@@ -1,6 +1,6 @@
 # Quellen und Lizenz
 
-Alle 18 SVG-Master und ihre Android-VectorDrawables wurden für diesen Auftrag neu aus geometrischen Pfaden konstruiert. Keine Material-Symbols-, Lucide-, Heroicons- oder anderen fremden Icon-Pfade; keine Rasterbilder, Fonts oder ImageGen-Traces. Konventionelle Metaphern: Chatblase, Chip, Balken, Buch, Glühbirne, Dokumente, Rundpfeile, Tacho, Tokenstapel, Uhr und Detailkreis.
+Alle 18 SVG-Master und ihre Android-VectorDrawables wurden für diesen Auftrag neu aus geometrischen Pfaden konstruiert. Keine Material-Symbols-, Lucide-, Heroicons- oder anderen fremden Icon-Pfade; keine Rasterbilder, Fonts oder ImageGen-Traces. Konventionelle Metaphern: Chatblase, Chip, Blitz, Buch, Glühbirne, Dokumente, Rundpfeile, Tacho, Tokenstapel, Uhr und Info-i im Kreis (ausdrücklich gewünschte Ausnahme von der ursprünglichen Vorgabe ohne Buchstaben).
 
 Lizenz: MIT, Copyright (c) 2026 Bonsai Offline contributors. Volltext: [LICENSE](LICENSE), identisch zur Projektlizenz. Die bisherigen sechs Material-Antworticons wurden vollständig ersetzt; ihre spezifische Attribution im App-Asset wurde entsprechend aktualisiert. Andere Drittanbieterhinweise bleiben erhalten.
 
