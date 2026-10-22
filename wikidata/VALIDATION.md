@@ -91,6 +91,15 @@ Rohbelege:
 
 ## Reproduzierbare Befehle
 
+Zusätzliche Integrationsprüfung nach dem Nutzerauftrag, alle offenen PRs zu
+mergen: EmbeddingGemma #12 und Wikipedia #13 gemeinsam mit Wikidata geprüft.
+**39 RAG-/IVF-/Wikipedia-Tests**, **14 Wikidata-Tests** und **4 weitere
+Python-Tests** bestanden. Android-Test-/APK-/Lint-Tasks erneut erfolgreich;
+unveränderte Java-/Native-Eingaben wurden dabei teilweise inkrementell
+wiederverwendet. Der reihenfolgeabhängige Embedding-Exporttest wurde im
+Wikipedia-Branch korrigiert; produktiver Embedding-Code blieb unverändert.
+Rohlog: [`validation/integration-rag-tests.txt`](validation/integration-rag-tests.txt).
+
 ```sh
 python3 scripts/fetch_runtime.py
 python3 scripts/check_project.py

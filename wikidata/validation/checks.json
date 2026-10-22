@@ -37,5 +37,13 @@
   "fixture_sha256": "73a2d08bb49b648e999f47b5c0bafafd2d85fcf7c90c55d3df7ac13ee2527022",
   "physical_devices": [],
   "full_dump_processed": false,
-  "wikipedia_or_embedding_components_changed": false
+  "wikipedia_or_embedding_components_changed": false,
+  "combined_integration": {
+    "rag_wikipedia_ivf_python_tests": 39,
+    "wikidata_python_tests": 14,
+    "other_python_tests": 4,
+    "android_tasks": "testDebugUnitTest/assembleDebug/lintDebug successful; unchanged inputs reused incremental outputs",
+    "embedding_production_code_changed": false,
+    "wikipedia_fix": "PR13: assert title/content association independently of stable chunk ID order"
+  }
 }
