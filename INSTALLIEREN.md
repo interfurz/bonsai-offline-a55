@@ -4,7 +4,9 @@
    [Release-Assets](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.4.5)
    auf das A55 laden. Bei privatem Repository ist ein berechtigtes GitHub-Login nötig.
 2. **Vor einem Update die Signieridentität beachten:** 0.4.5 nutzt den ausdrücklich
-   bereitgestellten Original-Debug-Keystore. Die veröffentlichten 0.4.3-/0.4.4-APKs
+   bereitgestellten Original-Debug-Keystore. Zertifikat und Paket passen zur
+   ursprünglichen 0.3.0, und der Versionscode ist höher; diese Kriterien wurden
+   anhand ihrer veröffentlichten APK geprüft, eine Geräteinstallation nicht. Die veröffentlichten 0.4.3-/0.4.4-APKs
    verwenden ein anderes Zertifikat und lassen sich damit nicht direkt aktualisieren.
    Details und Fingerabdrücke: [SIGNIEREN.md](SIGNIEREN.md). Die vorhandene App
    nicht vorschnell deinstallieren; dadurch werden lokale Daten gelöscht.

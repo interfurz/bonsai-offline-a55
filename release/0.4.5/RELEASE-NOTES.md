@@ -23,6 +23,10 @@ Auf Wunsch mit dem bereitgestellten **Original-Debug-Keystore** signiert.
 Zertifikat SHA256:
 `ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db`.
 
+**Signaturkompatibel mit der ursprünglichen v0.3.0:** das Zertifikat der
+veröffentlichten APK und ihr Paket wurden geprüft; Versionscode 12 ist höher
+als 4. Ein tatsächlicher Updateversuch auf dem A55 wurde nicht durchgeführt.
+
 **Kein direktes Update der veröffentlichten 0.4.3-/0.4.4-APKs**, deren Zertifikat
 `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d` lautet.
 Das Paket bleibt gleich; ein anderer Schlüssel ermöglicht keine parallele
@@ -32,15 +36,28 @@ automatische Migration oder Schlüsselrotation behauptet.
 
 Keystore und Passwörter werden ausschließlich lokal verwendet und gehören
 nicht zu Git, CI oder Release-Assets. Download und Prüfsumme stehen unter Assets.
-Weitere Hinweise: [SIGNIEREN.md](../../SIGNIEREN.md).
+Weitere Hinweise: [SIGNIEREN.md](https://github.com/interfurz/bonsai-offline-a55/blob/main/SIGNIEREN.md).
 
 ## Prüfungen und Grenzen
 
 Die geprüften Commit-/Build-/Signaturdaten stehen in `build-info.json` unter
 Assets. Signatur, Paket-/Versions-/Debugflags, 16-KiB-ZIP-/ELF-Ausrichtung sowie
-unveränderte APK-Dateiinhalte nach Signierung werden vor Veröffentlichung geprüft.
+unveränderte APK-Dateiinhalte nach Signierung sind erfolgreich geprüft.
+Die APK ist 68.084.780 Byte groß; ihre SHA256 steht in `SHA256SUMS.txt`.
 
-Keine physische A55-Installation, keine reale Modellinferenz dieser APK und keine
-RTX-4060-Messung. Das IVF-Untersekundenziel, reale Clusterverteilung, Vulkan-Treiber,
+- **Auf dem Gerät gemessen:** keine Messungen und kein Installations-/Updateversuch.
+- **Nur auf dem Host getestet:** 106 Java-/Robolectric-Tests erfolgreich,
+  Release-Lint ohne Fehler (acht Warnungen). Auf dem integrierten Stand außerdem 21 RAG- und drei
+  Benchmark-Python-Tests, Kernel-/Grammatiktests, `lintDebug` und
+  `scripts/check_project.py` erfolgreich. Keine neue Geräte-Laufzeit oder
+  Recall-Zahl wird aus diesen Funktionstests abgeleitet.
+- **Nur gebaut:** ARM64-CPU/Vulkan-Release aus Commit
+  `39b1391e0f568a7065032eb76e757992822b7221`, lokal mit dem festgelegten
+  Vulkan-SDK 1.4.363.0, NDK 28.2.13676358 und anschließend lokal signiert.
+  Der [unabhängige CI-Lauf desselben Quellstands](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39777528867)
+  ist ebenfalls erfolgreich. Die veröffentlichte APK stammt aus dem lokalen
+  Build; der CI-Artefakt-Download war durch den Umgebungsproxy blockiert.
+
+Keine reale Modellinferenz dieser APK und keine RTX-4060-Messung. Das IVF-Untersekundenziel, reale Clusterverteilung, Vulkan-Treiber,
 optionale FA/Q8-Einstellungen und Hintergrundverhalten müssen auf dem A55 geprüft
 werden. Die veröffentlichten Host-Messungen sind keine Gerätewerte.

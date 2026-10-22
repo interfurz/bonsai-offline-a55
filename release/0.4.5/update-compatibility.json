@@ -1,0 +1,13 @@
+{
+  "previous_version": "0.3.0",
+  "previous_version_code": 4,
+  "previous_apk_sha256": "f3c53f1c3f801b6fa2b4fbb431a971950e424c707e222db8a33230f73a2bd9a9",
+  "package": "de.bonsai.offline.debug",
+  "signing_certificate_sha256": "ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db",
+  "verification": "actual published v0.3.0 APK verified with apksigner; package/version checked with aapt2",
+  "new_version": "0.4.5",
+  "new_version_code": 12,
+  "matching_update_signing_identity": true,
+  "device_update_tested": false,
+  "historical_apk_url": "https://github.com/interfurz/bonsai-offline-a55/raw/refs/heads/downloads/v0.3.0/Bonsai-Offline-0.3.0-arm64-CPU-Vulkan.apk"
+}
