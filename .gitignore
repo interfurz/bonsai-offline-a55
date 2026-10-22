@@ -14,3 +14,4 @@ __pycache__/
 *.aab
 .env
 .env.*
+/work/

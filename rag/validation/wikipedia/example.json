@@ -1,0 +1,27 @@
+{
+  "dataset": "self-authored MediaWiki XML fixture, no Wikipedia download",
+  "database_bytes": 184320,
+  "sha256": "ccc2d3c1cafe31cdd15151d7b52b94cfbf79205dc312e373bbd0b240fcab46bc",
+  "integrity": "ok",
+  "journal_mode": "delete",
+  "user_version": 1,
+  "tables": {
+    "articles": 8,
+    "redirects": 5,
+    "chunks": 20,
+    "chunk_metadata": 20,
+    "chunks_fts": 20,
+    "chunks_fts4": 20,
+    "ingest_errors": 0
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "sqlite": "3.53.1"
+  },
+  "dependencies": {
+    "mwparserfromhell": "0.7.2",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "psutil": "7.2.2"
+  }
+}
