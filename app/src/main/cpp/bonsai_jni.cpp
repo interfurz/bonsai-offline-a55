@@ -6,6 +6,7 @@
 #include "utf8_stream.h"
 #include "reference_cpu.h"
 #include "chat_sampler.h"
+#include "conversation_state.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -35,7 +36,14 @@ struct Engine {
     std::string backend = "CPU";
     int context_size = 4096;
     bool gpu = false;
-    void unload() { templates.reset(); context.reset(); model.reset(); }
+    std::vector<llama_token> cached;
+    size_t evicted_turns=0;
+    std::chrono::system_clock::time_point template_now=std::chrono::system_clock::now();
+    void clear_cache() {
+        evicted_turns=0;cached.clear();
+        if(context)llama_memory_clear(llama_get_memory(context.get()),true);
+    }
+    void unload() { evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
 };
 Engine & engine(jlong handle) {
     if (!handle) throw std::runtime_error("Native Engine fehlt.");
@@ -58,29 +66,89 @@ jbyteArray result_bytes(JNIEnv * env, const std::string & value) {
     if (out) env->SetByteArrayRegion(out, 0, static_cast<jsize>(value.size()), reinterpret_cast<const jbyte *>(value.data()));
     return out;
 }
-std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string & text) {
+std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string & text,bool special=true) {
     if (text.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max()))
         throw std::runtime_error("Eingabe ist zu gross.");
-    int count = llama_tokenize(vocab, text.data(), static_cast<int32_t>(text.size()), nullptr, 0, true, true);
+    int count = llama_tokenize(vocab, text.data(), static_cast<int32_t>(text.size()), nullptr, 0, special, true);
     if (count == std::numeric_limits<int32_t>::min()) throw std::runtime_error("Zu viele Tokens.");
     std::vector<llama_token> tokens(static_cast<size_t>(count < 0 ? -count : count));
     count = llama_tokenize(vocab, text.data(), static_cast<int32_t>(text.size()), tokens.data(),
-                           static_cast<int32_t>(tokens.size()), true, true);
+                           static_cast<int32_t>(tokens.size()), special, true);
     if (count < 0) throw std::runtime_error("Tokenisierung fehlgeschlagen.");
     tokens.resize(count);
     return tokens;
 }
 std::string piece(const llama_vocab * vocab, llama_token token) {
     std::string out(256, '\0');
-    int n = llama_token_to_piece(vocab, token, out.data(), static_cast<int32_t>(out.size()), 0, false);
+    int n = llama_token_to_piece(vocab, token, out.data(), static_cast<int32_t>(out.size()), 0, true);
     if (n < 0) {
         out.resize(-n);
-        n = llama_token_to_piece(vocab, token, out.data(), static_cast<int32_t>(out.size()), 0, false);
+        n = llama_token_to_piece(vocab, token, out.data(), static_cast<int32_t>(out.size()), 0, true);
     }
     if (n < 0) throw std::runtime_error("Token konnte nicht dekodiert werden.");
     out.resize(n);
     return out;
 }
+void decode_tokens(Engine & e,const llama_token * tokens,size_t count) {
+    const size_t batch=llama_n_batch(e.context.get());
+    for(size_t i=0;i<count;i+=batch) {
+        if(e.stop)throw std::runtime_error("Abgebrochen.");
+        const size_t n=std::min(batch,count-i);
+        auto b=llama_batch_get_one(const_cast<llama_token *>(tokens+i),static_cast<int32_t>(n));
+        if(llama_decode(e.context.get(),b)!=0)throw std::runtime_error("Token-Dekodierung fehlgeschlagen (Speicher oder Backend).");
+        e.cached.insert(e.cached.end(),tokens+i,tokens+i+n);
+    }
+}
+size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits) {
+    auto keep=conversation_prefix(e.cached,tokens,logits);
+    if(keep<e.cached.size()) {
+        if(!llama_memory_seq_rm(llama_get_memory(e.context.get()),0,static_cast<llama_pos>(keep),-1)) {
+            e.clear_cache();keep=0;
+        } else e.cached.resize(keep);
+    }
+    decode_tokens(e,tokens.data()+keep,tokens.size()-keep);
+    return keep;
+}
+void stable_input(Engine & e,common_chat_templates_inputs & input) {
+    input.enable_thinking=false;
+    input.use_jinja=true;
+    // Templates using strftime_now must not mutate earlier turns between requests.
+    input.now=e.template_now;
+}
+void retain_window(Engine & e,common_chat_templates_inputs & input) {
+    if(!e.evicted_turns)return;
+    size_t first=input.messages.size(),turn=0;
+    for(size_t i=0;i<input.messages.size();++i) {
+        const auto & m=input.messages[i];
+        if(m.role=="user" && m.content.rfind("<tool_result>",0)!=0) {
+            if(first==input.messages.size())first=i;
+            if(turn++==e.evicted_turns) {
+                input.messages.erase(input.messages.begin()+first,input.messages.begin()+i);return;
+            }
+        }
+    }
+    // A caller supplied a different conversation without an explicit reset.
+    e.clear_cache();
+}
+std::vector<llama_token> fit_prompt(Engine & e,common_chat_templates_inputs & input,size_t reserve,int & dropped) {
+    const auto vocab=llama_model_get_vocab(e.model.get());
+    for(;;) {
+        auto tokens=tokenize(vocab,common_chat_templates_apply(e.templates.get(),input).prompt);
+        if(!tokens.empty() && tokens.size()+reserve<=llama_n_ctx(e.context.get()))return tokens;
+        // Keep the system prompt and the complete latest user turn (including tool rounds).
+        size_t first=input.messages.size(),next=first;
+        for(size_t i=0;i<input.messages.size();++i) {
+            const auto & m=input.messages[i];
+            if(m.role=="user" && m.content.rfind("<tool_result>",0)!=0) {
+                if(first==input.messages.size())first=i;
+                else { next=i;break; }
+            }
+        }
+        if(next==input.messages.size())throw std::runtime_error("Die aktuelle Nachricht passt mit dem Antwortbudget nicht in den Kontext. Nachricht oder Antwortlimit verkleinern.");
+        input.messages.erase(input.messages.begin()+first,input.messages.begin()+next);++dropped;++e.evicted_turns;
+    }
+}
+
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -100,6 +168,32 @@ Java_de_bonsai_offline_NativeEngine_stop(JNIEnv *, jclass, jlong handle) {
 extern "C" JNIEXPORT void JNICALL
 Java_de_bonsai_offline_NativeEngine_unload(JNIEnv * env, jclass, jlong handle) {
     try { engine(handle).unload(); } catch (const std::exception & e) { fail(env, e); }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_de_bonsai_offline_NativeEngine_clearCache(JNIEnv * env,jclass,jlong handle) {
+    try { engine(handle).clear_cache(); } catch(const std::exception & ex) { fail(env,ex); }
+}
+extern "C" JNIEXPORT void JNICALL
+Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,jobjectArray roles,jobjectArray contents) {
+    try {
+        auto & e=engine(handle);
+        if(!e.context || !e.model)throw std::runtime_error("Kein Kontext geladen.");
+        common_chat_templates_inputs input;stable_input(e,input);input.add_generation_prompt=false;
+        const auto count=env->GetArrayLength(roles);
+        if(count!=env->GetArrayLength(contents))throw std::runtime_error("Ungueltiger Chat.");
+        for(jsize i=0;i<count;++i) {
+            auto r=static_cast<jbyteArray>(env->GetObjectArrayElement(roles,i));
+            auto c=static_cast<jbyteArray>(env->GetObjectArrayElement(contents,i));
+            common_chat_msg m;m.role=bytes(env,r);m.content=bytes(env,c);
+            if(m.role=="assistant")m.content=without_reasoning(m.content);
+            input.messages.push_back(std::move(m));env->DeleteLocalRef(r);env->DeleteLocalRef(c);
+        }
+        retain_window(e,input);
+        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);sync_cache(e,tokens,false);
+    } catch(const std::exception & ex) {
+        if(handle)engine(handle).clear_cache();fail(env,ex);
+    }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -185,6 +279,8 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         e.templates = std::move(templates);
         e.model = std::move(model);
         e.context = std::move(context);
+        e.template_now=std::chrono::system_clock::now();
+        e.cached.reserve(llama_n_ctx(e.context.get()));
         return result_bytes(env, common_json({{"backend",e.backend},{"context",llama_n_ctx(e.context.get())},{"metadata",metadata},
             {"reference_cpu",bonsai_reference_cpu.load()}}).dump());
     } catch (const std::exception & e) { fail(env, e); return nullptr; }
@@ -215,6 +311,7 @@ Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle
         cp.no_perf = false;
         cp.abort_callback = abort_compute;
         cp.abort_callback_data = &e;
+        e.evicted_turns=0;e.cached.clear();
         e.context.reset(); // Release the previous KV allocation before creating another.
         e.context.reset(llama_init_from_model(e.model.get(), cp));
         if (!e.context) throw std::runtime_error("Optimierungsprofil konnte keinen Kontext anlegen.");
@@ -233,7 +330,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             text += "Ein Wald speichert Wasser im Boden. Baeume nutzen Sonnenlicht und bilden neue Blaetter. ";
         auto tokens = tokenize(vocab, text);
         tokens.resize(std::min<size_t>(tokens.size(), 192));
-        llama_memory_clear(llama_get_memory(e.context.get()), true);
+        e.clear_cache();
         auto start = Clock::now();
         const size_t batch = llama_n_batch(e.context.get());
         for (size_t i = 0; i < tokens.size(); i += batch) {
@@ -264,95 +361,123 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             fingerprint = (fingerprint ^ static_cast<uint64_t>(best)) * 1099511628211ULL;
         }
         const double decode = elapsed(start);
-        llama_memory_clear(llama_get_memory(e.context.get()), true);
+        e.clear_cache();
         return result_bytes(env, common_json({{"prefill_ms",prefill}, {"decode_ms",decode},
             {"decode_tokens",steps}, {"prompt_tokens",tokens.size()},
             {"tokens_per_second",steps * 1000.0 / std::max(decode, 0.001)},
             {"score_ms",prefill + decode * 128.0 / steps},
             {"fingerprint",std::to_string(fingerprint)}, {"signature",signature}, {"top_tokens",top_tokens}}).dump());
-    } catch (const std::exception & e) { fail(env, e); return nullptr; }
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle, jobjectArray roles,
-                                            jobjectArray contents, jint limit, jint seed, jobject callback, jbyteArray grammar) {
+                                            jobjectArray contents, jint limit, jint seed, jobject callback, jbyteArray grammar,jint reasoning_budget) {
     try {
         auto & e = engine(handle);
         if (!e.context || !e.model) throw std::runtime_error("Bitte zuerst ein Modell laden.");
         if (limit < 16 || limit > 2048) throw std::runtime_error("Ungueltiges Antwortlimit.");
+        if(e.stop) {
+            e.clear_cache();
+            return result_bytes(env,common_json({{"prompt_tokens",0},{"output_tokens",0},{"prefill_ms",0},
+                {"first_token_ms",0},{"generation_ms",0},{"tokens_per_second",0},{"stopped",true},{"limit_reached",false}}).dump());
+        }
         auto count = env->GetArrayLength(roles);
         if (count != env->GetArrayLength(contents) || !count) throw std::runtime_error("Ungueltiger Chat.");
         common_chat_templates_inputs input;
-        input.enable_thinking = false;
-        input.use_jinja = true;
+        stable_input(e,input);
         input.add_generation_prompt = true;
         for (jsize i = 0; i < count; ++i) {
             auto r = static_cast<jbyteArray>(env->GetObjectArrayElement(roles, i));
             auto c = static_cast<jbyteArray>(env->GetObjectArrayElement(contents, i));
             common_chat_msg msg;
             msg.role = bytes(env, r); msg.content = bytes(env, c);
+            if(msg.role=="assistant")msg.content=without_reasoning(msg.content);
             env->DeleteLocalRef(r); env->DeleteLocalRef(c);
             input.messages.push_back(std::move(msg));
         }
-        auto formatted = common_chat_templates_apply(e.templates.get(), input);
-        auto vocab = llama_model_get_vocab(e.model.get());
-        auto tokens = tokenize(vocab, formatted.prompt);
-        if (tokens.empty()) throw std::runtime_error("Leerer Prompt.");
-        if (tokens.size() + static_cast<size_t>(limit) > llama_n_ctx(e.context.get()))
-            throw std::runtime_error("Chat passt nicht mehr in den Kontext. Neuen Chat starten, das Antwortlimit verkleinern oder den Kontext erhoehen.");
+        const auto grammar_text=grammar?bytes(env,grammar):std::string();
+        const int budget=std::clamp(static_cast<int>(reasoning_budget),0,600);
+        const int reserve_reasoning=budget;
+        const int hard_limit=limit+reserve_reasoning+32;
+        retain_window(e,input);
+        int dropped=0;
+        auto tokens=fit_prompt(e,input,static_cast<size_t>(hard_limit+32),dropped);
+        const auto vocab=llama_model_get_vocab(e.model.get());
         auto cb_class = env->GetObjectClass(callback);
         auto on_chunk = env->GetMethodID(cb_class, "onBytes", "([B)V");
         env->DeleteLocalRef(cb_class);
         if (!on_chunk) throw std::runtime_error("Streaming-Callback fehlt.");
-        llama_memory_clear(llama_get_memory(e.context.get()), true);
         llama_perf_context_reset(e.context.get());
-        auto start = Clock::now();
-        const int batch = static_cast<int>(llama_n_batch(e.context.get()));
-        for (size_t offset = 0; offset < tokens.size() && !e.stop; offset += batch) {
-            auto n = static_cast<int32_t>(std::min<size_t>(batch, tokens.size() - offset));
-            auto b = llama_batch_get_one(tokens.data() + offset, n);
-            int rc = llama_decode(e.context.get(), b);
-            if (rc != 0 && !e.stop) throw std::runtime_error("Prompt-Verarbeitung fehlgeschlagen (Speicher oder Backend). Bitte CPU/kleineren Kontext versuchen.");
-        }
+        auto start=Clock::now();
+        const auto reused=sync_cache(e,tokens,true);
         double prefill_ms = elapsed(start), first_token_ms = 0;
         auto generation_start = Clock::now(), last_emit = Clock::now();
-        const auto grammar_text = grammar ? bytes(env, grammar) : std::string();
         Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed),grammar_text.c_str()), llama_sampler_free);
         if (!sampler) throw std::runtime_error("Sampler konnte nicht angelegt werden.");
-        std::string pending;
-        int generated = 0;
-        bool eos = false;
-        auto emit = [&] {
-            auto n = complete_utf8_prefix(pending);
-            if (!n) return;
-            auto data = result_bytes(env, pending.substr(0,n));
-            if (!data) throw std::runtime_error("Kein Speicher fuer die Antwort.");
-            env->CallVoidMethod(callback, on_chunk, data);
-            env->DeleteLocalRef(data);
-            pending.erase(0,n);
-            last_emit = Clock::now();
-            if (env->ExceptionCheck()) throw std::runtime_error("Antwort-Streaming unterbrochen.");
+        ReasoningFilter output;
+        const auto rendered=common_chat_templates_apply(e.templates.get(),input).prompt;
+        const auto end=rendered.find_last_not_of(" \t\r\n");
+        output.thinking=end!=std::string::npos && end+1>=7 && rendered.compare(end+1-7,7,"<think>")==0;
+        size_t emitted=0;
+        int generated=0,answer_tokens=0,reasoning_tokens=0,injected=0;
+        double first_visible_token_ms=0;
+        bool eos=false,reasoning_capped=false;
+        auto emit=[&] {
+            const auto n=complete_utf8_prefix(output.visible.substr(emitted));
+            if(!n)return;
+            auto data=result_bytes(env,output.visible.substr(emitted,n));
+            if(!data)throw std::runtime_error("Kein Speicher fuer die Antwort.");
+            env->CallVoidMethod(callback,on_chunk,data);env->DeleteLocalRef(data);
+            emitted+=n;last_emit=Clock::now();
+            if(env->ExceptionCheck())throw std::runtime_error("Antwort-Streaming unterbrochen.");
         };
-        while (generated < limit && !e.stop) {
+        auto close_reasoning=[&] {
+            const std::string closing="</think>";
+            const auto prefix=closing.compare(0,output.pending.size(),output.pending)==0?output.pending.size():0;
+            auto close=tokenize(vocab,closing.substr(prefix),false);
+            for(auto token:close)llama_sampler_accept(sampler.get(),token);
+            decode_tokens(e,close.data(),close.size());injected+=static_cast<int>(close.size());
+            output.close();reasoning_capped=true;
+        };
+        if(output.thinking && budget==0)close_reasoning();
+        while (answer_tokens < limit && generated < hard_limit && !e.stop) {
             const float * logits = llama_get_logits_ith(e.context.get(), -1);
             if (!logits || !std::all_of(logits, logits + llama_vocab_n_tokens(vocab), [](float x) { return std::isfinite(x); }))
                 throw std::runtime_error("Das Modell liefert ungueltige Rechenwerte. CPU-Kompatibilitaetsmodus oder Modelltest verwenden.");
             auto token = llama_sampler_sample(sampler.get(), e.context.get(), -1);
             if (llama_vocab_is_eog(vocab, token)) { eos = true; break; }
             if (!generated) first_token_ms = elapsed(start);
-            pending += piece(vocab, token);
-            ++generated;
-            if (elapsed(last_emit) >= 50) emit();
-            if (generated >= limit || e.stop) break;
-            auto b = llama_batch_get_one(&token, 1);
-            int rc = llama_decode(e.context.get(), b);
-            if (rc != 0 && !e.stop) throw std::runtime_error("Antwortberechnung fehlgeschlagen. CPU oder kleineren Kontext versuchen.");
+            const bool thinking=output.thinking;
+            const auto visible_before=output.visible.size();
+            output.feed(piece(vocab,token));++generated;
+            if(first_visible_token_ms==0 && output.visible.size()>visible_before)first_visible_token_ms=elapsed(start);
+            if(thinking || output.thinking)++reasoning_tokens;
+            else if(output.visible.size()>visible_before)++answer_tokens;
+            decode_tokens(e,&token,1);
+            if(output.thinking && reasoning_tokens>=budget)close_reasoning();
+            if(elapsed(last_emit)>=50)emit();
         }
-        emit();
+        output.finish();emit();
         const double generation_ms = elapsed(generation_start);
+        // Remove reasoning now, not only when the next user message arrives.
+        auto cleanup_start=Clock::now();
+        if(e.stop)e.clear_cache();
+        else {
+            std::string final=output.visible;
+            if(!grammar_text.empty() && final.rfind("<final>",0)==0 && final.size()>=15 && final.compare(final.size()-8,8,"</final>")==0)
+                final=final.substr(7,final.size()-15);
+            common_chat_msg answer;answer.role="assistant";answer.content=final;
+            input.messages.push_back(std::move(answer));input.add_generation_prompt=false;
+            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);sync_cache(e,clean,false);
+        }
         return result_bytes(env, common_json({{"prompt_tokens",tokens.size()}, {"output_tokens",generated},
             {"prefill_ms",prefill_ms}, {"first_token_ms",first_token_ms},
+            {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},
+            {"first_visible_token_ms",first_visible_token_ms},{"reasoning_tokens",reasoning_tokens},{"reasoning_capped",reasoning_capped},{"injected_tokens",injected},
+            {"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
+            {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
             {"generation_ms",generation_ms}, {"tokens_per_second", generation_ms > 0 ? generated*1000.0/generation_ms : 0},
-            {"stopped",e.stop.load()}, {"limit_reached",!eos && generated >= limit}}).dump());
-    } catch (const std::exception & e) { fail(env, e); return nullptr; }
+            {"stopped",e.stop.load()}, {"limit_reached",!eos && (answer_tokens>=limit || generated>=hard_limit)}}).dump());
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
 }

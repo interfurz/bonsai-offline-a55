@@ -37,12 +37,13 @@ final class ToolLoop {
         final JSONObject stats;
         Result(String text,JSONObject stats) { this.text=text; this.stats=stats; }
     }
+    static String systemPrompt(boolean grammarEnabled) { return SYSTEM_PROMPT+(grammarEnabled?ToolGrammar.FORMAT_PROMPT:""); }
     static Result run(List<ChatStore.Message> history,ChatStore store,Generator generator,BooleanSupplier cancelled) throws Exception {
         return run(history,store,generator,cancelled,false);
     }
     static Result run(List<ChatStore.Message> history,ChatStore store,Generator generator,BooleanSupplier cancelled,boolean grammarEnabled) throws Exception {
         List<ChatStore.Message> turns=new ArrayList<>();
-        turns.add(new ChatStore.Message(0,"system",SYSTEM_PROMPT+(grammarEnabled?ToolGrammar.FORMAT_PROMPT:""),""));
+        turns.add(new ChatStore.Message(0,"system",systemPrompt(grammarEnabled),""));
         turns.addAll(history);
         for(int round=0;round<MAX_ROUNDS;round++) {
             checkCancelled(cancelled);

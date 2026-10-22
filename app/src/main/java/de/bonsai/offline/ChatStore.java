@@ -67,11 +67,20 @@ final class ChatStore extends SQLiteOpenHelper {
     List<Message> messages(long chat) {
         List<Message> result=new ArrayList<>();
         try(Cursor c=getReadableDatabase().rawQuery("SELECT id,role,text,detail FROM messages WHERE chat_id=? ORDER BY id",new String[]{Long.toString(chat)})) {
-            while(c.moveToNext()) result.add(new Message(c.getLong(0),c.getString(1),c.getString(2),c.getString(3)));
+            while(c.moveToNext()) {
+                String role=c.getString(1),text=c.getString(2);
+                result.add(new Message(c.getLong(0),role,"assistant".equals(role)?ReasoningText.strip(text):text,c.getString(3)));
+            }
+        }
+        // Repair older assistant messages lazily without altering user quotes or requiring a schema change.
+        for(Message m:result)if("assistant".equals(m.role)) {
+            ContentValues v=new ContentValues();v.put("text",m.text);
+            getWritableDatabase().update("messages",v,"id=? AND text<>?",new String[]{Long.toString(m.id),m.text});
         }
         return result;
     }
     long add(long chat,String role,String text,String detail) {
+        if("assistant".equals(role))text=ReasoningText.strip(text);
         SQLiteDatabase db=getWritableDatabase();
         ContentValues v=new ContentValues(); v.put("chat_id",chat); v.put("role",role); v.put("text",text); v.put("detail",detail);
         db.beginTransaction();

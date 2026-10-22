@@ -75,4 +75,18 @@ public class ChatStoreTest {
         }
     }
 
+    @Test public void assistantReasoningIsRemovedFromOldAndNewRowsButUserQuotesRemain() {
+        try(ChatStore store=new ChatStore(RuntimeEnvironment.getApplication())) {
+            long chat=store.createChat("Reasoning");
+            String tagged="<think>geheim</think>Final";
+            store.add(chat,"user",tagged,"");store.add(chat,"assistant",tagged,"");
+            store.getWritableDatabase().execSQL("INSERT INTO messages(chat_id,role,text) VALUES(?,'assistant',?)",new Object[]{chat,tagged});
+            assertEquals(tagged,store.messages(chat).get(0).text);
+            assertEquals("Final",store.messages(chat).get(1).text);assertEquals("Final",store.messages(chat).get(2).text);
+            try(android.database.Cursor c=store.getReadableDatabase().rawQuery("SELECT text FROM messages WHERE role='assistant'",null)) {
+                while(c.moveToNext())assertEquals("Final",c.getString(0));
+            }
+        }
+    }
+
 }

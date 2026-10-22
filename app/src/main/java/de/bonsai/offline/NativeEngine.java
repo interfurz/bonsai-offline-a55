@@ -8,12 +8,17 @@ final class NativeEngine {
     static native void resetStop(long handle);
     static native void stop(long handle);
     static native void unload(long handle);
+    static native void clearCache(long handle);
+    static native void commitTurn(long handle,byte[][] roles,byte[][] contents);
     static native void referenceCpu(boolean enabled);
     static native byte[] load(long handle, byte[] path, int context, int threads, boolean gpu);
     static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, Stream callback) {
         return generate(handle,roles,contents,maxTokens,seed,callback,null);
     }
-    static native byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, Stream callback, byte[] grammar);
+    static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, Stream callback, byte[] grammar) {
+        return generate(handle,roles,contents,maxTokens,seed,callback,grammar,600);
+    }
+    static native byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,Stream callback,byte[] grammar,int reasoningBudget);
     static native void configure(long handle, int threads, int batchThreads, int microBatch);
     static native byte[] probe(long handle, int steps);
     private NativeEngine() {}
