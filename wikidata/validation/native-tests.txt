@@ -1,0 +1,8 @@
+parse: error parsing grammar: expecting ::= at grammar
+
+invalid grammar
+failed to parse grammar
+Tool/final GBNF acceptance, rejection and sampler ordering passed
+Bonsai optimized/scalar kernels and 2x2 fallback match independent dense dots
+CPU reference bypasses fast Hadamard paths and matches dense transforms
+suche GBNF: valid Unicode query, invalid arguments and final-only round passed

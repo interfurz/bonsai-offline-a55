@@ -1,0 +1,8 @@
+{
+  "entities": ["Q17", "Q183", "Q937", "Q243", "Q634", "Q121750", "Q2537"],
+  "classes": ["Q11344", "Q6256", "Q634", "Q121750", "Q2537"],
+  "exclude_classes": [],
+  "properties": ["P31", "P279", "P36", "P47", "P569", "P19", "P17", "P1086", "P397", "P2048"],
+  "qualifiers": true,
+  "references": true
+}

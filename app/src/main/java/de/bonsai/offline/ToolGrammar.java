@@ -7,11 +7,22 @@ final class ToolGrammar {
         +"Gib ausschließlich <final>deine Antwort als normalen Text</final> aus. "
         +"Kein JSON und keine Anführungszeichen um die Endantwort. Die Markierungen werden von der App entfernt.";
     private static final String RULES="""
-        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | remember | recall | search) ws "}" ws "</tool>"
+        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | remember | recall | search | wikidata) ws "}" ws "</tool>"
         calc ::= "\\"calc\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"expr\\"" ws ":" ws json-string ws "}"
         remember ::= "\\"merken\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "," ws "\\"value\\"" ws ":" ws json-string ws "}"
         recall ::= "\\"abrufen\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "}"
         search ::= "\\"suche\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"query\\"" ws ":" ws json-string ws "}"
+        wikidata ::= "\\"wikidata\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"op\\"" ws ":" ws (wd-resolve | wd-facts | wd-path | wd-greater | wd-largest | wd-count) ws "}"
+        wd-entity ::= ws "," ws "\\"entity\\"" ws ":" ws json-string
+        wd-property ::= ws "," ws "\\"property\\"" ws ":" ws json-string
+        wd-value ::= ws "," ws "\\"value\\"" ws ":" ws json-string
+        wd-unit ::= ws "," ws "\\"unit\\"" ws ":" ws json-string
+        wd-resolve ::= "\\"resolve\\"" wd-entity
+        wd-facts ::= "\\"facts\\"" wd-entity wd-property
+        wd-path ::= "\\"path\\"" wd-entity wd-property
+        wd-greater ::= "\\"greater\\"" wd-entity wd-property wd-value wd-unit
+        wd-largest ::= "\\"largest\\"" wd-entity wd-property wd-unit
+        wd-count ::= "\\"count\\"" wd-entity wd-property wd-value
         json-string ::= "\\"" char* "\\""
         char ::= [^"\\\\\\x00-\\x1F] | "\\\\" (["\\\\/bfnrt] | "u" [0-9a-fA-F]{4})
         ws ::= [ \\t\\n\\r]*

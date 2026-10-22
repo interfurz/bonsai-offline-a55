@@ -1,0 +1,41 @@
+{
+  "embeddinggemma_prerequisite": {
+    "base_commit": "bdddacd16e0557c744226c3c2fa35c3dad36ad31",
+    "android_tests": 112,
+    "rag_python_tests": 22,
+    "apk": "ARM64 debug built",
+    "lint": "passed",
+    "real_model_smoke": "existing documented evidence reviewed; not repeated in this task",
+    "github_runs": [
+      39806226430,
+      39806156169
+    ]
+  },
+  "final_android": {
+    "tests": 129,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "wikidata_android_tests": 17,
+  "wikidata_python_tests": 14,
+  "existing_rag_python_tests": 22,
+  "existing_other_python_tests": 4,
+  "lint": {
+    "Error": 0,
+    "Warning": 8
+  },
+  "apk": "ARM64 CPU debug built",
+  "device_benchmark": "DEX JAR compiled; not run on Android hardware",
+  "java": "Temurin 21.0.10; Java source/target 17",
+  "android": {
+    "compile_sdk": 35,
+    "min_sdk": 28,
+    "ndk": "28.2.13676358",
+    "abi": "arm64-v8a"
+  },
+  "fixture_sha256": "73a2d08bb49b648e999f47b5c0bafafd2d85fcf7c90c55d3df7ac13ee2527022",
+  "physical_devices": [],
+  "full_dump_processed": false,
+  "wikipedia_or_embedding_components_changed": false
+}

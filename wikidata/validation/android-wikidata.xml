@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="de.bonsai.offline.WikidataKnowledgeTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-22T16:06:01" hostname="e6f7413ae6c3" time="1.007">
+  <properties/>
+  <testcase name="duplicateSubclassStatementsDoNotHideOtherClasses" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.148"/>
+  <testcase name="exactDecimalComparisonAndOrderingSurviveRealIndexTies" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.043"/>
+  <testcase name="numericClassFilterHasStrictThresholdAndUnitBoundary" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.036"/>
+  <testcase name="widePathsAndClassSetsFailInsteadOfPretendingCompleteResults" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.243"/>
+  <testcase name="incomingCountsIncludeSubclassesAndExplicitLocalCoverage" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.028"/>
+  <testcase name="missingIncompleteAndWrongSchemaAreClearErrors" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.021"/>
+  <testcase name="threeStepPathPreservesEvidenceAndUsesIdsBetweenSteps" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.034"/>
+  <testcase name="preferredRanksUnitsQualifiersAndReferencesAreReturned" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.019"/>
+  <testcase name="cancellationPropagatesBeforeAndDuringIndexedQueries" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.022"/>
+  <testcase name="ambiguousCandidatesAreBoundedWithoutBecomingAnAutomaticMatch" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.095"/>
+  <testcase name="hostRobolectricLatencyAndHeapAreRecordedWithoutDeviceClaims" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.098"/>
+  <testcase name="capitalBirthdayBordersAndAliasReadThePythonDatabase" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.063"/>
+  <testcase name="controllerPassesGraphResultsAndDeterministicProvenanceToFinalAnswer" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.026"/>
+  <testcase name="ambiguityNeverSilentlyChoosesAPersonAndUnknownDoesNotMeanFalse" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.028"/>
+  <testcase name="rowAndCharacterBudgetsAreExplicitlyMarked" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.05"/>
+  <testcase name="largeCompressedDetailsAreOmittedWithoutInflatingUnboundedMemory" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.026"/>
+  <testcase name="arbitrarySqlUnknownKeysWrongKindsAndBadArgumentsAreRejected" classname="de.bonsai.offline.WikidataKnowledgeTest" time="0.024"/>
+  <system-out><![CDATA[WIKIDATA_BENCHMARK={"environment":"Linux host \/ Robolectric native SQLite; not A55","database_bytes":53248,"queries":20,"warmup":3,"p50_ms":2.707789,"p95_ms":4.003697,"java_used_heap_before":329252864,"java_used_heap_after":331874304,"heap_note":"JVM heap snapshots, includes Robolectric; not peak or Android RSS"}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
