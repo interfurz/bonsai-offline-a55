@@ -1,8 +1,8 @@
 # A55-Echtwelttest: Debugausgaben und persönliche Nutzererfahrung
 
-Stand: 22. Oktober 2026, erneute Prüfung nach #15/#17. Dieser Plan folgt auf die
-[Projektanalyse/Roadmap](ROADMAP.md). Geprüfter `main`-Stand:
-`efcd87a0b02fbc0325fbc30a20ce9b1dac291a15` (v0.5, nach #16/#18). Neben Encoder (#12), Wikipedia (#13)
+Stand: 22. Oktober 2026, ergänzt für v0.5.1 nach Merge von #20/#21. Dieser Plan folgt auf die
+[Projektanalyse/Roadmap](ROADMAP.md). Aktueller Release-Quellstand auf `main`:
+`2dfe2c41d6fcfa58b2537171e204a815baec4897` (v0.5.1, nach #20/#21). Neben Encoder (#12), Wikipedia (#13)
 und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
 (#15) und optischen 16-dp-Iconvarianten (#17) integriert.
 **Ein physischer A55-Test wurde hier noch nicht ausgeführt.**
@@ -15,9 +15,9 @@ Das ist ein konkreter UX-Befund zur Warteanzeige, aber ohne APK-/Modellhash,
 Zeitmessung oder Antwortabschluss kein Leistungs- oder Geräteabnahmebeleg.
 Die Renderaufnahmen/138 Tests aus der Iconvalidierung
 sind Hostbelege mit Testinhalten; sie ersetzen deinen Durchlauf nicht.
-Die neue CPU/Vulkan-APK ist inzwischen lokal gebaut, signiert und binär geprüft;
-[Buildnachweis](release/0.5/build-info.json) und
-[Updatevergleich](release/0.5/update-compatibility.json) identifizieren genau das
+Die v0.5.1-CPU/Vulkan-APK ist lokal gebaut, signiert und binär geprüft;
+[Buildnachweis](release/0.5.1/build-info.json) und
+[Updatevergleich mit v0.5](release/0.5.1/update-compatibility.json) identifizieren genau das
 Artefakt. Der lokale Build ist kein physischer A55-Test.
 
 Ziel ist ein gemeinsamer Befund aus **deinen echten Aufgaben, deinem Eindruck
@@ -73,7 +73,7 @@ Für den aktuellen Folgerelease gilt Appversion **0.5.1**, Versionscode **14**.
 Die Signieridentität entspricht auch dem tatsächlichen v0.5-Release.
 Der bereitgestellte Release-Keystore entspricht der geprüften 0.4.4-Signatur
 (`d45ceaf8…`), nicht der 0.4.5-/0.3.0-Signatur (`ce1a585c…`). Den tatsächlichen
-APK-/Buildhash des veröffentlichten v0.5-Artefakts in das Sitzungsmanifest
+APK-/Buildhash des veröffentlichten v0.5.1-Artefakts in das Sitzungsmanifest
 übernehmen; die neue Versionsnummer allein ist weiterhin kein Gerätebeleg.
 
 ### Drei ausführbare Teststufen
