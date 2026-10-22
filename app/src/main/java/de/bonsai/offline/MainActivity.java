@@ -12,11 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.CheckBox;
 import android.app.AlertDialog;
 import android.content.Intent;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -198,7 +194,7 @@ public final class MainActivity extends Activity {
             }
         }
         popupTitle.setText(destination==1?"Modell":"Leistung");sectionDialog.setTitle(popupTitle.getText());
-        popupTitle.setCompoundDrawables(UiArtwork.icon(destination==1?"model":"performance",ACCENT,dp(24)),null,null,null);
+        popupTitle.setCompoundDrawables(UiArtwork.icon(this,destination==1?"model":"performance",iconColor(R.color.icon_primary),dp(24)),null,null,null);
         refreshPopupContent();updatePopupStatus();
         UiMotion.enter(popupHost,0,dp(8));
     }
@@ -311,7 +307,7 @@ public final class MainActivity extends Activity {
     }
     private void updateSend(){
         if(send==null||input==null)return;
-        send.kind=app.busy?"stop":"send";send.setContentDescription(app.busy?"Vorgang abbrechen":"Nachricht senden");
+        send.setKind(app.busy?"stop":"send");send.setContentDescription(app.busy?"Vorgang abbrechen":"Nachricht senden");
         send.setEnabled(app.busy?!app.cancelled:app.loaded&&!input.getText().toString().trim().isEmpty()&&input.length()<=32000);
         send.setAlpha(send.isEnabled()?1:.4f);send.invalidate();
         // Drafting the next question stays available while inference runs.
@@ -350,14 +346,14 @@ public final class MainActivity extends Activity {
         content.setSpan(new android.text.style.RelativeSizeSpan(DesignTokens.TYPE_LABEL/(float)DesignTokens.TYPE_BODY),label.length()+1,content.length(),0);
         content.setSpan(new android.text.style.ForegroundColorSpan(MUTED),label.length()+1,content.length(),0);
         TextView t=menuItem("");t.setText(content);t.setPadding(dp(16),dp(16),dp(16),dp(16));t.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
-        t.setCompoundDrawables(UiArtwork.icon(glyph,ACCENT,dp(28)),null,UiArtwork.icon("arrow",ACCENT,dp(18)),null);t.setCompoundDrawablePadding(dp(16));
+        t.setCompoundDrawables(UiArtwork.icon(this,glyph,iconColor(R.color.icon_primary),dp(24)),null,UiArtwork.icon(this,"arrow",iconColor(R.color.icon_secondary),dp(24)),null);t.setCompoundDrawablePadding(dp(16));
         t.setOnClickListener(v->{input.setText(prompt);input.setSelection(input.length());input.requestFocus();((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);});return t;
     }
     private void addMessage(ChatStore.Message m){
         boolean user=m.role.equals("user");LinearLayout box=column();box.setPadding(user?dp(16):0,dp(16),user?dp(16):0,dp(16));
         if(user)box.setBackground(round(PANEL,DesignTokens.RADIUS_CARD));
         TextView author=text(user?"Du":"Bonsai",DesignTokens.TYPE_LABEL,user?MUTED:ACCENT);author.setTypeface(null,Typeface.BOLD);
-        author.setCompoundDrawables(UiArtwork.icon(user?"chat":"leaf",user?MUTED:ACCENT,dp(20)),null,null,null);author.setCompoundDrawablePadding(dp(8));box.addView(author);
+        author.setCompoundDrawables(UiArtwork.icon(this,user?"chat":"leaf",user?iconColor(R.color.icon_secondary):ACCENT,dp(user?24:20)),null,null,null);author.setCompoundDrawablePadding(dp(8));box.addView(author);
         TextView body=text(m.text.isEmpty()?"Bonsai denkt nach …":m.text,DesignTokens.TYPE_BODY,TEXT);body.setTextIsSelectable(true);addSpaced(box,body,8);
         LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user)bounds.leftMargin=dp(24);
         if(!user){
@@ -383,12 +379,13 @@ public final class MainActivity extends Activity {
     }
 
     private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
-        android.graphics.drawable.Drawable drawable=getDrawable(resource).mutate();drawable.setTint(MUTED);
+        android.graphics.drawable.Drawable drawable=getDrawable(resource).mutate();drawable.setTint(iconColor(R.color.icon_secondary));
         drawable.setBounds(0,0,dp(size),dp(size));return drawable;
     }
     private android.widget.ImageButton answerAction(int resource,String label,View.OnClickListener listener) {
         android.widget.ImageButton button=new android.widget.ImageButton(this);
-        button.setImageDrawable(answerGlyph(resource,28));button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        android.graphics.drawable.Drawable glyph=answerGlyph(resource,28);glyph.setTint(iconColor(R.color.icon_primary));
+        button.setImageDrawable(glyph);button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         button.setPadding(dp(10),dp(10),dp(10),dp(10));button.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));
         button.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
         button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(listener);return button;
@@ -446,21 +443,24 @@ public final class MainActivity extends Activity {
         FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(Math.min(dp(315),getResources().getDisplayMetrics().widthPixels-dp(40)),-1);
         drawer.addView(panel,bounds);
         LinearLayout drawerHeader=row();
-        TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setCompoundDrawables(UiArtwork.icon("leaf",ACCENT,dp(28)),null,null,null);brand.setCompoundDrawablePadding(dp(12));brand.setPadding(dp(10),0,0,0);drawerHeader.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+        TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setCompoundDrawables(UiArtwork.icon(this,"leaf",ACCENT,dp(28)),null,null,null);brand.setCompoundDrawablePadding(dp(12));brand.setPadding(dp(10),0,0,0);drawerHeader.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
         IconButton close=icon("close","Menü schließen",v->closeDrawer());drawerHeader.addView(close);panel.addView(drawerHeader);
         ScrollView menuScroll=new ScrollView(this);menuScroll.setFillViewport(true);LinearLayout menu=column();menuScroll.addView(menu);panel.addView(menuScroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView fresh=menuItem("Neuen Chat starten"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);}); addSpaced(menu,fresh,16);
+        TextView fresh=menuItem("Neuen Chat starten");decorateAction(fresh,"edit"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);}); addSpaced(menu,fresh,16);
         TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));menu.addView(model);
         TextView performance=menuItem("Leistung");decorateAction(performance,"performance");performance.setOnClickListener(v->closeDrawer(()->navigate(2)));menu.addView(performance);
         TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); menu.addView(label);
         LinearLayout entries=column();menu.addView(entries);
         for(ChatStore.Chat c:app.store.chats(archived)) {
-            TextView item=menuItem(c.title); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
-            if(c.id==app.currentChat) item.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
+            TextView item=menuItem(c.title);decorateAction(item,archived?"archive":"history"); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
+            if(c.id==app.currentChat) {
+                item.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
+                item.getCompoundDrawables()[0].setTint(iconColor(R.color.icon_selected));
+            }
             item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");navigate(0);});
             item.setOnLongClickListener(v->{showChatActions(c,archived);return true;}); entries.addView(item);
         }
-        TextView archive=menuItem(archived?"Zurück zu deinen Chats":"Archivierte Chats");
+        TextView archive=menuItem(archived?"Zurück zu deinen Chats":"Archivierte Chats");decorateAction(archive,archived?"history":"archive");
         archive.setOnClickListener(v->refreshDrawer(!archived));menu.addView(archive);
         TextView privacy=text("Alle Chats bleiben auf diesem Gerät.",14,MUTED); privacy.setPadding(dp(12),dp(16),0,0); menu.addView(privacy);
         if(app.store.chats(archived).isEmpty())entries.addView(text(archived?"Noch keine archivierten Chats.":"Noch keine Chats. Deine Gespräche erscheinen hier, sobald du eine Nachricht sendest.",16,MUTED));
@@ -659,12 +659,12 @@ public final class MainActivity extends Activity {
     }
     private LinearLayout card(){LinearLayout c=column();c.setPadding(dp(24),dp(24),dp(24),dp(24));GradientDrawable background=round(PANEL,DesignTokens.RADIUS_CARD);background.setStroke(dp(1),tokens.subtleBorder);c.setBackground(background);return c;}
     private void decorateAction(TextView view,String glyph){
-        view.setCompoundDrawables(UiArtwork.icon(glyph,ACCENT,dp(20)),null,null,null);view.setCompoundDrawablePadding(dp(12));
+        view.setCompoundDrawables(UiArtwork.icon(this,glyph,iconColor(R.color.icon_primary),dp(24)),null,null,null);view.setCompoundDrawablePadding(dp(12));
     }
     private TextView badge(String label,String glyph){
         TextView view=text(label,DesignTokens.TYPE_META,ACCENT);view.setTypeface(null,Typeface.BOLD);
         view.setPadding(dp(12),dp(8),dp(12),dp(8));view.setBackground(round(tokens.accentSurface,DesignTokens.RADIUS_SMALL));
-        view.setCompoundDrawables(UiArtwork.icon(glyph,ACCENT,dp(16)),null,null,null);view.setCompoundDrawablePadding(dp(8));return view;
+        view.setCompoundDrawables(UiArtwork.icon(this,glyph,iconColor(R.color.icon_secondary),dp(16)),null,null,null);view.setCompoundDrawablePadding(dp(8));return view;
     }
     private LinearLayout profileFacts(){
         LinearLayout facts=row();facts.setBaselineAligned(false);
@@ -694,41 +694,37 @@ public final class MainActivity extends Activity {
     private int dp(float v){return Math.round(v*getResources().getDisplayMetrics().density);}
     private IconButton icon(String kind,String description,View.OnClickListener listener) {
         IconButton v=new IconButton(kind); v.setContentDescription(description); v.setOnClickListener(listener);
-        v.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));v.setFocusable(true);v.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));return v;
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));v.setFocusable(true);
+        android.graphics.drawable.Drawable feedback=interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL);
+        if(kind.equals("send")||kind.equals("stop")) {
+            GradientDrawable circle=new GradientDrawable();circle.setShape(GradientDrawable.OVAL);circle.setColor(tokens.action);
+            v.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
+                new android.graphics.drawable.InsetDrawable(circle,dp(6)),feedback}));
+        } else v.setBackground(feedback);
+        return v;
     }
-    private final class IconButton extends View {
-        String kind;
-        final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
-        final RectF stopBounds=new RectF(-5,-5,5,5);
-        final Path editPath=new Path();
-        IconButton(String kind) { super(MainActivity.this); this.kind=kind; setMinimumHeight(dp(48)); setMinimumWidth(dp(48)); }
-        @Override public boolean performClick() { return super.performClick(); }
+    private int iconColor(int role) { return getColor(role); }
+    /** Asset-only button; circle, focus, ripple and pressed motion belong to the container. */
+    private final class IconButton extends android.widget.ImageButton {
+        private String kind;
+        IconButton(String kind) {
+            super(MainActivity.this);
+            setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            setPadding(dp(12),dp(12),dp(12),dp(12));
+            setMinimumHeight(dp(48));setMinimumWidth(dp(48));setKind(kind);
+        }
+        void setKind(String next) {
+            if(next.equals(kind))return;
+            kind=next;
+            setImageDrawable(BonsaiIcons.icon(MainActivity.this,kind,
+                iconColor(kind.equals("send")||kind.equals("stop")?R.color.icon_on_action:R.color.icon_primary),dp(24)));
+        }
         @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
         private boolean pressedBefore;
         @Override protected void drawableStateChanged(){
             super.drawableStateChanged();
             boolean down=isEnabled()&&isPressed();
             if(down!=pressedBefore){pressedBefore=down;UiMotion.press(this,down);}
-        }
-        @Override protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            canvas.save(); canvas.translate(getWidth()/2f,getHeight()/2f); canvas.scale(dp(1),dp(1));
-            paint.setColor(ACCENT); paint.setStrokeWidth(1.8f); paint.setStyle(Paint.Style.STROKE); paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
-            if(kind.equals("send") || kind.equals("stop")) {
-                paint.setColor(tokens.action);paint.setStyle(Paint.Style.FILL); canvas.drawCircle(0,0,18,paint); paint.setColor(tokens.onPrimary);
-                if(kind.equals("stop")) canvas.drawRoundRect(stopBounds,1,1,paint);
-                else { paint.setStyle(Paint.Style.STROKE); canvas.drawLine(0,8,0,-8,paint); canvas.drawLine(0,-8,-6,-2,paint); canvas.drawLine(0,-8,6,-2,paint); }
-            } else if(kind.equals("close")) {
-                canvas.drawLine(-6,-6,6,6,paint);canvas.drawLine(-6,6,6,-6,paint);
-            } else if(kind.equals("menu")) {
-                canvas.drawLine(-9,-5,9,-5,paint); canvas.drawLine(-9,3,3,3,paint);
-            } else if(kind.equals("plus")) {
-                canvas.drawLine(-8,0,8,0,paint); canvas.drawLine(0,-8,0,8,paint);
-            } else {
-                editPath.reset(); editPath.moveTo(5,-8); editPath.lineTo(9,-4); editPath.lineTo(-3,8); editPath.lineTo(-8,9); editPath.lineTo(-7,4); editPath.close(); canvas.drawPath(editPath,paint);
-                canvas.drawLine(-6,-9,-10,-9,paint); canvas.drawLine(-10,-9,-10,-3,paint);
-            }
-            canvas.restore();
         }
     }
 }

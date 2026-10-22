@@ -16193,20 +16193,8 @@ public licenses.
 
 Creative Commons may be contacted at creativecommons.org.
 
-
-
-
-===== Google Material Symbols Rounded — answer footer icons =====
-Copyright Google LLC. Licensed under the Apache License, Version 2.0.
-Source: https://github.com/google/material-design-icons/tree/master/symbols/web
-Icons: content_copy, refresh, speed, numbers, timer, info (24px, rounded).
-The original SVG path data is used in Android VectorDrawable resources with a viewBox translation.
-License: https://www.apache.org/licenses/LICENSE-2.0
-The full Apache License 2.0 is included elsewhere in this notice file.
-
-===== EmbeddingGemma 2 text architecture backport =====
-The PrismML runtime includes a modified MIT-licensed llama.cpp text model graph
-from ggml-org/llama.cpp#30054 (merge 4fbc76dec51d). API adaptations and file
-checksums are documented in runtime/README.md in the Bonsai Offline source.
-EmbeddingGemma 2 model weights (Google, Apache-2.0) are supplied separately and
-are not included in this APK. https://huggingface.co/google/embeddinggemma-2
+===== Bonsai original icon set =====
+18 purpose-drawn icons, SVG masters in design/icons/svg; MIT License.
+Copyright (c) 2026 Bonsai Offline contributors.
+No third-party icon geometry is used in these 18 assets.
+See the project LICENSE and design/icons/SOURCES.md.
