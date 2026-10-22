@@ -11,6 +11,8 @@ def compare(left, right):
         if len(report.get("turns", [])) != 5:
             raise ValueError("Expected five turns")
     fixed = ("model_sha256", "context_tokens", "seed", "max_output_tokens", "reasoning_budget", "gbnf", "prefix_warmup", "runtime_commit")
+    if "system_prompt_sha256" in left or "system_prompt_sha256" in right:
+        fixed += ("system_prompt_sha256",)
     mismatches = [key for key in fixed if key not in left or key not in right or left[key] != right[key]]
     if mismatches:
         raise ValueError("Incomparable settings: " + ", ".join(mismatches))

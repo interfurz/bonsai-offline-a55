@@ -22,7 +22,7 @@ Die App bleibt vollständig offline. Das A55-Protokoll zeigt für die Q2_0-Kopie
 
 Implementiert:
 
-- Chatansicht mit Antwortstreaming, Abbrechen, seitlicher Chatliste und lokalem SQLite-Verlauf. Tool-Runden und Reasoning bleiben intern.
+- Chatansicht mit Antwortstreaming, Abbrechen, seitlicher Chatliste und lokalem SQLite-Verlauf. Tool-Runden bleiben intern; aktuelles Thinking erscheint vorübergehend in einer Zeile.
 - Einen Chat im Seitenmenü lange drücken: **Löschen**, **Archivieren**, **Abbrechen**. Tippen außerhalb schließt das Menü ebenfalls. Archivierte Verläufe bleiben unter **Archivierte Chats** erreichbar und lassen sich dort per langem Drücken wiederherstellen. Löschen erfordert eine Bestätigung.
 - Import einer lokalen GGUF-Datei über den Android-Dateiauswahldialog. Die App erstellt eine private Kopie; ein abgebrochener Import ersetzt das alte Modell nicht.
 - JNI-Anbindung an den originalen PrismML-Fork mit PQ2_0/PTQ1_0 und Bonsai-2-Transformationen.
@@ -35,9 +35,9 @@ Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis
 
 ## Inkrementeller Kontext und Reasoning
 
-Der normale Chat behält denselben KV-Cache über mehrere Turns. Bei jeder Generierung wird der Prompt neu gerendert und tokenisiert, das gemeinsame Token-Präfix mit dem tatsächlich dekodierten Cache bestimmt und nur der abweichende Suffix entfernt und neu dekodiert. Bei einem vollständig vorhandenen Prompt wird nötigenfalls das letzte Token wiederholt, um passende Logits zu erhalten. Der System-Prompt bleibt zwischen Turns unverändert. Datum/Uhrzeit, falls das Modell-Template sie verwendet, werden pro Modellladung fixiert und ändern den Prompt nicht bei jeder Nachricht.
+Der normale Chat behält denselben KV-Cache über mehrere Turns. Bei jeder Generierung wird der Prompt neu gerendert und tokenisiert, das gemeinsame Token-Präfix mit dem tatsächlich dekodierten Cache bestimmt und nur der abweichende Suffix entfernt und neu dekodiert. Bei einem vollständig vorhandenen Prompt wird nötigenfalls das letzte Token wiederholt, um passende Logits zu erhalten. Der System-Prompt bleibt zwischen Turns unverändert, bis im Prompt-Editor neue Vorgaben gespeichert werden. Datum/Uhrzeit, falls das Modell-Template sie verwendet, werden pro Modellladung fixiert und ändern den Prompt nicht bei jeder Nachricht.
 
-`<think>…</think>` bleibt nur während der aktuellen Generierung im Kontext. Die native Streaming-Filterung verarbeitet auch über Token-/Chunkgrenzen geteilte Tags und zeigt ausschließlich Text außerhalb des Reasonings. Für eine Nutzerfrage stehen über alle Tool-Runden zusammen ungefähr **600 Reasoning-Tokens** zur Verfügung. Beim Erreichen des Budgets wird `</think>` in den laufenden Kontext eingefügt und mit der Endantwort fortgefahren. Die eingestellte maximale Antwortlänge begrenzt den sichtbaren Antwortteil; Platz für Reasoning und Abschluss wird zusätzlich innerhalb des bestehenden `n_ctx` reserviert. Thinking bleibt im Template standardmäßig deaktiviert; das Budget begrenzt trotzdem auftretendes Reasoning. GBNF-Tool-Grammatiken erlauben keine Thinking-Blöcke und benötigen dafür keine Reserve.
+`<think>…</think>` bleibt nur während der aktuellen Generierung im Kontext. Die native Streaming-Filterung verarbeitet auch über Token-/Chunkgrenzen geteilte Tags. Die endgültige Antwort enthält ausschließlich Text außerhalb des Reasonings. Im Nachfolgebuild zeigt die bisherige Zeile „Bonsai denkt nach …“ den aktuellen Thinking-Text separat und einzeilig; sichtbar ist das Ende eines auf 240 Zeichen begrenzten Ausschnitts. Er wird weder als Antwort gespeichert noch in Logs oder Benchmarkantworten übernommen. Wenn das Modell kein Thinking ausgibt, wird keines erfunden. Während Prompt-Prefill und aktivem Prefix-Vorwärmen zeigt dieselbe Zeile Fortschritt in Prozent und gemessene neue Prompt-Tokens pro Sekunde. Der Fortschritt umfasst wiederverwendete Cache-Tokens; die Rate zählt nur frisch dekodierte Tokens und wird nach jedem abgeschlossenen Decode-Batch aktualisiert. Bis zur ersten Messung steht dort „… Tok/s“. Sobald Antworttext eintrifft, wechselt die Anzeige zum normalen mehrzeiligen Antworttext. Für eine Nutzerfrage stehen über alle Tool-Runden zusammen ungefähr **600 Reasoning-Tokens** zur Verfügung. Beim Erreichen des Budgets wird `</think>` in den laufenden Kontext eingefügt und mit der Endantwort fortgefahren. Die eingestellte maximale Antwortlänge begrenzt den sichtbaren Antwortteil; Platz für Reasoning und Abschluss wird zusätzlich innerhalb des bestehenden `n_ctx` reserviert. Thinking bleibt im Template standardmäßig deaktiviert; das Budget begrenzt trotzdem auftretendes Reasoning. GBNF-Tool-Grammatiken erlauben keine Thinking-Blöcke und benötigen dafür keine Reserve.
 
 Nach Ende der Generierung wird der Cache auf den kanonisch gerenderten Verlauf mit ausschließlich finalem Assistant-Text abgeglichen. Dadurch muss nach einem Thinking-Block dessen ersetzter Suffix einmal mit dem finalen Text dekodiert werden; das unveränderte Präfix bleibt erhalten. Nach Tool-Runden entfernt ein abschließender Abgleich auch die internen Aufrufe/Ergebnisse aus dem Cache des sichtbaren Chats. Neue Assistant-Nachrichten werden ohne Reasoning gespeichert; ältere Assistant-Zeilen werden beim Lesen bereinigt. Wörtliche Tags in User-Nachrichten werden erhalten.
 
@@ -49,6 +49,26 @@ Es gibt weiterhin nur einen Modellkontext/KV-Cache mit unveränderter Standard-K
 
 ## Lokale Tools im Chat
 
+Im aktuellen Quellstand **nach dem veröffentlichten v0.5-Artefakt** lässt sich
+unter **Menü → Modell → Antworten anpassen → Systemprompt bearbeiten** der Prompt
+für alle Chats anpassen. **Eigene Vorgaben** enthalten Sprache und Antwortstil.
+Die getrennten **Tool-Anweisungen** enthalten Tool-Namen, Argumente, Beispiele
+und Ergebnisregeln. Sie sind zunächst schreibgeschützt; erst **Tool-Anweisungen
+entsperren → Trotzdem bearbeiten** erlaubt Änderungen nach einer Warnung.
+Bei jedem Öffnen wird der Bereich wieder gesperrt. Beide Bereiche lassen sich
+im Editor auf Standard setzen; der Tool-Reset benötigt ebenfalls das Entsperren.
+
+**Prompt speichern** übernimmt die Vorgaben lokal ab der nächsten Nachricht,
+leert den bisherigen Modellcache und wärmt den geänderten Systemprompt bei
+aktivem Vorwärmen erneut vor. Bestehende Chats und das Gedächtnis bleiben erhalten.
+**Abbrechen** verwirft den Entwurf; bei Activity-Neuerstellung bleibt er erhalten,
+der Tool-Bereich benötigt erneut die Warnbestätigung. Während einer Berechnung
+ist Speichern gesperrt. Eigene Vorgaben sind auf 4.000, Tool-Anweisungen auf
+16.000 Zeichen begrenzt; ein vollständig leerer Prompt wird abgewiesen. Längere
+Prompts verbrauchen Kontext. Ein neuer Tool-Name im Text registriert keine
+Funktion: Ausführbare Tools, Argumentprüfung und GBNF bleiben im Java-Code
+definiert. Die aktive GBNF-Formatanweisung hängt die App automatisch an.
+
 Der System-Prompt beschreibt ein einzelnes, vollständiges Tool-Format:
 
 ```text
@@ -56,6 +76,7 @@ Der System-Prompt beschreibt ein einzelnes, vollständiges Tool-Format:
 <tool>{"name":"merken","args":{"key":"name","value":"Alex"}}</tool>
 <tool>{"name":"abrufen","args":{"key":"name"}}</tool>
 <tool>{"name":"suche","args":{"query":"Photosynthese"}}</tool>
+<tool>{"name":"wikidata","args":{"op":"facts","entity":"Japan","property":"P36"}}</tool>
 ```
 
 Nach jeder Generierung prüft Java die komplette Antwort per Regex und validiert Name und Argumente. Ein eigener Java-Parser berechnet `+ - * / % ^`, Klammern, Dezimalzahlen, wissenschaftliche Schreibweise, `pi`, `e` und die Funktionen `sqrt`, `abs`, `sin`, `cos`, `tan`, `log` und `log10`. Winkel sind in Radiant; Division durch null, nicht endliche Ergebnisse und übermäßig lange oder tiefe Ausdrücke werden abgewiesen. Es gibt keine zusätzliche Bibliothek oder Netzwerkverbindung.
@@ -64,9 +85,9 @@ Nach jeder Generierung prüft Java die komplette Antwort per Regex und validiert
 
 Eine Antwort verwendet maximal **drei Modellgenerierungen**, also höchstens zwei Tool-Ausführungen und eine abschließende Antwort. Tool-Aufruf und JSON-Ergebnis werden nur für diesen Durchlauf intern an den Modellverlauf angehängt; Ergebnisse verwenden für kompatible Chat-Templates die Rolle `user`. Im UI und gespeicherten Chat stehen nur Frage und Endantwort. Die Endantwort wird live gestreamt, sobald ihr Format erkannt ist; Tool-Aufrufe und interne GBNF-Markierungen erscheinen dabei nicht im UI. Fehler der Tools gehen an das Modell zurück; gemischte oder unvollständige Tool-Tags, abgeschnittene Aufrufe und weitere Aufrufe nach dem Limit führen zu einer sichtbaren Fehlermeldung statt einer Tool-Ausgabe im Chat. Abbrechen verhindert weitere Runden; bereits ausgeführte Speicheroperationen bleiben bestehen.
 
-Unter **Modell → Antworten anpassen → GBNF für Tool-Aufrufe (experimentell)** lässt sich die Formatvorgabe zusätzlich im nativen Sampler erzwingen. Standardmäßig ist die Option ausgeschaltet. Mit **Einstellungen speichern** gilt sie ab der nächsten Chatnachricht; ein Neuladen des Modells ist dafür nicht nötig. Während einer laufenden Berechnung ist der Schalter gesperrt. Benchmark, Optimierung und Modellprüfung verwenden weiterhin keine Grammatik.
+Unter **Modell → Antworten anpassen → GBNF für Tool-Aufrufe (experimentell)** lässt sich die Formatvorgabe zusätzlich im nativen Sampler erzwingen. Standardmäßig ist die Option ausgeschaltet. Mit **Einstellungen speichern** gilt sie ab der nächsten Chatnachricht; ein Neuladen des Modells ist dafür nicht nötig. Während einer laufenden Berechnung ist der Schalter gesperrt. Einzelprompt-Benchmark, Optimierung und Modellprüfung verwenden keine Grammatik; der Fünf-Turn-Chatbenchmark nutzt dieselbe Einstellung wie der Chat.
 
-Bei aktivem GBNF erlaubt die Grammatik entweder genau einen der vier Tool-Aufrufe mit JSON-Stringargumenten oder eine intern mit `<final>…</final>` markierte Textantwort. Die App entfernt diese Markierungen vor Anzeige und Speicherung. In der dritten Runde ist nur noch eine Endantwort zulässig. Abgeschnittene Markierungen werden als Fehler gemeldet. Der optionale UTF-8-Grammatikparameter wird an `NativeEngine.generate` übergeben; `llama_sampler_init_grammar` steht vor den bisherigen Samplern. Eine fehlerhafte Grammatik führt zu einem Fehler statt zum stillen Abschalten der Vorgabe. Ausdrucks- und Speichergrenzen werden weiterhin in Java geprüft.
+Bei aktivem GBNF erlaubt die Grammatik entweder genau einen der fünf Tool-Aufrufe mit JSON-Stringargumenten oder eine intern mit `<final>…</final>` markierte Textantwort. Die App entfernt diese Markierungen vor Anzeige und Speicherung. In der dritten Runde ist nur noch eine Endantwort zulässig. Abgeschnittene Markierungen werden als Fehler gemeldet. Der optionale UTF-8-Grammatikparameter wird an `NativeEngine.generate` übergeben; `llama_sampler_init_grammar` steht vor den bisherigen Samplern. Eine fehlerhafte Grammatik führt zu einem Fehler statt zum stillen Abschalten der Vorgabe. Ausdrucks- und Speichergrenzen werden weiterhin in Java geprüft.
 
 Die Formatbefolgung und Antwortqualität des echten Bonsai-Modells müssen noch auf dem Gerät geprüft werden, etwa mit „Berechne 173 * 249 mit calc“ und den obigen Gedächtnisbeispielen, jeweils mit aus- und eingeschaltetem GBNF.
 

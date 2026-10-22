@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <functional>
 
 // No second KV allocation: only token IDs for the positions in sequence 0.
 template<class Token> size_t conversation_prefix(const std::vector<Token> & cached,const std::vector<Token> & prompt,bool logits) {
@@ -12,10 +13,11 @@ template<class Token> size_t conversation_prefix(const std::vector<Token> & cach
     return n;
 }
 
-// Keeps at most a tag prefix while thinking; never buffers the reasoning text.
+// Keeps at most a tag prefix while thinking; optionally streams thoughts to a separate UI channel.
 struct ReasoningFilter {
     bool thinking=false;
     std::string pending, visible;
+    std::function<void(char)> on_thinking;
     void feed(const std::string & bytes) {
         for(char c:bytes) {
             pending+=c;
@@ -25,6 +27,7 @@ struct ReasoningFilter {
                 if(std::string("<think>").compare(0,pending.size(),pending)==0 ||
                    std::string("</think>").compare(0,pending.size(),pending)==0)break;
                 if(!thinking)visible+=pending[0];
+                else if(on_thinking)on_thinking(pending[0]);
                 pending.erase(0,1);
                 if(pending.empty())break;
             }

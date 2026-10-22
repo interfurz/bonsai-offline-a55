@@ -11,7 +11,11 @@ final class ReplyStream implements NativeEngine.Stream {
     private final ByteArrayOutputStream output=new ByteArrayOutputStream();
     private final boolean grammar;
     private final Consumer<String> visible;
-    ReplyStream(boolean grammar,Consumer<String> visible) { this.grammar=grammar;this.visible=visible; }
+    private final NativeEngine.Stream progress;
+    ReplyStream(boolean grammar,Consumer<String> visible) { this(grammar,visible,null); }
+    ReplyStream(boolean grammar,Consumer<String> visible,NativeEngine.Stream progress) { this.grammar=grammar;this.visible=visible;this.progress=progress; }
+    @Override public void onThinking(byte[] bytes) { if(progress!=null)progress.onThinking(bytes); }
+    @Override public void onPrefill(int done,int total,double speed) { if(progress!=null)progress.onPrefill(done,total,speed); }
     String text() {
         byte[] bytes=output.toByteArray();CharBuffer decoded=CharBuffer.allocate(bytes.length);
         if(StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes),decoded,false).isError())

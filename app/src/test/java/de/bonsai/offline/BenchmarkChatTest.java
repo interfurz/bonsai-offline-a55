@@ -24,19 +24,23 @@ public class BenchmarkChatTest {
     @Implements(value=NativeEngine.class,isInAndroidSdk=false)
     public static class Engine {
         static int clears,calls,commits,warmups;
+        static String expectedSystem;
         @Implementation protected static void __staticInitializer__() {}
         @Implementation protected static long create() {return 1;}
         @Implementation protected static void resetStop(long h) {}
         @Implementation protected static void clearCache(long h) {clears++;}
-        @Implementation protected static byte[] warmPrefix(long h,byte[] system) {warmups++;return BonsaiApp.utf8("{warmed_tokens:100}");}
+        @Implementation protected static byte[] warmPrefix(long h,byte[] system) {warmups++;assertEquals(expectedSystem,new String(system,StandardCharsets.UTF_8));return BonsaiApp.utf8("{warmed_tokens:100}");}
+        @Implementation protected static byte[] warmPrefixProgress(long h,byte[] system,NativeEngine.Stream progress) { return warmPrefix(h,system); }
         @Implementation protected static byte[] commitTurn(long h,byte[][] roles,byte[][] texts) {
             commits++;
+            assertEquals(expectedSystem,new String(texts[0],StandardCharsets.UTF_8));
             assertEquals(commits*2+1,roles.length);
             for(byte[] text:texts) assertFalse(new String(text,StandardCharsets.UTF_8).contains("hidden"));
             return BonsaiApp.utf8("{cached_tokens:150,kv_positions:150}");
         }
         @Implementation protected static byte[] generate(long h,byte[][] roles,byte[][] texts,int limit,int seed,NativeEngine.Stream stream,byte[] grammar,int budget) {
             calls++;assertEquals(42,seed);assertEquals(128,limit);assertEquals(600,budget);
+            assertEquals(expectedSystem,new String(texts[0],StandardCharsets.UTF_8));
             assertEquals(calls*2,roles.length);
             stream.onBytes(BonsaiApp.utf8("<think>hidden</think>Antwort."));
             return BonsaiApp.utf8("{tokens_per_second:10,output_tokens:10,reasoning_tokens:2,generation_ms:1000,prefill_ms:3,reused_prompt_tokens:"+(100*calls)+",decoded_prompt_tokens:10,cached_tokens:150,kv_positions:150,stopped:false,limit_reached:false}");
@@ -46,6 +50,8 @@ public class BenchmarkChatTest {
         BonsaiApp app=(BonsaiApp)RuntimeEnvironment.getApplication();
         Engine.clears=Engine.calls=Engine.commits=Engine.warmups=0;
         app.loaded=true;app.prefs.edit().putBoolean("prefixWarmup",true).putBoolean("gbnfTools",false).commit();
+        SystemPrompt.save(app.prefs,"Antworte als geduldiger Lehrer.",SystemPrompt.DEFAULT_TOOLS);
+        Engine.expectedSystem=app.systemPrompt(false);
         Files.write(app.modelFile().toPath(),BonsaiApp.utf8("synthetic model fixture"));
         app.currentChat=app.store.createChat("Existing");
         app.store.add(app.currentChat,"user","Existing question","");long chat=app.currentChat;
@@ -55,6 +61,8 @@ public class BenchmarkChatTest {
         assertEquals(chat,app.currentChat);assertEquals(1,app.store.messages(chat).size());
         JSONObject report=new JSONObject(new String(Files.readAllBytes(new File(app.getFilesDir(),"benchmark.json").toPath()),StandardCharsets.UTF_8));
         assertTrue(report.getBoolean("completed"));assertEquals("bonsai-chat-5-v1",report.getString("benchmark"));
+        assertTrue(report.getBoolean("system_prompt_customized"));assertEquals(SystemPrompt.fingerprint(Engine.expectedSystem),report.getString("system_prompt_sha256"));
+        assertFalse(report.toString().contains("geduldiger Lehrer"));
         JSONArray turns=report.getJSONArray("turns");assertEquals(5,turns.length());
         for(int i=0;i<5;i++) {
             JSONObject turn=turns.getJSONObject(i);assertEquals(i+1,turn.getInt("turn"));

@@ -3,13 +3,18 @@ package de.bonsai.offline;
 /** JNI takes UTF-8 bytes so emoji and NUL cannot be corrupted by Modified UTF-8. */
 final class NativeEngine {
     static { System.loadLibrary("bonsai-jni"); }
-    interface Stream { void onBytes(byte[] bytes); }
+    interface Stream {
+        void onBytes(byte[] bytes);
+        default void onThinking(byte[] bytes) {}
+        default void onPrefill(int done,int total,double tokensPerSecond) {}
+    }
     static native long create();
     static native void resetStop(long handle);
     static native void stop(long handle);
     static native void unload(long handle);
     static native void clearCache(long handle);
     static native byte[] warmPrefix(long handle,byte[] system);
+    static native byte[] warmPrefixProgress(long handle,byte[] system,Stream progress);
     static native byte[] commitTurn(long handle,byte[][] roles,byte[][] contents);
     static native void referenceCpu(boolean enabled);
     static native byte[] load(long handle, byte[] path, int context, int threads, boolean gpu);

@@ -25,5 +25,13 @@ class CompareTest(unittest.TestCase):
     def test_rejects_question_change(self):
         left=self.fixture();right=copy.deepcopy(left);right["turns"][1]["question"]="changed"
         with self.assertRaises(ValueError): module.compare(left,right)
+    def test_checks_prompt_identity_when_either_export_has_it(self):
+        left=self.fixture();left["system_prompt_sha256"]="a"*64
+        right=copy.deepcopy(left)
+        module.compare(left,right)
+        right["system_prompt_sha256"]="b"*64
+        with self.assertRaisesRegex(ValueError,"system_prompt_sha256"): module.compare(left,right)
+        del right["system_prompt_sha256"]
+        with self.assertRaisesRegex(ValueError,"system_prompt_sha256"): module.compare(left,right)
 
 if __name__ == "__main__": unittest.main()

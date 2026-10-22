@@ -15,7 +15,7 @@ keine Chatnachrichten. Er verwendet dieselbe Tool-Schleife wie normale Antworten
 ## Messablauf
 
 1. APK und Modell identisch halten, `n_ctx=4096`, GBNF, Vorwärmen und Antwortbudget
-   zwischen den Läufen unverändert lassen. Das JSON enthält App-Version/-Code,
+   und Systemprompt zwischen den Läufen unverändert lassen. Das JSON enthält App-Version/-Code,
    Runtime-Commit, Modell-SHA256 und Geräte-Fingerprint; `schema=3` und
    `benchmark=bonsai-chat-5-v1` kennzeichnen die neue Instrumentierung.
 2. CPU in den Modelleinstellungen wählen. Unter **Messoptionen** zunächst Flash
@@ -42,6 +42,13 @@ keine Chatnachrichten. Er verwendet dieselbe Tool-Schleife wie normale Antworten
    GBNF und Vorwärm-Einstellung. Es verwirft unvollständige Läufe und gibt pro
    Turn A, B und die Differenz B minus A aus. Unterschiedliche Geräte/App-Versionen
    stehen in den Metadaten und müssen bei der Interpretation berücksichtigt werden.
+
+   Seit dem anpassbaren Systemprompt enthält der Chat-Export zusätzlich
+   `system_prompt_sha256` und `system_prompt_customized`; der Prompttext wird
+   nicht exportiert. Vorwärmen, Generierung und Cache-Commit verwenden denselben
+   Prompt. Sobald einer der Exporte den Hash enthält, verlangt das Vergleichsskript
+   ihn in beiden Exporten und identische Werte. Zwei alte Exporte ohne Hash bleiben
+   vergleichbar; deren Promptidentität lässt sich damit nicht nachweisen.
 
 ## Werte richtig lesen
 

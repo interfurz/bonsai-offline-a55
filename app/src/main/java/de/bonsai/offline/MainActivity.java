@@ -46,6 +46,7 @@ public final class MainActivity extends Activity {
     private FrameLayout screenHost;
     private LinearLayout page, chatPage, modelPage, performancePage, statusCard, composerGroup;
     private Dialog sectionDialog;
+    private SystemPromptEditor systemPromptEditor;
     private FrameLayout popupHost;
     private TextView popupTitle, popupState, popupAction;
     private LinearLayout popupStatusCard;
@@ -130,6 +131,7 @@ public final class MainActivity extends Activity {
         setContentView(root);
         if(saved!=null){input.setText(saved.getString("draft",""));pendingPrompt=saved.getString("pendingPrompt","");}
         app.listener=uiListener;navigate(saved==null?0:saved.getInt("screen",0));render();
+        if(saved!=null && saved.containsKey("systemPromptDraft"))showSystemPrompt(saved.getBundle("systemPromptDraft"));
     }
     private void createChatPage() {
         chatPage=column();
@@ -231,8 +233,9 @@ public final class MainActivity extends Activity {
         popupAction.setText(statusAction.getText());popupAction.setEnabled(statusAction.isEnabled());
         popupProgress.setVisibility(statusProgress.getVisibility());popupProgress.setIndeterminate(statusProgress.isIndeterminate());popupProgress.setProgress(statusProgress.getProgress());
     }
-    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);}
+    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);if(systemPromptEditor!=null && systemPromptEditor.isShowing())out.putBundle("systemPromptDraft",systemPromptEditor.draft());}
     @Override protected void onDestroy(){
+        if(systemPromptEditor!=null)systemPromptEditor.dismiss();
         app.main.removeCallbacks(progressTick);app.main.removeCallbacks(settleGlow);
         if(sectionDialog!=null){sectionDialog.setOnDismissListener(null);sectionDialog.dismiss();sectionDialog=null;}
         if(errorDialog!=null)errorDialog.dismiss();
@@ -283,7 +286,7 @@ public final class MainActivity extends Activity {
             if(switched)UiMotion.enter(chat,0,dp(8));
             if(activeScreen==1&&(phaseChanged||modelChanged))refreshPopupContent();
         }else if(liveAnswer!=null&&!app.messages.isEmpty()){
-            ChatStore.Message m=app.messages.get(app.messages.size()-1);liveAnswer.setText(m.text.isEmpty()?"Bonsai denkt nach …":m.text);
+            ChatStore.Message m=app.messages.get(app.messages.size()-1);setAnswerText(liveAnswer,m);
             if(liveDetail!=null)setAnswerDetail(liveDetail,m.detail);
         }
         if(app.modelApproval!=null&&!app.busy)showError();
@@ -299,8 +302,9 @@ public final class MainActivity extends Activity {
             state.setText(app.status+(elapsed>=10000?" · "+elapsed/1000+" s":""));state.setTextColor(TEXT);
             statusAction.setText(app.cancelled?"Wird beendet":"Abbrechen");statusAction.setEnabled(!app.cancelled);statusAction.setOnClickListener(v->app.cancel());
             statusProgress.setVisibility(elapsed>=DesignTokens.LOADING_DELAY?View.VISIBLE:View.GONE);
-            statusProgress.setIndeterminate(!app.optimizing);
+            statusProgress.setIndeterminate(!app.optimizing && app.prefillFraction<0);
             if(app.optimizing)statusProgress.setProgress((int)(app.optimizingFraction*1000));
+            else if(app.prefillFraction>=0)statusProgress.setProgress((int)(app.prefillFraction*1000));
             app.main.postDelayed(progressTick,elapsed<DesignTokens.LOADING_DELAY?DesignTokens.LOADING_DELAY:1000);
         }else{
             busySince=0;state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);statusProgress.setVisibility(View.GONE);statusAction.setEnabled(true);
@@ -404,7 +408,7 @@ public final class MainActivity extends Activity {
         if(user)box.setBackground(round(PANEL,DesignTokens.RADIUS_CARD));
         TextView author=text(user?"Du":"Bonsai",DesignTokens.TYPE_LABEL,user?MUTED:ACCENT);author.setTypeface(null,Typeface.BOLD);
         author.setCompoundDrawables(UiArtwork.icon(this,user?"chat":"leaf",user?iconColor(R.color.icon_secondary):ACCENT,dp(user?24:20)),null,null,null);author.setCompoundDrawablePadding(dp(8));box.addView(author);
-        TextView body=text(m.text.isEmpty()?"Bonsai denkt nach …":m.text,DesignTokens.TYPE_BODY,TEXT);body.setTextIsSelectable(true);addSpaced(box,body,8);
+        TextView body=text("",DesignTokens.TYPE_BODY,TEXT);setAnswerText(body,m);addSpaced(box,body,8);
         LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user)bounds.leftMargin=dp(24);
         if(!user){
             TextView detail=text("",DesignTokens.TYPE_META,MUTED);setAnswerDetail(detail,m.detail);addSpaced(box,detail,8);
@@ -429,6 +433,13 @@ public final class MainActivity extends Activity {
             answerAura=light(LightArea.CHAT,PulsingBorder.Mode.RAIL,0,.55f);
             answerAura.addView(box,new FrameLayout.LayoutParams(-1,-2));chat.addView(answerAura,bounds);
         }else chat.addView(box,bounds);
+    }
+
+    private void setAnswerText(TextView body,ChatStore.Message message) {
+        boolean pending=app.busy && message.role.equals("assistant") && message.text.isEmpty();
+        body.setSingleLine(pending);body.setEllipsize(pending?android.text.TextUtils.TruncateAt.START:null);
+        body.setTextIsSelectable(!pending);body.setTextColor(pending?MUTED:TEXT);
+        body.setText(pending?(app.generationLine.isEmpty()?"Antwort wird vorbereitet …":app.generationLine):message.text);
     }
 
     private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
@@ -585,6 +596,7 @@ public final class MainActivity extends Activity {
         download.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(ModelIntegrity.downloadUrl())))); content.addView(download);
         content.addView(settingLabel("Du kannst auch andere GGUF-Modelle über die Dateiauswahl importieren. Unterstützte Architektur, Quantisierung und verfügbarer RAM bestimmen, ob ein Modell geladen werden kann."));
         TextView section=text("Antworten anpassen",DesignTokens.TYPE_TITLE,TEXT);section.setAccessibilityHeading(true);addSpaced(content,section,24);
+        TextView prompt=menuItem("Systemprompt bearbeiten");prompt.setEnabled(!app.busy);prompt.setOnClickListener(v->showSystemPrompt(null));addSpaced(content,prompt,8);
         LinearLayout controls=card();addSpaced(content,controls,16);
         TextView ctx=settingLabel("Kontextlänge");controls.addView(ctx);Spinner context=spinner(new String[]{"2.048 Tokens","4.096 Tokens","8.192 Tokens"},app.context()==2048?0:app.context()==8192?2:1);labelSpinner(ctx,context);controls.addView(context);
         TextView threadLabel=settingLabel("CPU-Threads");controls.addView(threadLabel);Spinner threads=spinner(new String[]{"2","4","6","8"},app.threads()/2-1);labelSpinner(threadLabel,threads);controls.addView(threads);
@@ -616,6 +628,11 @@ public final class MainActivity extends Activity {
         LinearLayout footer=column();footer.setPadding(dp(16),dp(8),dp(16),dp(8));primaryAura=lightWrap(apply,LightArea.POPUP_CONTENT,24,.6f);footer.addView(primaryAura);screen.addView(footer);return screen;
     }
     private void labelSpinner(TextView label,Spinner spinner){spinner.setId(View.generateViewId());label.setLabelFor(spinner.getId());spinner.setContentDescription(label.getText());}
+    private void showSystemPrompt(Bundle draft) {
+        if(app.busy || (systemPromptEditor!=null && systemPromptEditor.isShowing()))return;
+        systemPromptEditor=new SystemPromptEditor(this,app,draft);
+        systemPromptEditor.setOnDismissListener(d->systemPromptEditor=null);systemPromptEditor.show();
+    }
     private void showLicenses(){
         try(InputStream stream=getAssets().open("third_party_notices.txt")){
             ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;

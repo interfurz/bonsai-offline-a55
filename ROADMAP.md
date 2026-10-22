@@ -20,6 +20,29 @@ Assets; LLM-/Embedding-/RAG-/Wikidata-Kernpfade bleiben gegenüber dieser Basis
 unverändert. Der ergänzende [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md)
 verbindet vorhandene Debugausgaben, Geräteversuche und persönliches Nutzerfeedback.
 
+Ergänzung im Featurebranch `feat/editable-system-prompt`, auf Basis des
+anschließenden Dokumentationsmerges `b6431a0…`: Der Systemprompt ist nun im
+Modellmenü in eigene Vorgaben und zunächst schreibgeschützte Tool-Anweisungen
+geteilt. Nur eine bestätigte Warnung entsperrt den Tool-Bereich. Einstellungen
+werden lokal und chatübergreifend gespeichert; Vorwärmen, Tool-Schleife und
+Cache-Commit nutzen denselben Prompt, Änderungen verwerfen den alten Cache.
+Der Chat-Benchmark exportiert dessen SHA256 statt des Prompttexts; Vergleiche
+weisen abweichende oder einseitig fehlende Prompt-Hashes zurück. Diese Änderung
+ist **nicht in der veröffentlichten v0.5-APK**. Gerätefunktion, Toolwahl und
+persönliche UX-Abnahme bleiben offen; siehe die ergänzenden P-Tests im
+[A55-Testplan](A55-ECHTWELT-TESTPLAN.md).
+In demselben Nachfolgebuild ersetzt die einzelne Wartezeile unter „Bonsai“
+den statischen Hinweis durch aktuellen Thinking-Text beziehungsweise
+Prompt-Cache-Fortschritt und gemessene Prefill-Tokens/s. Thinking wird separat
+gestreamt, auf einen kurzen Ausschnitt begrenzt und weder in Antwort/SQLite noch
+Logs übernommen. Fortschritt wird nach nativen Decode-Batches aktualisiert;
+keine zusätzliche KV-Allokation und keine Änderung der Decode-Batchgröße.
+Live-Anzeige und Modellbefolgung benötigen weiterhin die physische A55-Abnahme.
+Hostnachweise des Nachfolgestands: **151 Release-/Robolectric-Tests** bestanden,
+Release-Lint ohne Fehler und ARM64-CPU/Vulkan-Build erfolgreich. Einzelheiten,
+Grenzen und Renderbilder mit Testdaten:
+[Validierung von Prompt und Live-Zeile](docs/validation/SYSTEM-PROMPT-STATUS.md).
+
 ## A. Projektziel und Definition of Done
 
 Eine vollständig lokale Android-KI kombiniert Bonsai 2 4B mit lesbaren

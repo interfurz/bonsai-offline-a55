@@ -26,17 +26,23 @@ public class ToolChatTest {
         static byte[] lastGrammar;
         static int clears,lastBudget,firstReasoning;
         static byte[][] committedRoles,committedTexts;
+        static String warmedSystem;
+        static boolean progressCallbacks;
+        static java.util.List<String> generatedSystems;
         static boolean pauseMid;
         static CountDownLatch partial,resume;
         @Implementation protected static void __staticInitializer__() {}
         @Implementation protected static void clearCache(long handle) { clears++; }
+        @Implementation protected static byte[] warmPrefix(long handle,byte[] text) { warmedSystem=new String(text,StandardCharsets.UTF_8);return BonsaiApp.utf8("{}"); }
         @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] contents) { committedRoles=roles;committedTexts=contents;return BonsaiApp.utf8("{}"); }
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) {}
         @Implementation protected static void stop(long handle) { finish.countDown(); }
         @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] texts,int maxTokens,int seed,NativeEngine.Stream stream,byte[] grammar,int reasoningBudget) throws Exception {
             lastGrammar=grammar;lastBudget=reasoningBudget;
+            generatedSystems.add(new String(texts[0],StandardCharsets.UTF_8));
             if(++calls==1) {
+                if(progressCallbacks) { stream.onPrefill(256,1024,32);stream.onThinking(BonsaiApp.utf8("Ich prüfe\ndie Rechnung.")); }
                 stream.onBytes((malformed?"Vorwort ":"").getBytes(StandardCharsets.UTF_8));
                 stream.onBytes("<tool>{\"name\":\"calc\",\"args\":{\"expr\":\"6*7\"}}</tool>".getBytes(StandardCharsets.UTF_8));
             } else {
@@ -55,6 +61,8 @@ public class ToolChatTest {
     private BonsaiApp app;
     @Before public void prepare() {
         Engine.calls=0; Engine.malformed=false;Engine.clears=0;Engine.firstReasoning=0;Engine.pauseMid=false;
+        Engine.warmedSystem=null;Engine.generatedSystems=new java.util.ArrayList<>();
+        Engine.progressCallbacks=false;
         Engine.partial=new CountDownLatch(1);Engine.resume=new CountDownLatch(1);
         Engine.secondRound=new CountDownLatch(1); Engine.finish=new CountDownLatch(1);
         app=(BonsaiApp)RuntimeEnvironment.getApplication();app.loaded=true;
@@ -109,6 +117,32 @@ public class ToolChatTest {
     @Test public void newAndSelectedChatsClearNativeCacheOnWorker() throws Exception {
         app.newChat();app.worker.submit(()->{}).get(5,TimeUnit.SECONDS);assertEquals(1,Engine.clears);
         app.selectChat(app.store.createChat("Other"));app.worker.submit(()->{}).get(5,TimeUnit.SECONDS);assertEquals(2,Engine.clears);
+    }
+    @Test public void thinkingProgressIsEphemeralAndNeverStoredOrCountedAsVisibleAnswer() throws Exception {
+        Engine.progressCallbacks=true;app.send("Berechne 6*7");
+        assertTrue(Engine.secondRound.await(5,TimeUnit.SECONDS));Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Ich prüfe die Rechnung.",app.generationLine);assertEquals(-1,app.prefillFraction,0);
+        assertEquals("",app.messages.get(1).text);assertEquals(1,app.store.messages(app.currentChat).size());
+        Engine.finish.countDown();complete();assertEquals("",app.generationLine);assertEquals(-1,app.prefillFraction,0);
+        assertFalse(app.store.messages(app.currentChat).get(1).text.contains("prüfe"));
+    }
+    @Test public void customizedPromptIsSharedByWarmupAllToolRoundsAndCleanCommit() throws Exception {
+        app.prefs.edit().putBoolean("gbnfTools",true).apply();
+        String tools=SystemPrompt.DEFAULT_TOOLS+"\nNenne Rechenergebnisse ohne Einleitung.";
+        assertTrue(app.saveSystemPrompt("Antworte sehr knapp.",tools));
+        app.worker.submit(()->{}).get(5,TimeUnit.SECONDS);
+        String expected=SystemPrompt.compose("Antworte sehr knapp.",tools,true);
+        assertEquals(1,Engine.clears);assertEquals(expected,Engine.warmedSystem);
+        assertTrue(app.store.chats().isEmpty());
+        assertTrue(app.send("Berechne 6*7"));
+        assertTrue(Engine.secondRound.await(5,TimeUnit.SECONDS));
+        assertFalse(app.saveSystemPrompt("Anderer Prompt",SystemPrompt.DEFAULT_TOOLS));
+        assertEquals(expected,app.systemPrompt(true));
+        Engine.finish.countDown();complete();
+        assertEquals("",app.error);assertEquals(2,Engine.generatedSystems.size());
+        for(String prompt:Engine.generatedSystems)assertEquals(expected,prompt);
+        assertEquals(expected,new String(Engine.committedTexts[0],StandardCharsets.UTF_8));
+        assertEquals(2,app.store.messages(app.currentChat).size());
     }
     @Test public void cancellationDiscardsBufferedOutputAndUnansweredUserTurn() throws Exception {
         app.send("Berechne 6*7");
