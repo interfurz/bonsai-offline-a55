@@ -92,7 +92,7 @@ public class KernelTemperatureTest {
             if(++probes==heatOnProbe)setThermal(PowerManager.THERMAL_STATUS_SEVERE);
             return BonsaiApp.utf8(PROBE);
         }
-        @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback) {
+        @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback,byte[] grammar) {
             callback.onBytes(BonsaiApp.utf8("Synthetic test reply"));
             return BonsaiApp.utf8("{\"tokens_per_second\":1,\"output_tokens\":1,\"first_token_ms\":1,\"stopped\":false,\"limit_reached\":false}");
         }

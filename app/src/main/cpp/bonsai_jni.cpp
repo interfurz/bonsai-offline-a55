@@ -275,7 +275,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle, jobjectArray roles,
-                                            jobjectArray contents, jint limit, jint seed, jobject callback) {
+                                            jobjectArray contents, jint limit, jint seed, jobject callback, jbyteArray grammar) {
     try {
         auto & e = engine(handle);
         if (!e.context || !e.model) throw std::runtime_error("Bitte zuerst ein Modell laden.");
@@ -316,7 +316,8 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         }
         double prefill_ms = elapsed(start), first_token_ms = 0;
         auto generation_start = Clock::now(), last_emit = Clock::now();
-        Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed)), llama_sampler_free);
+        const auto grammar_text = grammar ? bytes(env, grammar) : std::string();
+        Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed),grammar_text.c_str()), llama_sampler_free);
         if (!sampler) throw std::runtime_error("Sampler konnte nicht angelegt werden.");
         std::string pending;
         int generated = 0;

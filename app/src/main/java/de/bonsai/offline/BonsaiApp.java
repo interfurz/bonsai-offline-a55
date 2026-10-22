@@ -114,6 +114,7 @@ public final class BonsaiApp extends Application {
         worker.execute(()->KernelOptimizer.run(this,handle,compare));
     }
     void finishOptimization(String issue) { complete(issue); }
+    boolean gbnfTools() { return prefs.getBoolean("gbnfTools",false); }
     int maxTokens() { return prefs.getInt("maxTokens", 512); }
     boolean gpu() { return BuildConfig.VULKAN_BUILD && prefs.getBoolean("gpu", false); }
     void newChat() {
@@ -316,15 +317,16 @@ public final class BonsaiApp extends Application {
         List<ChatStore.Message> history=new ArrayList<>(messages);
         messages.add(new ChatStore.Message(0,"assistant","","")); notifyUi();
         final int limit=maxTokens();
+        final boolean grammarEnabled=gbnfTools();
         worker.execute(() -> {
             String text="", issue="", detail="";
             try {
-                ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts)->{
+                ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts,grammar)->{
                     ByteArrayOutputStream output=new ByteArrayOutputStream();
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
-                        chunk->output.write(chunk,0,chunk.length)),StandardCharsets.UTF_8));
+                        chunk->output.write(chunk,0,chunk.length),grammar),StandardCharsets.UTF_8));
                     return new ToolLoop.Result(new String(output.toByteArray(),StandardCharsets.UTF_8),stats);
-                },()->cancelled);
+                },()->cancelled,grammarEnabled);
                 text=result.text;
                 JSONObject stats=result.stats;
                 final double speed=stats.getDouble("tokens_per_second");

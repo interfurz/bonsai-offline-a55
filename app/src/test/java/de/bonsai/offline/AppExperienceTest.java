@@ -445,6 +445,26 @@ public class AppExperienceTest {
             assertTrue(((View)field(a,"performanceStart")).isEnabled());
         }
     }
+    @Test @Config(shadows=BackgroundInferenceTest.Engine.class)
+    public void grammarSettingPersistsWithoutReloadAndIsDisabledWhileBusy() throws Exception {
+        BackgroundInferenceTest.Engine.loads=0;
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity activity=controller.get();BonsaiApp app=(BonsaiApp)activity.getApplication();
+            java.nio.file.Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F'});
+            app.loaded=true;app.prefs.edit().putString("optimizedFor","keep-profile").apply();
+            View root=openSection(activity,"Modell");
+            android.widget.CheckBox grammar=(android.widget.CheckBox)find(root,"GBNF für Tool-Aufrufe");
+            assertFalse(grammar.isChecked());assertFalse(app.gbnfTools());
+            grammar.setChecked(true);find(root,"Einstellungen speichern").performClick();
+            assertTrue(app.gbnfTools());assertEquals(0,BackgroundInferenceTest.Engine.loads);
+            assertEquals("keep-profile",app.prefs.getString("optimizedFor",""));
+            root=openSection(activity,"Modell");
+            assertTrue(((android.widget.CheckBox)find(root,"GBNF für Tool-Aufrufe")).isChecked());
+            app.busy=true;root=openSection(activity,"Modell");
+            assertFalse(find(root,"GBNF für Tool-Aufrufe").isEnabled());
+            app.busy=false;
+        }
+    }
     @Test public void conversationAndDraftSurviveRecreation() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();

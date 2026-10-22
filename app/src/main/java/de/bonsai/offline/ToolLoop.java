@@ -31,15 +31,18 @@ final class ToolLoop {
         +"Ohne Tool-Bedarf antworte direkt als normaler Text.";
     private static final Pattern CALL=Pattern.compile("\\A\\s*<tool>\\s*(\\{.*\\})\\s*</tool>\\s*\\z",Pattern.DOTALL);
     private static final Pattern MARKER=Pattern.compile("</?tool\\b",Pattern.CASE_INSENSITIVE);
-    interface Generator { Result generate(byte[][] roles,byte[][] texts) throws Exception; }
+    interface Generator { Result generate(byte[][] roles,byte[][] texts,byte[] grammar) throws Exception; }
     static final class Result {
         final String text;
         final JSONObject stats;
         Result(String text,JSONObject stats) { this.text=text; this.stats=stats; }
     }
     static Result run(List<ChatStore.Message> history,ChatStore store,Generator generator,BooleanSupplier cancelled) throws Exception {
+        return run(history,store,generator,cancelled,false);
+    }
+    static Result run(List<ChatStore.Message> history,ChatStore store,Generator generator,BooleanSupplier cancelled,boolean grammarEnabled) throws Exception {
         List<ChatStore.Message> turns=new ArrayList<>();
-        turns.add(new ChatStore.Message(0,"system",SYSTEM_PROMPT,""));
+        turns.add(new ChatStore.Message(0,"system",SYSTEM_PROMPT+(grammarEnabled?ToolGrammar.FORMAT_PROMPT:""),""));
         turns.addAll(history);
         for(int round=0;round<MAX_ROUNDS;round++) {
             checkCancelled(cancelled);
@@ -48,12 +51,20 @@ final class ToolLoop {
                 roles[i]=turns.get(i).role.getBytes(StandardCharsets.UTF_8);
                 texts[i]=turns.get(i).text.getBytes(StandardCharsets.UTF_8);
             }
-            Result result=generator.generate(roles,texts);
+            byte[] grammar=grammarEnabled?ToolGrammar.forRound(round==MAX_ROUNDS-1).getBytes(StandardCharsets.UTF_8):null;
+            Result result=generator.generate(roles,texts,grammar);
             checkCancelled(cancelled);
             // Never execute a request cut short by a token limit or stop.
             boolean incomplete=result.stats.optBoolean("limit_reached") || result.stats.optBoolean("stopped");
+            if(grammarEnabled && result.text.startsWith("<final>") && result.text.endsWith("</final>")) {
+                if(incomplete) throw new IllegalStateException("GBNF-Endantwort wurde unterbrochen oder hat das Antwortlimit erreicht.");
+                String answer=result.text.substring(7,result.text.length()-8);
+                if(answer.trim().isEmpty() || answer.contains("</final>")) throw new IllegalStateException("Ungültige GBNF-Endantwort.");
+                return new Result(answer,result.stats);
+            }
             Matcher match=CALL.matcher(result.text);
             if(!match.matches()) {
+                if(grammarEnabled) throw new IllegalStateException("Ungültiges GBNF-Antwortformat.");
                 if(MARKER.matcher(result.text).find()) throw new IllegalStateException("Ungültiges Tool-Format. Bitte erneut versuchen.");
                 if(result.text.trim().isEmpty()) throw new IllegalStateException("Keine Endantwort erhalten.");
                 return result;

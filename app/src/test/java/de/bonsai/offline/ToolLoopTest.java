@@ -20,12 +20,40 @@ public class ToolLoopTest {
     private static String decode(byte[] bytes) { return new String(bytes,StandardCharsets.UTF_8); }
     private static String call(String name,String args) { return "<tool>{\"name\":\""+name+"\",\"args\":"+args+"}</tool>"; }
     private ChatStore store() { return new ChatStore(RuntimeEnvironment.getApplication()); }
+    @Test public void grammarModeUsesFinalOnlyGrammarOnThirdRoundAndUnwrapsAnswer() throws Exception {
+        AtomicInteger rounds=new AtomicInteger();
+        try(ChatStore store=store()) {
+            ToolLoop.Result answer=ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
+                assertNotNull(grammar);
+                assertTrue(decode(texts[0]).contains("GBNF ist aktiv"));
+                if(rounds.incrementAndGet()<3) {
+                    assertTrue(decode(grammar).startsWith("root ::= tool | final"));
+                    return result(call("calc","{\"expr\":\"2+2\"}"));
+                }
+                assertTrue(decode(grammar).startsWith("root ::= final\n"));
+                return result("<final>4 🪴\n2 < 4</final>");
+            },()->false,true);
+            assertEquals("4 🪴\n2 < 4",answer.text);
+        }
+    }
+    @Test public void grammarModeRejectsIncompleteOrUnwrappedAnswers() throws Exception {
+        try(ChatStore store=store()) {
+            for(String text:new String[]{"Hallo", "<final>Hallo", "<final></final>", "<final>Hallo</final>leak"}) {
+                try { ToolLoop.run(Collections.emptyList(),store,(r,t,g)->result(text),()->false,true); fail(text); }
+                catch(IllegalStateException expected) { }
+            }
+            ToolLoop.Result cut=result("<final>Hallo</final>");cut.stats.put("limit_reached",true);
+            try { ToolLoop.run(Collections.emptyList(),store,(r,t,g)->cut,()->false,true); fail(); }
+            catch(IllegalStateException expected) { }
+        }
+    }
     @Test public void calculatorResultFeedsNextGenerationButOnlyFinalTextIsReturned() throws Exception {
         AtomicInteger rounds=new AtomicInteger();
         try(ChatStore store=store()) {
-            ToolLoop.Result finalResult=ToolLoop.run(Collections.emptyList(),store,(roles,texts)->{
+            ToolLoop.Result finalResult=ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
                 if(rounds.getAndIncrement()==0) {
                     assertTrue(decode(texts[0]).contains("<tool>"));
+                    assertNull(grammar);
                     return result(call("calc","{\"expr\":\"2*(3+4)\"}"));
                 }
                 assertEquals("assistant",decode(roles[1]));
@@ -42,7 +70,7 @@ public class ToolLoopTest {
         try(ChatStore store=store()) {
             for(String tool:new String[]{"merken","abrufen"}) {
                 AtomicInteger rounds=new AtomicInteger();
-                ToolLoop.run(Collections.emptyList(),store,(roles,texts)->{
+                ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
                     if(rounds.getAndIncrement()==0) return result(call(tool,tool.equals("merken")?"{\"key\":\"name\",\"value\":\"Alex\"}":"{\"key\":\"name\"}"));
                     String reply=decode(texts[texts.length-1]);
                     assertTrue(reply.contains("\"ok\":true"));
@@ -56,7 +84,7 @@ public class ToolLoopTest {
         for(String request:new String[]{call("calc","{\"expr\":\"1/0\"}"),call("unknown","{}"),call("merken","{\"key\":\"a\",\"value\":7}"),"<tool>{broken}</tool>", "<tool>{'name':'merken','args':{'key':'a','value':'bad'}}</tool>", "<tool>{\"name\":\"calc\",\"name\":\"merken\",\"args\":{\"key\":\"a\",\"value\":\"bad\"}}</tool>"}) {
             AtomicInteger rounds=new AtomicInteger();
             try(ChatStore store=store()) {
-                ToolLoop.run(Collections.emptyList(),store,(roles,texts)->{
+                ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
                     if(rounds.getAndIncrement()==0) return result(request);
                     assertTrue(decode(texts[texts.length-1]).contains("\"ok\":false"));
                     return result("Konnte nicht ausgeführt werden.");
@@ -68,7 +96,7 @@ public class ToolLoopTest {
     @Test public void twoToolsCanFinishWithinThreeGenerations() throws Exception {
         AtomicInteger rounds=new AtomicInteger();
         try(ChatStore store=store()) {
-            ToolLoop.Result finalResult=ToolLoop.run(Collections.emptyList(),store,(roles,texts)->{
+            ToolLoop.Result finalResult=ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
                 switch(rounds.incrementAndGet()) {
                     case 1: return result(call("calc","{\"expr\":\"6*7\"}"));
                     case 2:
@@ -86,7 +114,7 @@ public class ToolLoopTest {
         AtomicInteger rounds=new AtomicInteger();
         try(ChatStore store=store()) {
             try {
-                ToolLoop.run(Collections.emptyList(),store,(roles,texts)->{
+                ToolLoop.run(Collections.emptyList(),store,(roles,texts,grammar)->{
                     int round=rounds.incrementAndGet();
                     if(round==3) {
                         assertTrue(decode(texts[texts.length-1]).contains("Antworte jetzt abschließend"));
@@ -104,15 +132,15 @@ public class ToolLoopTest {
         String request=call("merken","{\"key\":\"blocked\",\"value\":\"no\"}");
         try(ChatStore store=store()) {
             for(String text:new String[]{"Vorwort "+request, request+request, "<tool>{", request.replace("<tool>","<TOOL>")}) {
-                try { ToolLoop.run(Collections.emptyList(),store,(r,t)->result(text),()->false); fail(); }
+                try { ToolLoop.run(Collections.emptyList(),store,(r,t,g)->result(text),()->false); fail(); }
                 catch(IllegalStateException expected) { }
             }
             ToolLoop.Result truncated=result(request);
             truncated.stats.put("limit_reached",true);
-            try { ToolLoop.run(Collections.emptyList(),store,(r,t)->truncated,()->false); fail(); }
+            try { ToolLoop.run(Collections.emptyList(),store,(r,t,g)->truncated,()->false); fail(); }
             catch(IllegalStateException expected) { }
             AtomicInteger cancellationChecks=new AtomicInteger();
-            try { ToolLoop.run(Collections.emptyList(),store,(r,t)->result(request),()->cancellationChecks.incrementAndGet()>1); fail(); }
+            try { ToolLoop.run(Collections.emptyList(),store,(r,t,g)->result(request),()->cancellationChecks.incrementAndGet()>1); fail(); }
             catch(CancellationException expected) { }
             assertNull(store.recall("blocked"));
         }
