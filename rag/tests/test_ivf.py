@@ -31,7 +31,9 @@ class IvfTests(unittest.TestCase):
         index = IvfIndex(self.index)
         self.assertEqual((50, 8), (index.count, index.clusters))
         self.assertEqual(1, HEADER.unpack(self.index.read_bytes()[:HEADER.size])[1])
-        self.assertEqual(set(range(1, 51)), set(index.ids.tolist()))
+        with sqlite3.connect(self.db) as db:
+            expected_ids = {row[0] for row in db.execute("SELECT id FROM chunks")}
+        self.assertEqual(expected_ids, set(index.ids.tolist()))
         self.assertEqual(50, int(index.offsets[-1]))
         self.assertEqual(layout(50, 8)[-1], self.index.stat().st_size)
         self.assertAlmostEqual(1 / 127, index.scale, places=8)

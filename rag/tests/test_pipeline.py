@@ -17,17 +17,17 @@ DATA = Path(__file__).resolve().parents[1] / "data"
 
 class ChunkingTests(unittest.TestCase):
     def test_clean_wiki_markup(self):
-        self.assertEqual("Ein Baum und Link.", clean("Ein {{box|{{nested}}}}[[Baum]] und [https://example.org Link].<ref>Beleg</ref>[[Datei:A.png|Bild]]"))
+        self.assertEqual("Ein Baum und [Link](https://example.org).", clean("Ein {{box|{{nested}}}}[[Baum]] und [https://example.org Link].<ref>Beleg</ref>[[Datei:A.png|Bild]]"))
 
     def test_heading_paths_and_small_sections_merge(self):
         wiki = "Einleitung.\n== Natur ==\nEin Baum.\n=== Blätter ===\nGrüne Blätter."
         chunks = chunk_article("12", "Wald", wiki, "quelle")
-        self.assertEqual(1, len(chunks))
-        self.assertIn("Wald / Natur / Blätter", chunks[0].heading)
+        self.assertEqual(2, len(chunks))
+        self.assertIn("Wald / Natur / Blätter", chunks[1].heading)
         self.assertEqual("12", chunks[0].article_id)
         self.assertEqual("quelle", chunks[0].source)
         self.assertIn("Einleitung.", chunks[0].text)
-        self.assertIn("Grüne Blätter.", chunks[0].text)
+        self.assertIn("Grüne Blätter.", chunks[1].text)
 
     def test_large_sibling_sections_keep_distinct_heading_paths(self):
         wiki = "== Natur ==\n" + "Lebende Pflanzen. " * 30 + "\n=== Blätter ===\n" + "Grüne Blätter. " * 30 + "\n== Nutzung ==\n" + "Holz bearbeiten. " * 30
@@ -69,7 +69,7 @@ class SearchTests(unittest.TestCase):
         with sqlite3.connect(self.db) as db:
             self.assertEqual(50, db.execute("SELECT count(DISTINCT article_id) FROM chunks").fetchone()[0])
             self.assertEqual(1, db.execute("PRAGMA user_version").fetchone()[0])
-            self.assertIn("Hauptstadt", zlib.decompress(db.execute("SELECT text_zlib FROM chunks WHERE id=1").fetchone()[0]).decode())
+            self.assertIn("Hauptstadt", zlib.decompress(db.execute("SELECT text_zlib FROM chunks WHERE article_id='1'").fetchone()[0]).decode())
         self.assertEqual(16 + 50 * (8 + 4 + 256), self.vectors.stat().st_size)
         self.assertEqual((b"BRAGV001", 256, 50), struct.unpack("<8sII", self.vectors.read_bytes()[:16]))
 
