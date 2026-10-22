@@ -1,0 +1,29 @@
+Default verification for the declared minimum API 28 (v3 selected):
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Separate v2 cryptographic verification with verifier SDK range 24-27; APK minimum remains 28:
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: APK Signature Scheme v2 signer #1: APK Signature Scheme v2 signer: 0 references unknown APK signature scheme ID: 3

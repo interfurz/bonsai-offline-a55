@@ -4,7 +4,7 @@ Stand: **22. Oktober 2026**. Zielgerät: Samsung Galaxy A55 5G, Exynos 1480,
 Xclipse 530, ARM64, 8 GB RAM, Android 16 / One UI 8.x.
 
 Diese Datei ist eine Analyse und Arbeitsplanung. Sie implementiert keine Features.
-Die aktualisierte Grundlage ist `main` bei
+Die ursprüngliche Release-Analyse bezog sich auf `main` bei
 `efcd87a0b02fbc0325fbc30a20ce9b1dac291a15`, einschließlich der gemergten
 PRs #12 (EmbeddingGemma 2), #13 (Wikipedia), #14 (Wikidata), #15 (native
 Chatoberfläche mit Lichtzuständen) und #17 (Icon-Familie).
@@ -45,8 +45,12 @@ Grenzen und Renderbilder mit Testdaten:
 
 Release-Nachtrag: PR #20 ist in `main` bei `ec28598…` integriert. Für
 **v0.5.1** wird Versionscode **14** verwendet; Prompt-Editor und Live-Zeile sind
-somit im Releasequellstand enthalten. Der abschließende APK-Nachweis wird nach
-Build/Signierung ergänzt. Die v0.5-Nachweise oben bleiben historische Belege.
+somit im Releasequellstand enthalten. Der Releasebuild stammt aus `2dfe2c4…`: 151 Release-/Robolectric-Tests bestanden,
+Release-Lint ohne Fehler, lokale CPU/Vulkan-APK gebaut und signiert. Signatur,
+Updatevergleich mit der tatsächlichen v0.5-APK sowie ZIP-/ELF-Ausrichtung sind
+geprüft. [v0.5.1-Buildnachweis](release/0.5.1/build-info.json) und
+[Releasehinweise](release/0.5.1/RELEASE-NOTES.md) identifizieren das Artefakt.
+Die v0.5-Nachweise oben bleiben historische Belege; physische A55-Abnahme offen.
 
 ## A. Projektziel und Definition of Done
 

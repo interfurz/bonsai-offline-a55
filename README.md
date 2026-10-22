@@ -2,7 +2,7 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Version **0.5.1** ergänzt den anpassbaren Systemprompt mit geschütztem Tool-Bereich und die einzeilige Thinking-/Prefill-Anzeige. Sie enthält außerdem die Funktionen von 0.5: EmbeddingGemma 2, Wikipedia-/Wikidata-Pipelines, Hybrid-RAG, Cache-Diagnosen sowie die neue Chatoberfläche mit nativen Lichtzuständen und Icon-Familie. Der bereitgestellte Release-Keystore entspricht der Signieridentität von 0.4.3/0.4.4; er unterscheidet sich von 0.4.5/0.3.0. Signieridentität und Datenhinweise: [SIGNIEREN.md](SIGNIEREN.md). [Releasehinweise](release/0.5.1/RELEASE-NOTES.md), [technische Roadmap](ROADMAP.md) und [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md).
+[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Version **0.5.1** ergänzt den anpassbaren Systemprompt mit geschütztem Tool-Bereich und die einzeilige Thinking-/Prefill-Anzeige. Sie enthält außerdem die Funktionen von 0.5: EmbeddingGemma 2, Wikipedia-/Wikidata-Pipelines, Hybrid-RAG, Cache-Diagnosen sowie die neue Chatoberfläche mit nativen Lichtzuständen und Icon-Familie. Der bereitgestellte Release-Keystore entspricht der Signieridentität von 0.5 und 0.4.3/0.4.4; er unterscheidet sich von 0.4.5/0.3.0. Signieridentität und Datenhinweise: [SIGNIEREN.md](SIGNIEREN.md). [Releasehinweise](release/0.5.1/RELEASE-NOTES.md), [technische Roadmap](ROADMAP.md) und [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md).
 
 ## UI-Überarbeitung im aktuellen Quellcode
 

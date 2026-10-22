@@ -1,52 +1,50 @@
 {
-  "version": "0.5",
-  "version_code": 13,
+  "version": "0.5.1",
+  "version_code": 14,
   "package": "de.bonsai.offline.debug",
   "abi": "arm64-v8a",
   "backends": [
     "CPU",
     "Vulkan"
   ],
-  "source_commit": "efcd87a0b02fbc0325fbc30a20ce9b1dac291a15",
+  "source_commit": "2dfe2c41d6fcfa58b2537171e204a815baec4897",
   "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
   "embeddinggemma2_patch_sha256": "e4a0a8d772a1af1e7b7697d04a3a81293ad321c77ffaab167cd909557a9ea5f3",
-  "run_id": 39821276142,
-  "run_attempt": 2,
-  "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39821276142",
+  "run_id": 39833109407,
+  "run_attempt": 1,
+  "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39833109407",
   "variant": "release",
   "debuggable": false,
   "unsigned": false,
   "signature_verified": true,
   "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
   "signing_identity": "user-supplied bonsai-release PKCS12 key",
-  "apk_name": "Bonsai-Offline-0.5-arm64-CPU-Vulkan.apk",
-  "apk_bytes": 68172532,
-  "apk_sha256": "1a6633bf93c9a0d7073aaf5ffd32916315163c2038f2750c894a4317b2607da5",
-  "unsigned_apk_sha256": "973c3dbe56baa40000caf60b5bd418f8ca6faa6dccb68eb2d8e09ee397f0de90",
+  "apk_name": "Bonsai-Offline-0.5.1-arm64-CPU-Vulkan.apk",
+  "apk_bytes": 68188916,
+  "apk_sha256": "0046bf0ae77773e5b854793ba933bea730a7e5afcb5795f8dc40645aa91a638c",
+  "unsigned_apk_sha256": "a7c2ad2ce68ce05c8c75a7312ecd066cc6da3ef2ea7929f50c6c35d07e5adde2",
   "zipalign_16k_verified": true,
   "elf_load_16k_verified": true,
   "apk_contents_unchanged_after_signing": true,
   "junit": {
-    "tests": 138,
+    "tests": 151,
     "failures": 0,
     "errors": 0,
     "skipped": 0
   },
-  "unit_tests_passed": 138,
+  "unit_tests_passed": 151,
   "junit_source": "local Release JVM/Robolectric tests with Vulkan build configuration",
   "lint": {
     "Error": 0,
-    "Warning": 8
+    "Warning": 9
   },
   "lint_errors": 0,
   "local_python_tests": {
-    "rag_wikipedia": 39,
-    "wikidata": 14,
-    "other": 4,
+    "benchmark_compare": 4,
     "failures": 0,
     "skipped": 0
   },
-  "local_icon_pairs_verified": 37,
+  "local_host_checks": "scripts/check_project.py: Manifest/XML/JNI/runtime, UTF-8 and reasoning streaming tests passed",
   "physical_a55_tested": false,
   "real_model_inference_tested": false,
   "device_update_tested": false,
@@ -63,7 +61,7 @@
   "native_libraries": [
     {
       "name": "lib/arm64-v8a/libbonsai-jni.so",
-      "sha256": "d06fd6b41d8945185a508ff62b116ba8ab7c7c7b4537c113ecb17facd28d1987",
+      "sha256": "def6c0d57f3e0a9d60c1aa31c477ed38423bccd4639379833902221fad518654",
       "load_alignments": [
         16384,
         16384,
@@ -83,7 +81,7 @@
   ],
   "provenance": {
     "build_location": "local Linux host; built from source, not downloaded CI artifact",
-    "source_sha": "efcd87a0b02fbc0325fbc30a20ce9b1dac291a15",
+    "source_sha": "2dfe2c41d6fcfa58b2537171e204a815baec4897",
     "runtime_revision": "e3de715222b2667c54a267441159a5729f11155e",
     "vulkan_sdk_version": "1.4.363.0",
     "vulkan_sdk_sha256": "197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43",
@@ -102,23 +100,27 @@
       "app/.cxx/Release/2l1k5t1b/arm64-v8a/CMakeCache.txt"
     ],
     "independent_ci_validation": {
-      "id": 39821276142,
-      "head_sha": "efcd87a0b02fbc0325fbc30a20ce9b1dac291a15",
-      "status": "completed",
-      "conclusion": "success",
-      "run_attempt": 2,
-      "html_url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39821276142"
+      "id": 39833109407,
+      "head_sha": "2dfe2c41d6fcfa58b2537171e204a815baec4897",
+      "status": "in_progress",
+      "conclusion": null,
+      "run_attempt": 1,
+      "html_url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39833109407"
     },
     "ci_artifact_downloaded": false,
-    "ci_artifact_download_limit": "artifact storage returned Forbidden; published APK was built locally",
-    "first_ci_attempt": "Robolectric MavenArtifactFetcher/HttpURLConnection dependency downloads failed before Android test execution; cancelled remaining build and reran identical source"
+    "ci_artifact_download_limit": "not attempted; APK built and verified locally",
+    "superseded_ci_run": {
+      "id": 39832951250,
+      "source_sha": "ec285984dd6e40376a0442cde4b57f40895a99ad",
+      "reason": "cancelled the superseded v0.5 feature build to unblock the exact v0.5.1 source run"
+    }
   },
   "update_compatibility": {
-    "previous_version": "0.4.4",
-    "previous_version_code": 11,
-    "previous_apk_sha256": "1fa7fc0350db8f73bc5a28b3bfa2a0b19b988e5efb232a5921dd839d50dd70ed",
-    "new_version": "0.5",
-    "new_version_code": 13,
+    "previous_version": "0.5",
+    "previous_version_code": 13,
+    "previous_apk_sha256": "1a6633bf93c9a0d7073aaf5ffd32916315163c2038f2750c894a4317b2607da5",
+    "new_version": "0.5.1",
+    "new_version_code": 14,
     "package": "de.bonsai.offline.debug",
     "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
     "matching_update_signing_identity": true,
@@ -127,17 +129,16 @@
       "0.4.5",
       "0.3.0"
     ],
-    "verification": "actual published 0.4.4 and signed 0.5 APKs checked with apksigner and aapt2; no device installation"
+    "verification": "actual published 0.5 and signed 0.5.1 APKs checked with apksigner and aapt2; no device installation"
   },
   "distribution": {
-    "release_url": "https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5",
+    "release_url": "https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.1",
     "method": "GitHub downloads branch, linked from release body",
     "branch": "downloads",
-    "directory": "v0.5",
-    "release_asset_upload": "unavailable: uploads.github.com returned HTTP 401 Bad credentials",
-    "download_commit": "de4cbc824a2c08f5c090371c61ad15394287bd0e",
-    "apk_url": "https://github.com/interfurz/bonsai-offline-a55/raw/de4cbc824a2c08f5c090371c61ad15394287bd0e/v0.5/Bonsai-Offline-0.5-arm64-CPU-Vulkan.apk",
-    "checksum_url": "https://github.com/interfurz/bonsai-offline-a55/raw/de4cbc824a2c08f5c090371c61ad15394287bd0e/v0.5/SHA256SUMS.txt"
+    "directory": "v0.5.1",
+    "apk_url": "https://github.com/interfurz/bonsai-offline-a55/raw/020c78c69badfab4e9cc53cacb41b4b3c9fd079f/v0.5.1/Bonsai-Offline-0.5.1-arm64-CPU-Vulkan.apk",
+    "checksums_url": "https://github.com/interfurz/bonsai-offline-a55/raw/020c78c69badfab4e9cc53cacb41b4b3c9fd079f/v0.5.1/SHA256SUMS.txt",
+    "release_asset_upload": "unavailable: uploads.github.com returned HTTP 401 Bad credentials"
   },
   "limits": "CI/JVM/native build and local binary checks; no physical A55 model, UI, RAM, thermal or retrieval validation"
 }
