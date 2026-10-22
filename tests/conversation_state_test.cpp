@@ -9,8 +9,10 @@ int main() {
     require(conversation_prefix(std::vector<int>{1,2,3},std::vector<int>{1,2,3},false)==3);
     const std::string text="<think>geheim 🪴</think>Antwort < 4<think>mehr</think> fertig";
     for(size_t split=0;split<=text.size();++split) {
-        ReasoningFilter filter;filter.feed(text.substr(0,split));filter.feed(text.substr(split));filter.finish();
+        std::string thoughts;
+        ReasoningFilter filter;filter.on_thinking=[&](char c) { thoughts+=c; };filter.feed(text.substr(0,split));filter.feed(text.substr(split));filter.finish();
         require(filter.visible=="Antwort < 4 fertig");
+        require(thoughts=="geheim 🪴mehr");
     }
     ReasoningFilter stream;
     for(char c:text)stream.feed(std::string(1,c));

@@ -51,6 +51,9 @@ public final class BonsaiApp extends Application {
     volatile boolean cancelled;
     boolean busy, loaded;
     String status = "Modell auswählen", error = "", backend = "CPU", benchmarkProgress = "";
+    String generationLine="";
+    double prefillFraction=-1;
+    private volatile long progressEpoch;
     JSONObject benchmark, optimizerReport, cpuReference, prefixWarmupStats;
     String backendNotice="";
     volatile boolean cpuCompatibility;
@@ -119,6 +122,15 @@ public final class BonsaiApp extends Application {
     }
     void finishOptimization(String issue) { complete(issue); }
     boolean gbnfTools() { return prefs.getBoolean("gbnfTools",false); }
+    String systemPrompt(boolean grammar) { return SystemPrompt.read(prefs,grammar); }
+    boolean saveSystemPrompt(String instructions,String tools) {
+        if(busy)return false;
+        SystemPrompt.validate(instructions,tools);
+        boolean changed=!instructions.equals(SystemPrompt.instructions(prefs)) || !tools.equals(SystemPrompt.tools(prefs));
+        SystemPrompt.save(prefs,instructions,tools);
+        if(changed) { prefixWarmupStats=null;resetConversationCache(); }
+        return true;
+    }
     int maxTokens() { return prefs.getInt("maxTokens", 512); }
     boolean gpu() { return BuildConfig.VULKAN_BUILD && prefs.getBoolean("gpu", false); }
     private void resetConversationCache() {
@@ -167,6 +179,7 @@ public final class BonsaiApp extends Application {
         discardModelApproval();
         NativeEngine.resetStop(handle);
         cancelled=false; busy=true; status=label; error=""; backgroundError="";
+        progressEpoch++;generationLine="";prefillFraction=-1;
         try { startForegroundService(new Intent(this,InferenceService.class)); }
         catch(RuntimeException e) {
             busy=false; error="Hintergrundverarbeitung konnte nicht gestartet werden: "+reason(e); notifyUi(); return false;
@@ -175,10 +188,11 @@ public final class BonsaiApp extends Application {
     }
     void cancel() {
         if (!busy) return;
-        cancelled=true; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
+        cancelled=true;progressEpoch++;generationLine="Wird abgebrochen …";prefillFraction=-1; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
     }
     private String reason(Throwable e) { return e.getMessage() == null ? e.toString() : e.getMessage(); }
     void complete(String issue) {
+        progressEpoch++;generationLine="";prefillFraction=-1;
         busy=false;
         if(inferenceService!=null) inferenceService.finishIfIdle();
         error = !backgroundError.isEmpty() ? backgroundError : cancelled ? "" : issue;
@@ -201,13 +215,19 @@ public final class BonsaiApp extends Application {
         prefixWarmupStats=null;
         if(!prefs.getBoolean("prefixWarmup",true)) return;
         try {
-            byte[] stats=NativeEngine.warmPrefix(handle,utf8(ToolLoop.systemPrompt(gbnfTools())));
+            byte[] stats=busy?NativeEngine.warmPrefixProgress(handle,utf8(systemPrompt(gbnfTools())),generationProgress()):NativeEngine.warmPrefix(handle,utf8(systemPrompt(gbnfTools())));
             prefixWarmupStats=new JSONObject(new String(stats,StandardCharsets.UTF_8));
             if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn","prefix "+prefixWarmupStats);
         } catch(Exception | LinkageError e) {
             if(cancelled) throw new IllegalStateException("Abgebrochen.",e);
             android.util.Log.w("BonsaiTurn","Prefix-Vorwärmen fehlgeschlagen: "+reason(e));
         }
+    }
+    private NativeEngine.Stream generationProgress() {
+        final long epoch=progressEpoch;
+        return new InferenceProgress((line,fraction)->main.post(()->{
+            if(busy && !cancelled && epoch==progressEpoch) { generationLine=line;prefillFraction=fraction;notifyUi(); }
+        }));
     }
     private void verifyModel(String name,long bytes,String sha) {
         if(!ModelIntegrity.approval(name,bytes,sha).equals(prefs.getString("approvedModelIntegrity","")))
@@ -341,6 +361,7 @@ public final class BonsaiApp extends Application {
         ChatStore.Message answer=new ChatStore.Message(0,"assistant","","");messages.add(answer);notifyUi();
         final int limit=maxTokens();
         final boolean grammarEnabled=gbnfTools();
+        final String systemPrompt=systemPrompt(grammarEnabled);
         BenchmarkMetrics metrics=new BenchmarkMetrics();
         worker.execute(() -> {
             String text="", issue="", detail="";
@@ -351,16 +372,16 @@ public final class BonsaiApp extends Application {
                         metrics.visible(value);
                         main.post(()->{
                         if(!cancelled) { answer.text=value;status="Antwort wird geschrieben …";notifyUi(); }
-                    });});
+                    });},generationProgress());
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
                         output,grammar,grammarEnabled?0:reasoningBudget[0]),StandardCharsets.UTF_8));
                     metrics.add(stats);
                     reasoningBudget[0]=Math.max(0,reasoningBudget[0]-stats.optInt("reasoning_tokens",0));
                     return new ToolLoop.Result(output.text(),stats);
-                },()->cancelled,grammarEnabled);
+                },()->cancelled,grammarEnabled,systemPrompt);
                 text=ReasoningText.strip(result.text);
                 long commitStart=android.os.SystemClock.elapsedRealtime();
-                JSONObject committed=commitCleanTurn(history,text,grammarEnabled);
+                JSONObject committed=commitCleanTurn(history,text,systemPrompt);
                 JSONObject stats=metrics.finish(result.stats,android.os.SystemClock.elapsedRealtime()-commitStart,committed);
                 if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn",stats.toString());
                 final double speed=stats.getDouble("tokens_per_second");
@@ -390,8 +411,11 @@ public final class BonsaiApp extends Application {
         return true;
     }
     JSONObject commitCleanTurn(List<ChatStore.Message> history,String text,boolean grammar) throws Exception {
+        return commitCleanTurn(history,text,systemPrompt(grammar));
+    }
+    JSONObject commitCleanTurn(List<ChatStore.Message> history,String text,String systemPrompt) throws Exception {
         byte[][] roles=new byte[history.size()+2][],texts=new byte[history.size()+2][];
-        roles[0]=utf8("system");texts[0]=utf8(ToolLoop.systemPrompt(grammar));
+        roles[0]=utf8("system");texts[0]=utf8(systemPrompt);
         for(int i=0;i<history.size();i++) {
             roles[i+1]=utf8(history.get(i).role);texts[i+1]=utf8(ReasoningText.strip(history.get(i).text));
         }

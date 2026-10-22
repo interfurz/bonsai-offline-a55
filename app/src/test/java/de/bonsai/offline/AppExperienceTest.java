@@ -186,6 +186,25 @@ public class AppExperienceTest {
             assertEquals("Mein Entwurf",input.getText().toString());assertNotNull(find(root,"Gute Gedanken"));
         }
     }
+    @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
+    public void thinkingAndPrefillUseOneLineThenFinalAnswerWrapsNormally() throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity activity=controller.get();BonsaiApp app=(BonsaiApp)activity.getApplication();
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.loaded=true;app.busy=true;app.status="Antwort wird vorbereitet …";
+            app.messages.clear();app.messages.add(new ChatStore.Message(1,"user","Was geht?",""));
+            ChatStore.Message answer=new ChatStore.Message(2,"assistant","","");app.messages.add(answer);
+            app.generationLine="Ich überlege, wie ich die Frage passend beantworten kann.";app.notifyUi();idleUi();
+            TextView body=(TextView)field(activity,"liveAnswer");assertEquals(app.generationLine,body.getText().toString());assertEquals(1,body.getMaxLines());
+            screenshot(activity,"thinking-line-dark");
+            app.generationLine="Prompt-Cache 25 % · 31,3 Tok/s";app.prefillFraction=.25;app.notifyUi();idleUi();
+            assertEquals(app.generationLine,body.getText().toString());assertEquals(1,body.getMaxLines());
+            android.widget.ProgressBar progress=(android.widget.ProgressBar)field(activity,"statusProgress");assertFalse(progress.isIndeterminate());assertEquals(250,progress.getProgress());
+            screenshot(activity,"prefill-line-dark");
+            answer.text="Hallo!\nWie kann ich dir helfen?";app.notifyUi();idleUi();
+            assertEquals(answer.text,body.getText().toString());assertTrue(body.getMaxLines()>1);assertNull(body.getEllipsize());
+            app.busy=false;app.notifyUi();idleUi();
+        }
+    }
     @Test @Config(qualifiers="w375dp-h812dp-night-mdpi")
     public void narrowDarkModeAndLargeTextKeepNavigationReachable() throws Exception {
         org.robolectric.RuntimeEnvironment.setFontScale(2f);
@@ -268,7 +287,7 @@ public class AppExperienceTest {
             input.setText("Meine nächste Frage");assertTrue(((View)field(a,"send")).isEnabled());
             app.messages.add(new ChatStore.Message(1,"user","Erkläre Photosynthese",""));
             ChatStore.Message answer=new ChatStore.Message(0,"assistant",""," ");app.messages.add(answer);app.busy=true;app.notifyUi();
-            TextView live=(TextView)field(a,"liveAnswer");assertEquals("Bonsai denkt nach …",live.getText().toString());
+            TextView live=(TextView)field(a,"liveAnswer");assertEquals("Antwort wird vorbereitet …",live.getText().toString());
             answer.text="Pflanzen nutzen Licht.";app.notifyUi();
             assertSame("Streaming must reuse the text view",live,field(a,"liveAnswer"));assertEquals(answer.text,live.getText().toString());
             assertTrue(input.isEnabled());assertEquals("Meine nächste Frage",input.getText().toString());

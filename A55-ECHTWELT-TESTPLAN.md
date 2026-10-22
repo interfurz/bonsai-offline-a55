@@ -7,8 +7,13 @@ und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
 (#15) und optischen 16-dp-Iconvarianten (#17) integriert.
 **Ein physischer A55-Test wurde hier noch nicht ausgeführt.**
 
-Beim erneuten Abruf liegen keine neuen A55-Logs oder persönlichen
-Nutzungsergebnisse vor. Die Renderaufnahmen/138 Tests aus der Iconvalidierung
+Es liegen weiterhin keine neuen A55-Logs oder abgeschlossenen persönlichen
+Testdurchläufe vor. Ein im Chat bereitgestellter Nutzer-Screenshot zeigt
+„Was geht“ und die statische Wartezeile „Bonsai denkt nach …“; der Nutzer wünscht
+dort aktuellen Thinking-Text beziehungsweise Prefill-Fortschritt und Tempo.
+Das ist ein konkreter UX-Befund zur Warteanzeige, aber ohne APK-/Modellhash,
+Zeitmessung oder Antwortabschluss kein Leistungs- oder Geräteabnahmebeleg.
+Die Renderaufnahmen/138 Tests aus der Iconvalidierung
 sind Hostbelege mit Testinhalten; sie ersetzen deinen Durchlauf nicht.
 Die neue CPU/Vulkan-APK ist inzwischen lokal gebaut, signiert und binär geprüft;
 [Buildnachweis](release/0.5/build-info.json) und
@@ -54,6 +59,7 @@ Beides wird festgehalten, ohne die eine Beobachtung durch die andere zu ersetzen
 | Encoder | `google/embeddinggemma-2`, tatsächliche GGUF-Datei/-Revision/-Hash; nicht 300M |
 | Wissen | Paket-/Dumpdatum, DB-/IVF-Hashes, Profil, Chunkanzahl, echte Quelle oder Fixture |
 | Einstellungen | CPU/GPU, Threads, Kontext, Antwortlimit, Microbatch, FA, KV, GBNF, Prefix-Warmup |
+| Systemprompt (Nachfolgebuild) | Standard/angepasst und `system_prompt_sha256` aus dem Chat-Benchmark; private Prompttexte nicht in öffentliche Logs kopieren |
 | Umgebung | Akkustand, Laden ja/nein, Temperaturgefühl, Energiesparen, Flugmodus, sonstige aktive Apps |
 
 Die Versionsanzeige **0.4.5 reicht nicht zur Identifikation**: Die veröffentlichte
@@ -274,6 +280,37 @@ Sicherung aller Antworten testen; er soll Inferenz beenden, nicht fortsetzen.
 Seit #15/#17 gehören X02–X06 zur gezielten zweiten UX-Sitzung. Deine spontanen
 Eindrücke zu Licht, Lesbarkeit und Bedienelementen schon bei U01–U03 notieren;
 nicht erst nach Erklärung der beabsichtigten Gestaltung bewerten.
+
+### P01–P06: Systemprompt und Live-Wartezeile im Nachfolgebuild
+
+Diese Fälle benötigen einen Build aus `feat/editable-system-prompt` oder dessen
+späterem Merge. Die bereits veröffentlichte v0.5-APK enthält den Editor nicht.
+Der Bedienweg ist **Menü → Modell → Antworten anpassen → Systemprompt bearbeiten**.
+
+| ID | Durchführung | Erwartung und Beleg |
+| --- | --- | --- |
+| P01 | Eigene Vorgaben um „Antworte in zwei kurzen Sätzen.“ ergänzen; Prompt speichern, neue Frage stellen, App neu öffnen | Vorgabe bleibt gespeichert und beeinflusst die neue Antwort. Tool-Anweisungen bleiben unverändert. Wortlaut/Antwort und persönlichen Eindruck notieren; Modellbefolgung ist kein Hostbeleg. |
+| P02 | Tool-Bereich lesen, Entsperren antippen, Warnung abbrechen; erneut entsperren und bestätigen | Vor Bestätigung keine Texteingabe und kein Tool-Reset möglich. Nach Bestätigung bearbeitbar; nach Schließen/Öffnen wieder schreibgeschützt. Prüfen, ob Warnung und Begriffe verständlich sind. |
+| P03 | Beide Bereiche ändern, Abbrechen wählen; erneut öffnen. Danach einen Entwurf bearbeiten und Gerät drehen | Abbrechen speichert nichts. Drehung erhält den Entwurf, sperrt den Tool-Bereich erneut; geänderte Tool-Entwürfe benötigen vor dem Speichern die Warnbestätigung. Auch große Schrift und Tastatur prüfen: Felder scrollbar, Speichern/Abbrechen erreichbar. |
+| P04 | Vorgabe speichern, im bestehenden Chat `173 * 249` rechnen lassen; Antwort und Cache-Logs erfassen, mit GBNF an/aus wiederholen | Neue Vorgaben ab der nächsten Nachricht; keine alten Promptreste oder sichtbaren Tool-Tags. Ergebnis **43077**, bestehender Verlauf/Gedächtnis erhalten. Während laufender Berechnung kein Speichern. Hosttests simulieren Tool-Ausgaben, die echte Modellwahl bleibt zu prüfen. |
+| P05 | Nach bestätigtem Entsperren Tool-Standard und Vorgaben-Standard einsetzen, speichern; Chat-Benchmark vor/nach Anpassung exportieren | Rückkehr zum Standard ohne Neuimport des Modells. `system_prompt_sha256` ändert sich bei geändertem Prompt, `system_prompt_customized` markiert Anpassungen; Vergleichsskript weist unterschiedliche Hashes zurück. Export enthält keinen eigenen Prompttext. |
+
+**P06 – markierte Wartezeile im Chat:** Im Nachfolgebuild dieselbe Frage einmal
+mit kaltem Cache und als Folgefrage stellen. Unter „Bonsai“ soll während Prefill
+**eine Zeile** mit `Prompt-Cache … % · … Tok/s` erscheinen. Die Rate beruht auf
+frisch dekodierten Tokens; der Fortschritt enthält auch Cache-Wiederverwendung.
+Vor dem ersten abgeschlossenen Batch steht statt einer erfundenen Rate `… Tok/s`.
+Wenn das Modell Thinking ausgibt, erscheint dessen aktueller Text in derselben
+Zeile, bei Überlänge das Ende. Ohne Modell-Thinking bleibt es beim tatsächlichen
+Arbeitsstatus. Die Endantwort wird normal mehrzeilig dargestellt. Abbrechen,
+App-Wechsel und Chatwechsel prüfen: keine alten Gedanken in neuen Antworten,
+im gespeicherten Verlauf oder in `BonsaiTurn`. Test mit Screenshot/Zeitmarker
+und persönlichem Eindruck dokumentieren; Host-Renderbilder sind Testinhalte.
+
+Für reguläre CPU-/Vulkan-Vergleiche anschließend beide Promptbereiche auf
+denselben Standard zurücksetzen. Änderungen an Namen/JSON-Beispielen erzeugen
+keine neuen ausführbaren Tools; GBNF und Java-Argumentgrenzen bleiben fest.
+Alle sechs Geräte-/UX-Ergebnisse sind bis zur belegten A55-Sitzung **ausstehend**.
 
 ## 5. Datenabhängige RAG- und Wikidata-Tests
 

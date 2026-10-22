@@ -94,7 +94,8 @@ std::string piece(const llama_vocab * vocab, llama_token token) {
     out.resize(n);
     return out;
 }
-void decode_tokens(Engine & e,const llama_token * tokens,size_t count) {
+using DecodeProgress=std::function<void(size_t)>;
+void decode_tokens(Engine & e,const llama_token * tokens,size_t count,const DecodeProgress & progress={}) {
     const size_t batch=llama_n_batch(e.context.get());
     for(size_t i=0;i<count;i+=batch) {
         if(e.stop)throw std::runtime_error("Abgebrochen.");
@@ -102,17 +103,32 @@ void decode_tokens(Engine & e,const llama_token * tokens,size_t count) {
         auto b=llama_batch_get_one(const_cast<llama_token *>(tokens+i),static_cast<int32_t>(n));
         if(llama_decode(e.context.get(),b)!=0)throw std::runtime_error("Token-Dekodierung fehlgeschlagen (Speicher oder Backend).");
         e.cached.insert(e.cached.end(),tokens+i,tokens+i+n);
+        if(progress)progress(i+n);
     }
 }
-size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits) {
+using PrefillProgress=std::function<void(size_t,size_t,double)>;
+size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits,const PrefillProgress & progress={}) {
     auto keep=conversation_prefix(e.cached,tokens,logits);
     if(keep<e.cached.size()) {
         if(!llama_memory_seq_rm(llama_get_memory(e.context.get()),0,static_cast<llama_pos>(keep),-1)) {
             e.clear_cache("suffix_removal_failed");keep=0;
         } else e.cached.resize(keep);
     }
-    decode_tokens(e,tokens.data()+keep,tokens.size()-keep);
+    const auto start=Clock::now();
+    if(progress)progress(keep,tokens.size(),0);
+    DecodeProgress decoded;
+    if(progress)decoded=[&](size_t count) { const auto ms=elapsed(start);progress(keep+count,tokens.size(),ms>0?count*1000.0/ms:0); };
+    decode_tokens(e,tokens.data()+keep,tokens.size()-keep,decoded);
     return keep;
+}
+PrefillProgress prefill_callback(JNIEnv * env,jobject callback) {
+    if(!callback)return {};
+    auto type=env->GetObjectClass(callback);auto method=env->GetMethodID(type,"onPrefill","(IID)V");env->DeleteLocalRef(type);
+    if(!method)throw std::runtime_error("Prefill-Callback fehlt.");
+    return [=](size_t done,size_t total,double rate) {
+        env->CallVoidMethod(callback,method,static_cast<jint>(done),static_cast<jint>(total),static_cast<jdouble>(rate));
+        if(env->ExceptionCheck())throw std::runtime_error("Prefill-Anzeige unterbrochen.");
+    };
 }
 void stable_input(Engine & e,common_chat_templates_inputs & input) {
     input.enable_thinking=false;
@@ -209,8 +225,7 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
 
 // Warm only the token prefix shared by closed-system and two complete first-turn
 // renders. Never cache an assistant header from a system-only generation prompt.
-extern "C" JNIEXPORT jbyteArray JNICALL
-Java_de_bonsai_offline_NativeEngine_warmPrefix(JNIEnv * env,jclass,jlong handle,jbyteArray system) {
+static jbyteArray warm_prefix(JNIEnv * env,jlong handle,jbyteArray system,jobject progress) {
     try {
         auto & e=engine(handle);
         if(!e.context || !e.model)throw std::runtime_error("Kein Kontext geladen.");
@@ -226,9 +241,17 @@ Java_de_bonsai_offline_NativeEngine_warmPrefix(JNIEnv * env,jclass,jlong handle,
         }
         if(prefix.size()+64>llama_n_ctx(e.context.get()))
             throw std::runtime_error("Systempraefix zu gross zum Vorwaermen.");
-        auto start=Clock::now();auto reused=sync_cache(e,prefix,false);
+        auto start=Clock::now();auto reused=sync_cache(e,prefix,false,prefill_callback(env,progress));
         return result_bytes(env,common_json({{"warmed_tokens",prefix.size()},{"decoded_tokens",prefix.size()-reused},{"warmup_ms",elapsed(start)}}).dump());
     } catch(const std::exception & ex) { if(handle)engine(handle).clear_cache("warmup_error");fail(env,ex);return nullptr; }
+}
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_de_bonsai_offline_NativeEngine_warmPrefix(JNIEnv * env,jclass,jlong handle,jbyteArray system) {
+    return warm_prefix(env,handle,system,nullptr);
+}
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_de_bonsai_offline_NativeEngine_warmPrefixProgress(JNIEnv * env,jclass,jlong handle,jbyteArray system,jobject progress) {
+    return warm_prefix(env,handle,system,progress);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -455,17 +478,30 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         const auto vocab=llama_model_get_vocab(e.model.get());
         auto cb_class = env->GetObjectClass(callback);
         auto on_chunk = env->GetMethodID(cb_class, "onBytes", "([B)V");
+        auto on_thinking = env->GetMethodID(cb_class, "onThinking", "([B)V");
         env->DeleteLocalRef(cb_class);
-        if (!on_chunk) throw std::runtime_error("Streaming-Callback fehlt.");
+        if (!on_chunk || !on_thinking) throw std::runtime_error("Streaming-Callback fehlt.");
         llama_perf_context_reset(e.context.get());
         const auto cached_before=e.cached.size();
         auto start=Clock::now();
-        const auto reused=sync_cache(e,tokens,true);
+        const auto reused=sync_cache(e,tokens,true,prefill_callback(env,callback));
         double prefill_ms = elapsed(start), first_token_ms = 0;
         auto generation_start = Clock::now(), last_emit = Clock::now();
         Sampler sampler(bonsai_chat_sampler(vocab,static_cast<uint32_t>(seed),grammar_text.c_str()), llama_sampler_free);
         if (!sampler) throw std::runtime_error("Sampler konnte nicht angelegt werden.");
         ReasoningFilter output;
+        std::string thinking_pending;
+        auto thought_emit=Clock::now();
+        auto emit_thinking=[&] {
+            const auto count=complete_utf8_prefix(thinking_pending);
+            if(!count)return;
+            auto data=result_bytes(env,thinking_pending.substr(0,count));
+            if(!data)throw std::runtime_error("Kein Speicher fuer die Statuszeile.");
+            env->CallVoidMethod(callback,on_thinking,data);env->DeleteLocalRef(data);
+            thinking_pending.erase(0,count);thought_emit=Clock::now();
+            if(env->ExceptionCheck())throw std::runtime_error("Thinking-Anzeige unterbrochen.");
+        };
+        output.on_thinking=[&](char c) { thinking_pending+=c;if(thinking_pending.size()>=256 || elapsed(thought_emit)>=80)emit_thinking(); };
         const auto rendered=common_chat_templates_apply(e.templates.get(),input).prompt;
         const auto end=rendered.find_last_not_of(" \t\r\n");
         output.thinking=end!=std::string::npos && end+1>=7 && rendered.compare(end+1-7,7,"<think>")==0;
@@ -508,7 +544,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             if(output.thinking && reasoning_tokens>=budget)close_reasoning();
             if(elapsed(last_emit)>=50)emit();
         }
-        output.finish();emit();
+        output.finish();emit_thinking();emit();
         const double generation_ms = elapsed(generation_start);
         // Remove reasoning now, not only when the next user message arrives.
         auto cleanup_start=Clock::now();

@@ -25,6 +25,7 @@ final class BenchmarkChat {
     static void run(BonsaiApp app,long handle) {
         JSONObject report=new JSONObject();JSONArray turns=new JSONArray();String issue="";
         boolean grammar=app.gbnfTools();
+        String systemPrompt=app.systemPrompt(grammar);
         java.util.concurrent.atomic.AtomicLong peak=new java.util.concurrent.atomic.AtomicLong(BonsaiApp.rssKb());
         java.util.concurrent.ScheduledExecutorService monitor=java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
         java.util.concurrent.ScheduledFuture<?> sampling=monitor.scheduleWithFixedDelay(()->peak.accumulateAndGet(BonsaiApp.rssKb(),Math::max),0,250,java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -37,6 +38,7 @@ final class BenchmarkChat {
                 .put("requested_profile",KernelOptimizer.current(app).json()).put("context_tokens",app.context())
                 .put("threads",app.threads()).put("rss_sample_interval_ms",250).put("seed",42).put("max_output_tokens",128).put("reasoning_budget",grammar?0:600).put("gbnf",grammar)
                 .put("prefix_warmup",app.prefs.getBoolean("prefixWarmup",true)).put("turns",turns)
+                .put("system_prompt_sha256",SystemPrompt.fingerprint(systemPrompt)).put("system_prompt_customized",SystemPrompt.customized(app.prefs))
                 .put("notes","One isolated connected conversation; reset once before turn 1, no untimed generation. Prefix warm-up is reported separately. TTFT is first visible final-answer callback across all tool rounds. Tokens/s includes reasoning and all native generation rounds, excludes prefill, cleanup and commit. No A55 result is implied by host tests.");
             NativeEngine.clearCache(handle);
             long warmStart=SystemClock.elapsedRealtime();app.warmPrefixOnWorker();
@@ -56,9 +58,9 @@ final class BenchmarkChat {
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,128,42,output,gbnf,budget[0]),StandardCharsets.UTF_8));
                     budget[0]=Math.max(0,budget[0]-stats.optInt("reasoning_tokens"));metrics.add(stats);
                     return new ToolLoop.Result(output.text(),stats);
-                },()->app.cancelled,grammar);
+                },()->app.cancelled,grammar,systemPrompt);
                 String answer=ReasoningText.strip(result.text);
-                long commit=SystemClock.elapsedRealtime();JSONObject committed=app.commitCleanTurn(history,answer,grammar);
+                long commit=SystemClock.elapsedRealtime();JSONObject committed=app.commitCleanTurn(history,answer,systemPrompt);
                 JSONObject stats=metrics.finish(result.stats,SystemClock.elapsedRealtime()-commit,committed);
                 // Flat per-turn metrics make two exports straightforward to compare.
                 java.util.Iterator<String> keys=stats.keys();while(keys.hasNext()) {String key=keys.next();turn.put(key,stats.get(key));}
