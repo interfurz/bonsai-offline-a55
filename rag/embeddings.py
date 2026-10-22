@@ -8,6 +8,8 @@ import zlib
 DIM = 256
 MAGIC = b"BRAGV001"
 FLOAT_MAGIC = b"BRAGF001"
+DEFAULT_MODEL = "google/embeddinggemma-2"
+GEMMA2_PROFILE = "embeddinggemma2-search-v1"
 
 
 def normalize(values):
@@ -41,9 +43,20 @@ class ModelEncoder:
     def __init__(self, model, device=None):
         from sentence_transformers import SentenceTransformer
         self.name = model
-        self.model = SentenceTransformer(model, device=device, trust_remote_code=False)
+        options = {}
+        if model == DEFAULT_MODEL:
+            import torch
+            # Query encoder is text-only; FP16 overflows this model's activations.
+            options = dict(config_kwargs={"vision_config": None, "audio_config": None},
+                           model_kwargs={"torch_dtype": torch.float32})
+        self.model = SentenceTransformer(model, device=device, trust_remote_code=False, **options)
 
     def encode(self, texts, query=False):
+        if self.name == DEFAULT_MODEL:
+            # Documents already carry their real title; do not add "title: none" again.
+            texts = [("task: search result | query: " + text) if query else text for text in texts]
+            return self.model.encode(texts, prompt="", convert_to_numpy=True,
+                                     show_progress_bar=False).tolist()
         method = self.model.encode_query if query else self.model.encode_document
         return method(texts, convert_to_numpy=True, show_progress_bar=False).tolist()
 
@@ -60,7 +73,7 @@ def quantize(values):
     return scale, quantized
 
 
-def embed(database, output, model="google/embeddinggemma-300m", reference=None, batch=32, device=None):
+def embed(database, output, model=DEFAULT_MODEL, reference=None, batch=32, device=None):
     if batch < 1:
         raise ValueError("batch must be positive")
     backend = encoder(model, device)
@@ -72,7 +85,8 @@ def embed(database, output, model="google/embeddinggemma-300m", reference=None, 
             cursor = db.execute("SELECT id,title,text_zlib FROM chunks ORDER BY id")
             reference_dim = None
             while rows := cursor.fetchmany(batch):
-                texts = [title + "\n" + zlib.decompress(blob).decode("utf-8") for _, title, blob in rows]
+                texts = [(f"title: {title or 'none'} | text: " if model == DEFAULT_MODEL else title + "\n")
+                         + zlib.decompress(blob).decode("utf-8") for _, title, blob in rows]
                 vectors = backend.encode(texts)
                 if len(vectors) != len(rows):
                     raise ValueError("Encoder row count mismatch")
@@ -95,6 +109,9 @@ def embed(database, output, model="google/embeddinggemma-300m", reference=None, 
                 reference_file.close()
         db.execute("INSERT OR REPLACE INTO metadata VALUES('embedding_model',?)", (model,))
         db.execute("INSERT OR REPLACE INTO metadata VALUES('embedding_dimension','256')")
+        db.execute("DELETE FROM metadata WHERE key='embedding_profile'")
+        if model == DEFAULT_MODEL:
+            db.execute("INSERT INTO metadata VALUES('embedding_profile',?)", (GEMMA2_PROFILE,))
 
 
 def vector_ranks(path, query, limit=20, reference=False):

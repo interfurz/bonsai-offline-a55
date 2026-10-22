@@ -1,7 +1,7 @@
 import argparse
 import json
 from .corpus import build
-from .embeddings import embed
+from .embeddings import embed, DEFAULT_MODEL
 from .search import search
 
 
@@ -16,7 +16,7 @@ def main():
     embedding = commands.add_parser("embed")
     embedding.add_argument("database")
     embedding.add_argument("vectors")
-    embedding.add_argument("--model", default="google/embeddinggemma-300m")
+    embedding.add_argument("--model", default=DEFAULT_MODEL)
     embedding.add_argument("--reference")
     embedding.add_argument("--batch", type=int, default=32)
     embedding.add_argument("--device")
