@@ -2,7 +2,7 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Der integrierte Quellstand 0.4.4 verbindet die Funktionszweige mit dem neuen UI. Er verwendet denselben neuen Signierschlüssel wie 0.4.3 und ist nicht direkt über 0.4.0/0.4.1 installierbar. Die alte App nicht vorschnell deinstallieren: dabei gehen lokale Daten verloren. Build-/Geräteverifikation siehe jeweilige Release-Notizen.
+[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Version **0.4.5** integriert die kompakten Antwort-Icons, lokale RAG-/IVF-Suche und zusätzliche Cache-/Benchmarkdiagnosen. Dieses Release verwendet auf Wunsch den bereitgestellten Original-Debug-Keystore und damit ein anderes Zertifikat als 0.4.3/0.4.4; es ist kein direktes Update dieser veröffentlichten APKs. Signieridentität und Datenhinweise: [SIGNIEREN.md](SIGNIEREN.md).
 
 ## UI-Überarbeitung im aktuellen Quellcode
 
@@ -12,7 +12,7 @@ Kurze native Übergänge berücksichtigen abgeschaltete Systemanimationen. Es gi
 
 ## Stand
 
-Der integrierte Quellstand **0.4.4** kombiniert Burgunder-/Pflaume-UI, Hintergrundgenerierung, dateigebundene GGUF-Freigabe, Chat-Archiv und Langdruckaktionen, striktes UTF-8 sowie zusätzliche skalare PQ-/Hadamard-Prüfungen. Vorherige Releasezweige bleiben als Historie erhalten. Die Appversion allein belegt keine erfolgreiche Geräte-/Modellprüfung.
+Der integrierte Quellstand **0.4.5** erweitert die bisherige Basis um lokale Tools einschließlich `suche`, abschnittsbasierte RAG-Pipeline, IVF-INT8-Index mit mmap, Quellenanzeige sowie Cache-/Prefill-Diagnosen und einen Fünf-Turn-Benchmark. Datenbank, Vektorindex und Modellgewichte werden separat bereitgestellt; der Android-Query-Encoder unterstützt zunächst den Beispieldatensatz. Details: [rag/IVF.md](rag/IVF.md) und [benchmark/README.md](benchmark/README.md). Die Basis kombiniert Burgunder-/Pflaume-UI, Hintergrundgenerierung, dateigebundene GGUF-Freigabe, Chat-Archiv und Langdruckaktionen, striktes UTF-8 sowie zusätzliche skalare PQ-/Hadamard-Prüfungen. Vorherige Releasezweige bleiben als Historie erhalten. Die Appversion allein belegt keine erfolgreiche Geräte-/Modellprüfung.
 
 Version **0.4.1** ergänzt eine dateigebundene Option **Trotzdem fortfahren** bei abweichender Prüfsumme und einen allgemein formulierten GGUF-Import. Andere von der Runtime unterstützte GGUF-Modelle benötigen keine Bonsai-Prüfsumme. Details: [UPDATE-0.4.1.md](UPDATE-0.4.1.md).
 
@@ -31,7 +31,7 @@ Implementiert:
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 - Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
-Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Wissensdatenbanken, RAG, Python, SymPy, STT und TTS sind noch nicht Teil dieser Version. Das Gedächtnis ist keine semantische Suche. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
+Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Die RAG-/IVF-Suchschnittstelle ist enthalten; Wissensdatenbank und Index werden nicht mit der APK ausgeliefert. Python läuft für die Vorbereitung auf dem Laptop, nicht in der App. SymPy, STT und TTS sind nicht enthalten. Das Gedächtnis ist keine semantische Suche. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
 
 ## Inkrementeller Kontext und Reasoning
 
@@ -55,6 +55,7 @@ Der System-Prompt beschreibt ein einzelnes, vollständiges Tool-Format:
 <tool>{"name":"calc","args":{"expr":"2*(3+4)"}}</tool>
 <tool>{"name":"merken","args":{"key":"name","value":"Alex"}}</tool>
 <tool>{"name":"abrufen","args":{"key":"name"}}</tool>
+<tool>{"name":"suche","args":{"query":"Photosynthese"}}</tool>
 ```
 
 Nach jeder Generierung prüft Java die komplette Antwort per Regex und validiert Name und Argumente. Ein eigener Java-Parser berechnet `+ - * / % ^`, Klammern, Dezimalzahlen, wissenschaftliche Schreibweise, `pi`, `e` und die Funktionen `sqrt`, `abs`, `sin`, `cos`, `tan`, `log` und `log10`. Winkel sind in Radiant; Division durch null, nicht endliche Ergebnisse und übermäßig lange oder tiefe Ausdrücke werden abgewiesen. Es gibt keine zusätzliche Bibliothek oder Netzwerkverbindung.
@@ -65,7 +66,7 @@ Eine Antwort verwendet maximal **drei Modellgenerierungen**, also höchstens zwe
 
 Unter **Modell → Antworten anpassen → GBNF für Tool-Aufrufe (experimentell)** lässt sich die Formatvorgabe zusätzlich im nativen Sampler erzwingen. Standardmäßig ist die Option ausgeschaltet. Mit **Einstellungen speichern** gilt sie ab der nächsten Chatnachricht; ein Neuladen des Modells ist dafür nicht nötig. Während einer laufenden Berechnung ist der Schalter gesperrt. Benchmark, Optimierung und Modellprüfung verwenden weiterhin keine Grammatik.
 
-Bei aktivem GBNF erlaubt die Grammatik entweder genau einen der drei Tool-Aufrufe mit JSON-Stringargumenten oder eine intern mit `<final>…</final>` markierte Textantwort. Die App entfernt diese Markierungen vor Anzeige und Speicherung. In der dritten Runde ist nur noch eine Endantwort zulässig. Abgeschnittene Markierungen werden als Fehler gemeldet. Der optionale UTF-8-Grammatikparameter wird an `NativeEngine.generate` übergeben; `llama_sampler_init_grammar` steht vor den bisherigen Samplern. Eine fehlerhafte Grammatik führt zu einem Fehler statt zum stillen Abschalten der Vorgabe. Ausdrucks- und Speichergrenzen werden weiterhin in Java geprüft.
+Bei aktivem GBNF erlaubt die Grammatik entweder genau einen der vier Tool-Aufrufe mit JSON-Stringargumenten oder eine intern mit `<final>…</final>` markierte Textantwort. Die App entfernt diese Markierungen vor Anzeige und Speicherung. In der dritten Runde ist nur noch eine Endantwort zulässig. Abgeschnittene Markierungen werden als Fehler gemeldet. Der optionale UTF-8-Grammatikparameter wird an `NativeEngine.generate` übergeben; `llama_sampler_init_grammar` steht vor den bisherigen Samplern. Eine fehlerhafte Grammatik führt zu einem Fehler statt zum stillen Abschalten der Vorgabe. Ausdrucks- und Speichergrenzen werden weiterhin in Java geprüft.
 
 Die Formatbefolgung und Antwortqualität des echten Bonsai-Modells müssen noch auf dem Gerät geprüft werden, etwa mit „Berechne 173 * 249 mit calc“ und den obigen Gedächtnisbeispielen, jeweils mit aus- und eingeschaltetem GBNF.
 

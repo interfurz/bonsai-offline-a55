@@ -1,23 +1,32 @@
-# Bonsai auf deinem Samsung Galaxy A55 installieren
+# Bonsai auf dem Galaxy A55 installieren
 
-Für die bereitgestellte CPU-Test-APK brauchst du auf dem Laptop weder Android Studio noch Git oder Python.
+1. Die signierte **Bonsai-Offline-0.4.5-arm64-CPU-Vulkan.apk** aus den
+   [Release-Assets](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.4.5)
+   auf das A55 laden. Bei privatem Repository ist ein berechtigtes GitHub-Login nötig.
+2. **Vor einem Update die Signieridentität beachten:** 0.4.5 nutzt den ausdrücklich
+   bereitgestellten Original-Debug-Keystore. Die veröffentlichten 0.4.3-/0.4.4-APKs
+   verwenden ein anderes Zertifikat und lassen sich damit nicht direkt aktualisieren.
+   Details und Fingerabdrücke: [SIGNIEREN.md](SIGNIEREN.md). Die vorhandene App
+   nicht vorschnell deinstallieren; dadurch werden lokale Daten gelöscht.
+3. **Eigene Dateien → Downloads → APK** öffnen. Falls Android fragt, dieser
+   Dateien-App das Installieren erlauben; eine konkrete Samsung-Blockierung prüfen.
+4. Eine unterstützte lokale GGUF-Datei unter **Modell** importieren und laden.
+   Beispiel: [Ternary-Bonsai-2-4B-PQ2_0.gguf](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/main).
+   Die App erstellt eine private Kopie; zusätzlich zur Download-Datei muss genug
+   freier Speicher vorhanden sein. Modellgewichte sind nicht Bestandteil der APK.
+5. Mit **CPU, 4 Threads und 4096 Tokens Kontext** beginnen. Bei Speichermangel
+   andere Apps schließen und einen kleineren Kontext prüfen. Vulkan ist enthalten,
+   seine Eignung für die konkrete Modell-/Treiberkombination muss auf dem Gerät
+   geprüft werden. **Leistung** enthält Benchmark und Optimierung.
+6. Eine kurze Frage stellen und den Betrieb anschließend ohne WLAN/mobile Daten
+   prüfen. Die App fordert keine Internetberechtigung an.
 
-1. **Bonsai-Offline-0.1.0-arm64-CPU.apk** auf dem A55 herunterladen oder per USB in den Ordner **Downloads** kopieren.
-2. **Eigene Dateien → Downloads → APK** öffnen und installieren. Falls Android fragt, dieser Dateien-App das Installieren erlauben. Falls Samsungs Auto Blocker die Installation verhindert, die konkrete angezeigte Blockierung prüfen.
-3. Das [offizielle Bonsai-2-4B-Repository](https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/tree/main) öffnen und diese Datei herunterladen:
+Die lokale Suche `suche` benötigt eine separat bereitgestellte Datenbank und einen
+passenden Index/Query-Encoder; diese Dateien werden nicht mit der APK ausgeliefert.
+Einrichtung: [rag/README.md](rag/README.md), IVF und Gerätebenchmark:
+[rag/IVF.md](rag/IVF.md). Eine fehlende Datenbank führt zu einer Tool-Fehlermeldung.
 
-   ```text
-   Ternary-Bonsai-2-4B-PQ2_0.gguf
-   ```
-
-   Die Datei ist etwa 1,15 GB groß. Es wird keine weitere Modelldatei für den Textchat gebraucht.
-
-4. **Bonsai** öffnen → **Bonsai-Modell auswählen** → die lokale GGUF-Datei auswählen. Import und Laden abwarten. Die App legt eine private Kopie an; dafür muss zusätzlich zur Originaldatei mindestens etwa 1,2 GB frei sein.
-5. Eine kurze Frage stellen. Danach WLAN und mobile Daten ausschalten und eine weitere Frage stellen, um den Offline-Betrieb zu prüfen.
-6. **Seitenmenü oben links → Benchmark → Benchmark starten**. Die App geöffnet lassen. Nach einem Aufwärmdurchlauf und drei Messläufen das Benchmark-Menü erneut öffnen. Mit **JSON exportieren** kannst du das Ergebnis speichern und hier anhängen.
-
-Starte mit **CPU, 4 Threads und 4.096 Tokens Kontext**. Falls Android die App beendet oder das Modell nicht lädt, zuerst andere Apps schließen und unter **Bonsai ⌄ → Modell und Einstellungen** den Kontext auf **2.048 Tokens** reduzieren.
-
-Das ist eine signierte Testversion mit optimiertem nativen CPU-Code. Vulkan, RAG, die Wissensdatenbanken und externe Tools sind noch nicht aktiviert. Die APK enthält keine Modellgewichte und fordert keine Internetberechtigung an. Ein Test auf deinem konkreten A55 steht noch aus.
-
-Deinstallation löscht die privaten Chats, Einstellungen und die importierte Modellkopie. Die separat heruntergeladene Original-GGUF im Downloads-Ordner bleibt erhalten.
+Der Name `.debug` im Paket ist historisch; die veröffentlichte APK ist ein
+Release-Build mit ausgeschaltetem Debugging. Kein physischer A55-Test wird
+behauptet. Eine Deinstallation löscht private Chats, Erinnerungen, Einstellungen
+und Modellkopien; die separat heruntergeladene GGUF-Datei bleibt bestehen.
