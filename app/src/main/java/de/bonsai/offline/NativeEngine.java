@@ -9,6 +9,7 @@ final class NativeEngine {
     static native void stop(long handle);
     static native void unload(long handle);
     static native void clearCache(long handle);
+    static native byte[] warmPrefix(long handle,byte[] system);
     static native void commitTurn(long handle,byte[][] roles,byte[][] contents);
     static native void referenceCpu(boolean enabled);
     static native byte[] load(long handle, byte[] path, int context, int threads, boolean gpu);

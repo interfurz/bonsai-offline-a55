@@ -199,6 +199,30 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
     }
 }
 
+// Warm only the token prefix shared by closed-system and two complete first-turn
+// renders. Never cache an assistant header from a system-only generation prompt.
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_de_bonsai_offline_NativeEngine_warmPrefix(JNIEnv * env,jclass,jlong handle,jbyteArray system) {
+    try {
+        auto & e=engine(handle);
+        if(!e.context || !e.model)throw std::runtime_error("Kein Kontext geladen.");
+        common_chat_templates_inputs input;stable_input(e,input);input.add_generation_prompt=false;
+        common_chat_msg message;message.role="system";message.content=bytes(env,system);input.messages.push_back(message);
+        auto vocab=llama_model_get_vocab(e.model.get());
+        auto prefix=tokenize(vocab,common_chat_templates_apply(e.templates.get(),input).prompt);
+        input.add_generation_prompt=true;
+        for(const auto * probe : {"A", "Zwei andere Wörter: 🪴"}) {
+            auto full=input;common_chat_msg user;user.role="user";user.content=probe;full.messages.push_back(user);
+            auto tokens=tokenize(vocab,common_chat_templates_apply(e.templates.get(),full).prompt);
+            prefix.resize(conversation_prefix(prefix,tokens,false));
+        }
+        if(prefix.size()+64>llama_n_ctx(e.context.get()))
+            throw std::runtime_error("Systempraefix zu gross zum Vorwaermen.");
+        auto start=Clock::now();auto reused=sync_cache(e,prefix,false);
+        return result_bytes(env,common_json({{"warmed_tokens",prefix.size()},{"decoded_tokens",prefix.size()-reused},{"warmup_ms",elapsed(start)}}).dump());
+    } catch(const std::exception & ex) { if(handle)engine(handle).clear_cache("warmup_error");fail(env,ex);return nullptr; }
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_de_bonsai_offline_NativeEngine_referenceCpu(JNIEnv *, jclass, jboolean enabled) {
     bonsai_reference_cpu = enabled;

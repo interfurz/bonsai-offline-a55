@@ -190,7 +190,18 @@ public final class BonsaiApp extends Application {
             verifyModel(modelName(),modelFile().length(),checkedSha==null?modelSha256():checkedSha);
         }
         String actualBackend=BackendGuard.load(this,handle);
+        warmPrefixOnWorker();
         main.post(() -> { loaded=true; backend=actualBackend; });
+    }
+    void warmPrefixOnWorker() {
+        if(!prefs.getBoolean("prefixWarmup",true)) return;
+        try {
+            byte[] stats=NativeEngine.warmPrefix(handle,utf8(ToolLoop.systemPrompt(gbnfTools())));
+            if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn","prefix "+new String(stats,StandardCharsets.UTF_8));
+        } catch(Exception | LinkageError e) {
+            if(cancelled) throw new IllegalStateException("Abgebrochen.",e);
+            android.util.Log.w("BonsaiTurn","Prefix-Vorwärmen fehlgeschlagen: "+reason(e));
+        }
     }
     private void verifyModel(String name,long bytes,String sha) {
         if(!ModelIntegrity.approval(name,bytes,sha).equals(prefs.getString("approvedModelIntegrity","")))

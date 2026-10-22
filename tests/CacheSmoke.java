@@ -23,6 +23,15 @@ public final class CacheSmoke {
         long handle=NativeEngine.create();
         try {
             NativeEngine.load(handle,bytes(args[0]),1024,2,false);
+            for(boolean gbnf : new boolean[]{false,true}) {
+                NativeEngine.clearCache(handle);
+                String system="You are helpful. Local tools: calc, remember, recall."+(gbnf?" Use <final> for answers.":"");
+                JSONObject warmed=new JSONObject(new String(NativeEngine.warmPrefix(handle,bytes(system)),StandardCharsets.UTF_8));
+                require(warmed.getInt("warmed_tokens")>0,"No stable system prefix");
+                JSONObject firstWarm=generate(handle,List.of("system","user"),List.of(system,"Unrelated first question."),"root ::= \"OK\"",0);
+                require(firstWarm.getInt("reused_prompt_tokens")==warmed.getInt("warmed_tokens"),"Warm prefix differs token by token: "+firstWarm);
+            }
+            NativeEngine.clearCache(handle);
             List<String> roles=new ArrayList<>(List.of("system","user")),texts=new ArrayList<>(List.of("You are helpful.","Say hello."));
             JSONObject first=generate(handle,roles,texts,"root ::= \"Hello.\"",0);
             require(first.getInt("reused_prompt_tokens")==0,"First turn must be cold");
