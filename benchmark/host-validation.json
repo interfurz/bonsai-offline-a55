@@ -1,0 +1,52 @@
+{
+  "date_utc": "2026-10-22",
+  "base_commit": "9922f14",
+  "app_version": "0.4.4",
+  "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
+  "on_device_measured": false,
+  "host_tests": {
+    "robolectric": {
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "lint_errors": 0,
+    "lint_warnings": 8,
+    "check_project": "passed",
+    "benchmark_comparison_tests": 3,
+    "native_kernels": "passed",
+    "grammar_sampler": "passed",
+    "real_jni_cache": "passed",
+    "three_uninterrupted_turns": {
+      "reused": [
+        0,
+        28,
+        47
+      ],
+      "decoded": [
+        25,
+        16,
+        16
+      ],
+      "final_clean_kv_positions": 66
+    },
+    "reasoning_budget": {
+      "reasoning_tokens": 600,
+      "clean_kv_positions": 35
+    },
+    "optional_fa_f16_and_fa_q8": "contexts_and_probes_passed; q8_without_fa_rejected; defaults_restored",
+    "model": "SmolLM2-135M-Instruct-Q4_K_M.gguf",
+    "model_sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d"
+  },
+  "built_only": {
+    "apk_variant": "CPU debug ARM64",
+    "apk_sha256": "c545902b0d55aa57fa2b650cfcacfe82839243de0b12d42a839adeeae73c1140",
+    "vulkan_apk_built": false,
+    "android_sdk": 35,
+    "ndk": "28.2.13676358",
+    "gradle": "8.11.1",
+    "jdk": 17
+  },
+  "limitations": "No Bonsai 2 4B PQ2_0 or A55 device execution; no device speed or thermal causation claims."
+}

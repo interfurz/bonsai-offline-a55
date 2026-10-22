@@ -9,7 +9,8 @@ final class NativeEngine {
     static native void stop(long handle);
     static native void unload(long handle);
     static native void clearCache(long handle);
-    static native void commitTurn(long handle,byte[][] roles,byte[][] contents);
+    static native byte[] warmPrefix(long handle,byte[] system);
+    static native byte[] commitTurn(long handle,byte[][] roles,byte[][] contents);
     static native void referenceCpu(boolean enabled);
     static native byte[] load(long handle, byte[] path, int context, int threads, boolean gpu);
     static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, Stream callback) {
@@ -20,6 +21,7 @@ final class NativeEngine {
     }
     static native byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,Stream callback,byte[] grammar,int reasoningBudget);
     static native void configure(long handle, int threads, int batchThreads, int microBatch);
+    static native void configureAdvanced(long handle,int threads,int batchThreads,int microBatch,boolean flashAttention,boolean kvQ8);
     static native byte[] probe(long handle, int steps);
     private NativeEngine() {}
 }

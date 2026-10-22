@@ -36,14 +36,18 @@ struct Engine {
     std::string backend = "CPU";
     int context_size = 4096;
     bool gpu = false;
+    bool flash_attention=false,kv_q8=false;
     std::vector<llama_token> cached;
     size_t evicted_turns=0;
     std::chrono::system_clock::time_point template_now=std::chrono::system_clock::now();
-    void clear_cache() {
+    size_t cache_resets=0;
+    std::string reset_reason="created";
+    void clear_cache(const char * reason="explicit") {
+        ++cache_resets;reset_reason=reason;
         evicted_turns=0;cached.clear();
         if(context)llama_memory_clear(llama_get_memory(context.get()),true);
     }
-    void unload() { evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
+    void unload() { ++cache_resets;reset_reason="unload";evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
 };
 Engine & engine(jlong handle) {
     if (!handle) throw std::runtime_error("Native Engine fehlt.");
@@ -103,7 +107,7 @@ size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits
     auto keep=conversation_prefix(e.cached,tokens,logits);
     if(keep<e.cached.size()) {
         if(!llama_memory_seq_rm(llama_get_memory(e.context.get()),0,static_cast<llama_pos>(keep),-1)) {
-            e.clear_cache();keep=0;
+            e.clear_cache("suffix_removal_failed");keep=0;
         } else e.cached.resize(keep);
     }
     decode_tokens(e,tokens.data()+keep,tokens.size()-keep);
@@ -128,7 +132,7 @@ void retain_window(Engine & e,common_chat_templates_inputs & input) {
         }
     }
     // A caller supplied a different conversation without an explicit reset.
-    e.clear_cache();
+    e.clear_cache("conversation_window_changed");
 }
 std::vector<llama_token> fit_prompt(Engine & e,common_chat_templates_inputs & input,size_t reserve,int & dropped) {
     const auto vocab=llama_model_get_vocab(e.model.get());
@@ -174,7 +178,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_de_bonsai_offline_NativeEngine_clearCache(JNIEnv * env,jclass,jlong handle) {
     try { engine(handle).clear_cache(); } catch(const std::exception & ex) { fail(env,ex); }
 }
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,jobjectArray roles,jobjectArray contents) {
     try {
         auto & e=engine(handle);
@@ -190,10 +194,40 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
             input.messages.push_back(std::move(m));env->DeleteLocalRef(r);env->DeleteLocalRef(c);
         }
         retain_window(e,input);
-        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);sync_cache(e,tokens,false);
+        auto start=Clock::now();
+        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);auto reused=sync_cache(e,tokens,false);
+        return result_bytes(env,common_json({{"cached_tokens",e.cached.size()},
+            {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
+            {"commit_decoded_tokens",tokens.size()-reused},{"commit_native_ms",elapsed(start)},
+            {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason}}).dump());
     } catch(const std::exception & ex) {
-        if(handle)engine(handle).clear_cache();fail(env,ex);
+        if(handle)engine(handle).clear_cache("commit_error");
+        fail(env,ex);return nullptr;
     }
+}
+
+// Warm only the token prefix shared by closed-system and two complete first-turn
+// renders. Never cache an assistant header from a system-only generation prompt.
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_de_bonsai_offline_NativeEngine_warmPrefix(JNIEnv * env,jclass,jlong handle,jbyteArray system) {
+    try {
+        auto & e=engine(handle);
+        if(!e.context || !e.model)throw std::runtime_error("Kein Kontext geladen.");
+        common_chat_templates_inputs input;stable_input(e,input);input.add_generation_prompt=false;
+        common_chat_msg message;message.role="system";message.content=bytes(env,system);input.messages.push_back(message);
+        auto vocab=llama_model_get_vocab(e.model.get());
+        auto prefix=tokenize(vocab,common_chat_templates_apply(e.templates.get(),input).prompt);
+        input.add_generation_prompt=true;
+        for(const auto * probe : {"A", "Zwei andere Wörter: 🪴"}) {
+            auto full=input;common_chat_msg user;user.role="user";user.content=probe;full.messages.push_back(user);
+            auto tokens=tokenize(vocab,common_chat_templates_apply(e.templates.get(),full).prompt);
+            prefix.resize(conversation_prefix(prefix,tokens,false));
+        }
+        if(prefix.size()+64>llama_n_ctx(e.context.get()))
+            throw std::runtime_error("Systempraefix zu gross zum Vorwaermen.");
+        auto start=Clock::now();auto reused=sync_cache(e,prefix,false);
+        return result_bytes(env,common_json({{"warmed_tokens",prefix.size()},{"decoded_tokens",prefix.size()-reused},{"warmup_ms",elapsed(start)}}).dump());
+    } catch(const std::exception & ex) { if(handle)engine(handle).clear_cache("warmup_error");fail(env,ex);return nullptr; }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -273,6 +307,7 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
             char buffer[512] = {};
             if (llama_model_meta_val_str(model.get(), key, buffer, sizeof(buffer)) >= 0) metadata[key] = buffer;
         }
+        e.flash_attention=false;e.kv_q8=false;
         e.context_size = context_size;
         e.gpu = gpu;
         e.backend = gpu ? std::string("Vulkan - ") + ggml_backend_dev_description(devices[0]) : "CPU";
@@ -286,9 +321,7 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
     } catch (const std::exception & e) { fail(env, e); return nullptr; }
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle,
-                                             jint threads, jint batch_threads, jint micro_batch) {
+static void configure_context(JNIEnv * env,jlong handle,jint threads,jint batch_threads,jint micro_batch,bool flash,bool q8) {
     try {
         auto & e = engine(handle);
         if (!e.model) throw std::runtime_error("Kein Modell geladen.");
@@ -296,6 +329,11 @@ Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle
             micro_batch < 1 || micro_batch > 256 || (micro_batch & (micro_batch - 1)))
             throw std::runtime_error("Ungueltiges Optimierungsprofil.");
         if (e.stop) throw std::runtime_error("Abgebrochen.");
+        if(q8 && !flash)throw std::runtime_error("Q8 KV benoetigt Flash Attention.");
+        // Thread counts can change without reallocating KV; identical profiles are a no-op.
+        if(e.context && e.flash_attention==flash && e.kv_q8==q8 && llama_n_ubatch(e.context.get())==static_cast<uint32_t>(micro_batch)) {
+            llama_set_n_threads(e.context.get(),threads,batch_threads);return;
+        }
         auto cp = llama_context_default_params();
         cp.n_ctx = e.context_size;
         cp.n_batch = 256;
@@ -303,19 +341,29 @@ Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle
         cp.n_seq_max = 1;
         cp.n_threads = threads;
         cp.n_threads_batch = batch_threads;
-        cp.type_k = GGML_TYPE_F16;
-        cp.type_v = GGML_TYPE_F16;
+        cp.type_k = q8 ? GGML_TYPE_Q8_0 : GGML_TYPE_F16;
+        cp.type_v = q8 ? GGML_TYPE_Q8_0 : GGML_TYPE_F16;
         cp.offload_kqv = e.gpu;
         cp.op_offload = e.gpu;
-        cp.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+        cp.flash_attn_type = flash ? LLAMA_FLASH_ATTN_TYPE_ENABLED : LLAMA_FLASH_ATTN_TYPE_DISABLED;
         cp.no_perf = false;
         cp.abort_callback = abort_compute;
         cp.abort_callback_data = &e;
-        e.evicted_turns=0;e.cached.clear();
+        e.clear_cache("configure_context");
         e.context.reset(); // Release the previous KV allocation before creating another.
         e.context.reset(llama_init_from_model(e.model.get(), cp));
+        e.flash_attention=flash;e.kv_q8=q8;
         if (!e.context) throw std::runtime_error("Optimierungsprofil konnte keinen Kontext anlegen.");
     } catch (const std::exception & e) { fail(env, e); }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env,jclass,jlong handle,jint threads,jint batch,jint micro) {
+    configure_context(env,handle,threads,batch,micro,false,false);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_de_bonsai_offline_NativeEngine_configureAdvanced(JNIEnv * env,jclass,jlong handle,jint threads,jint batch,jint micro,jboolean flash,jboolean q8) {
+    configure_context(env,handle,threads,batch,micro,flash,q8);
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
@@ -330,7 +378,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             text += "Ein Wald speichert Wasser im Boden. Baeume nutzen Sonnenlicht und bilden neue Blaetter. ";
         auto tokens = tokenize(vocab, text);
         tokens.resize(std::min<size_t>(tokens.size(), 192));
-        e.clear_cache();
+        e.clear_cache("probe_start");
         auto start = Clock::now();
         const size_t batch = llama_n_batch(e.context.get());
         for (size_t i = 0; i < tokens.size(); i += batch) {
@@ -361,13 +409,14 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             fingerprint = (fingerprint ^ static_cast<uint64_t>(best)) * 1099511628211ULL;
         }
         const double decode = elapsed(start);
-        e.clear_cache();
+        e.clear_cache("probe_end");
         return result_bytes(env, common_json({{"prefill_ms",prefill}, {"decode_ms",decode},
             {"decode_tokens",steps}, {"prompt_tokens",tokens.size()},
             {"tokens_per_second",steps * 1000.0 / std::max(decode, 0.001)},
             {"score_ms",prefill + decode * 128.0 / steps},
+            {"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
             {"fingerprint",std::to_string(fingerprint)}, {"signature",signature}, {"top_tokens",top_tokens}}).dump());
-    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache("probe_error");fail(env,ex);return nullptr; }
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
@@ -378,7 +427,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         if (!e.context || !e.model) throw std::runtime_error("Bitte zuerst ein Modell laden.");
         if (limit < 16 || limit > 2048) throw std::runtime_error("Ungueltiges Antwortlimit.");
         if(e.stop) {
-            e.clear_cache();
+            e.clear_cache("stopped");
             return result_bytes(env,common_json({{"prompt_tokens",0},{"output_tokens",0},{"prefill_ms",0},
                 {"first_token_ms",0},{"generation_ms",0},{"tokens_per_second",0},{"stopped",true},{"limit_reached",false}}).dump());
         }
@@ -409,6 +458,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         env->DeleteLocalRef(cb_class);
         if (!on_chunk) throw std::runtime_error("Streaming-Callback fehlt.");
         llama_perf_context_reset(e.context.get());
+        const auto cached_before=e.cached.size();
         auto start=Clock::now();
         const auto reused=sync_cache(e,tokens,true);
         double prefill_ms = elapsed(start), first_token_ms = 0;
@@ -462,22 +512,25 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         const double generation_ms = elapsed(generation_start);
         // Remove reasoning now, not only when the next user message arrives.
         auto cleanup_start=Clock::now();
-        if(e.stop)e.clear_cache();
+        size_t cleanup_decoded=0;
+        if(e.stop)e.clear_cache("stopped");
         else {
             std::string final=output.visible;
             if(!grammar_text.empty() && final.rfind("<final>",0)==0 && final.size()>=15 && final.compare(final.size()-8,8,"</final>")==0)
                 final=final.substr(7,final.size()-15);
             common_chat_msg answer;answer.role="assistant";answer.content=final;
             input.messages.push_back(std::move(answer));input.add_generation_prompt=false;
-            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);sync_cache(e,clean,false);
+            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_decoded=clean.size()-sync_cache(e,clean,false);
         }
-        return result_bytes(env, common_json({{"prompt_tokens",tokens.size()}, {"output_tokens",generated},
+        return result_bytes(env, common_json({{"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
+            {"prompt_tokens",tokens.size()}, {"output_tokens",generated},
             {"prefill_ms",prefill_ms}, {"first_token_ms",first_token_ms},
             {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},
             {"first_visible_token_ms",first_visible_token_ms},{"reasoning_tokens",reasoning_tokens},{"reasoning_capped",reasoning_capped},{"injected_tokens",injected},
-            {"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
+            {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason},{"cached_before",cached_before},
+            {"cleanup_decoded_tokens",cleanup_decoded},{"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
             {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
             {"generation_ms",generation_ms}, {"tokens_per_second", generation_ms > 0 ? generated*1000.0/generation_ms : 0},
             {"stopped",e.stop.load()}, {"limit_reached",!eos && (answer_tokens>=limit || generated>=hard_limit)}}).dump());
-    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache("generate_error");fail(env,ex);return nullptr; }
 }

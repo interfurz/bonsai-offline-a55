@@ -82,7 +82,7 @@ public class KernelTemperatureTest {
         static int probes,heatOnProbe;
         @Implementation protected static void __staticInitializer__() { }
         @Implementation protected static void clearCache(long handle) {}
-        @Implementation protected static void commitTurn(long handle,byte[][] roles,byte[][] contents) {}
+        @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] contents) {return BonsaiApp.utf8("{}");}
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { }
         @Implementation protected static void referenceCpu(boolean enabled) { }
