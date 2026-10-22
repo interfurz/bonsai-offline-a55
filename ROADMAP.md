@@ -43,6 +43,11 @@ Release-Lint ohne Fehler und ARM64-CPU/Vulkan-Build erfolgreich. Einzelheiten,
 Grenzen und Renderbilder mit Testdaten:
 [Validierung von Prompt und Live-Zeile](docs/validation/SYSTEM-PROMPT-STATUS.md).
 
+Release-Nachtrag: PR #20 ist in `main` bei `ec28598…` integriert. Für
+**v0.5.1** wird Versionscode **14** verwendet; Prompt-Editor und Live-Zeile sind
+somit im Releasequellstand enthalten. Der abschließende APK-Nachweis wird nach
+Build/Signierung ergänzt. Die v0.5-Nachweise oben bleiben historische Belege.
+
 ## A. Projektziel und Definition of Done
 
 Eine vollständig lokale Android-KI kombiniert Bonsai 2 4B mit lesbaren

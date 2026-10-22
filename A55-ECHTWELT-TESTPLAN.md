@@ -69,7 +69,8 @@ gemäß [SIGNIEREN.md](SIGNIEREN.md) durchführen. Keine Deinstallation und kein
 Für ein inkompatibles Zertifikat zuerst einen geprüften Export-/Migrationsweg
 bereitstellen; ein beliebiges neu signiertes Debug-APK ist kein Ersatz.
 
-Für den angeforderten Folgerelease gilt Appversion **0.5**, Versionscode **13**.
+Für den aktuellen Folgerelease gilt Appversion **0.5.1**, Versionscode **14**.
+Die Signieridentität entspricht auch dem tatsächlichen v0.5-Release.
 Der bereitgestellte Release-Keystore entspricht der geprüften 0.4.4-Signatur
 (`d45ceaf8…`), nicht der 0.4.5-/0.3.0-Signatur (`ce1a585c…`). Den tatsächlichen
 APK-/Buildhash des veröffentlichten v0.5-Artefakts in das Sitzungsmanifest
@@ -281,10 +282,9 @@ Seit #15/#17 gehören X02–X06 zur gezielten zweiten UX-Sitzung. Deine spontane
 Eindrücke zu Licht, Lesbarkeit und Bedienelementen schon bei U01–U03 notieren;
 nicht erst nach Erklärung der beabsichtigten Gestaltung bewerten.
 
-### P01–P06: Systemprompt und Live-Wartezeile im Nachfolgebuild
+### P01–P06: Systemprompt und Live-Wartezeile ab v0.5.1
 
-Diese Fälle benötigen einen Build aus `feat/editable-system-prompt` oder dessen
-späterem Merge. Die bereits veröffentlichte v0.5-APK enthält den Editor nicht.
+Diese Fälle benötigen v0.5.1 oder einen Build des in `main` gemergten PR #20. Die bereits veröffentlichte v0.5-APK enthält den Editor nicht.
 Der Bedienweg ist **Menü → Modell → Antworten anpassen → Systemprompt bearbeiten**.
 
 | ID | Durchführung | Erwartung und Beleg |
