@@ -12,6 +12,11 @@ Die angezeigte Appversion bleibt 0.4.5. Die veröffentlichte
 älteren Stand **ohne** diesen Encoder. Quellstand, Appversion und ausgelieferte APK
 müssen bei jeder Validierung getrennt erfasst werden.
 
+Die nach Abschluss der Analyse erneut geprüfte `main`-Änderung `b2ab5a7`
+verschiebt nur ältere Dokumentationsdateien; der hier beschriebene Anwendungscode
+bleibt identisch. Der ergänzende [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md)
+verbindet vorhandene Debugausgaben, Geräteversuche und persönliches Nutzerfeedback.
+
 ## A. Projektziel und Definition of Done
 
 Eine vollständig lokale Android-KI kombiniert Bonsai 2 4B mit lesbaren
