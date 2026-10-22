@@ -51,7 +51,7 @@ public final class BonsaiApp extends Application {
     volatile boolean cancelled;
     boolean busy, loaded;
     String status = "Modell auswählen", error = "", backend = "CPU", benchmarkProgress = "";
-    JSONObject benchmark, optimizerReport, cpuReference;
+    JSONObject benchmark, optimizerReport, cpuReference, prefixWarmupStats;
     String backendNotice="";
     volatile boolean cpuCompatibility;
     boolean modelCheckFinished;
@@ -78,6 +78,7 @@ public final class BonsaiApp extends Application {
             prefs.edit().putBoolean("cpuCompatibility",false).remove("optimizedFor").apply();
         }
         cpuCompatibility=prefs.getBoolean("cpuCompatibility",false);
+        BenchmarkControls.install(this);
         store = new ChatStore(this);
         store.recoverInterruptedTurns();
         if(prefs.getBoolean("optimizerRunning",false)) {
@@ -100,7 +101,10 @@ public final class BonsaiApp extends Application {
     int microBatch() { return prefs.getInt("microBatch",gpu()?1:32); }
     String profileIdentity() { return profileIdentity(gpu(),threads(),batchThreads(),microBatch()); }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+prefs.getBoolean("flashAttention",false)+":"+prefs.getBoolean("kvQ8",false)+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
+        return profileIdentity(gpu,threads,batchThreads,microBatch,prefs.getBoolean("flashAttention",false),prefs.getBoolean("kvQ8",false));
+    }
+    String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch,boolean flash,boolean q8) {
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {
@@ -118,7 +122,7 @@ public final class BonsaiApp extends Application {
     int maxTokens() { return prefs.getInt("maxTokens", 512); }
     boolean gpu() { return BuildConfig.VULKAN_BUILD && prefs.getBoolean("gpu", false); }
     private void resetConversationCache() {
-        if(handle!=0)worker.execute(()->NativeEngine.clearCache(handle));
+        if(handle!=0)worker.execute(()->{NativeEngine.clearCache(handle);if(loaded)warmPrefixOnWorker();});
     }
     void newChat() {
         if (busy) return;
@@ -157,7 +161,7 @@ public final class BonsaiApp extends Application {
         messages.clear();messages.addAll(store.messages(currentChat));
         send(question.text);
     }
-    private boolean begin(String label) {
+    boolean begin(String label) {
         if (busy) return false;
         if (handle == 0) { error = "Native Runtime konnte nicht geladen werden: " + nativeError; notifyUi(); return false; }
         discardModelApproval();
@@ -174,7 +178,7 @@ public final class BonsaiApp extends Application {
         cancelled=true; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
     }
     private String reason(Throwable e) { return e.getMessage() == null ? e.toString() : e.getMessage(); }
-    private void complete(String issue) {
+    void complete(String issue) {
         busy=false;
         if(inferenceService!=null) inferenceService.finishIfIdle();
         error = !backgroundError.isEmpty() ? backgroundError : cancelled ? "" : issue;
@@ -194,10 +198,12 @@ public final class BonsaiApp extends Application {
         main.post(() -> { loaded=true; backend=actualBackend; });
     }
     void warmPrefixOnWorker() {
+        prefixWarmupStats=null;
         if(!prefs.getBoolean("prefixWarmup",true)) return;
         try {
             byte[] stats=NativeEngine.warmPrefix(handle,utf8(ToolLoop.systemPrompt(gbnfTools())));
-            if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn","prefix "+new String(stats,StandardCharsets.UTF_8));
+            prefixWarmupStats=new JSONObject(new String(stats,StandardCharsets.UTF_8));
+            if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn","prefix "+prefixWarmupStats);
         } catch(Exception | LinkageError e) {
             if(cancelled) throw new IllegalStateException("Abgebrochen.",e);
             android.util.Log.w("BonsaiTurn","Prefix-Vorwärmen fehlgeschlagen: "+reason(e));
@@ -335,10 +341,10 @@ public final class BonsaiApp extends Application {
         ChatStore.Message answer=new ChatStore.Message(0,"assistant","","");messages.add(answer);notifyUi();
         final int limit=maxTokens();
         final boolean grammarEnabled=gbnfTools();
+        BenchmarkMetrics metrics=new BenchmarkMetrics();
         worker.execute(() -> {
             String text="", issue="", detail="";
             final int[] reasoningBudget={600};
-            BenchmarkMetrics metrics=new BenchmarkMetrics();
             try {
                 ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts,grammar)->{
                     ReplyStream output=new ReplyStream(grammarEnabled,value->{
@@ -353,18 +359,20 @@ public final class BonsaiApp extends Application {
                     return new ToolLoop.Result(output.text(),stats);
                 },()->cancelled,grammarEnabled);
                 text=ReasoningText.strip(result.text);
-                byte[][] committedRoles=new byte[history.size()+2][], committedTexts=new byte[history.size()+2][];
-                committedRoles[0]=utf8("system");committedTexts[0]=utf8(ToolLoop.systemPrompt(grammarEnabled));
-                for(int i=0;i<history.size();i++) { committedRoles[i+1]=utf8(history.get(i).role);committedTexts[i+1]=utf8(history.get(i).text); }
-                committedRoles[history.size()+1]=utf8("assistant");committedTexts[history.size()+1]=utf8(text);
                 long commitStart=android.os.SystemClock.elapsedRealtime();
-                NativeEngine.commitTurn(handle,committedRoles,committedTexts);
-                JSONObject stats=metrics.finish(result.stats,android.os.SystemClock.elapsedRealtime()-commitStart);
+                JSONObject committed=commitCleanTurn(history,text,grammarEnabled);
+                JSONObject stats=metrics.finish(result.stats,android.os.SystemClock.elapsedRealtime()-commitStart,committed);
                 if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn",stats.toString());
                 final double speed=stats.getDouble("tokens_per_second");
                 main.post(()->liveTokensPerSecond=speed);
                 detail=BenchmarkMetrics.detail(stats);
-            } catch(Exception | LinkageError e) { issue=reason(e); detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort"; }
+            } catch(Exception | LinkageError e) {
+                issue=reason(e);detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort";
+                if(prefs.getBoolean("turnDebugLog",false)) {
+                    try {android.util.Log.d("BonsaiTurn",metrics.finish(new JSONObject(),0).put("error",issue).put("cancelled",cancelled).toString());}
+                    catch(Exception ignored) { }
+                }
+            }
             try {
                 if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
                 else store.removeMessage(userId);  // Do not leave an unanswered user turn in model history.
@@ -381,6 +389,21 @@ public final class BonsaiApp extends Application {
         });
         return true;
     }
+    JSONObject commitCleanTurn(List<ChatStore.Message> history,String text,boolean grammar) throws Exception {
+        byte[][] roles=new byte[history.size()+2][],texts=new byte[history.size()+2][];
+        roles[0]=utf8("system");texts[0]=utf8(ToolLoop.systemPrompt(grammar));
+        for(int i=0;i<history.size();i++) {
+            roles[i+1]=utf8(history.get(i).role);texts[i+1]=utf8(ReasoningText.strip(history.get(i).text));
+        }
+        roles[history.size()+1]=utf8("assistant");texts[history.size()+1]=utf8(ReasoningText.strip(text));
+        return new JSONObject(new String(NativeEngine.commitTurn(handle,roles,texts),StandardCharsets.UTF_8));
+    }
+    void runChatBenchmark() {
+        if(!loaded) {error="Für den Benchmark bitte zuerst ein Modell laden.";notifyUi();return;}
+        if(!begin("Chat-Benchmark wird vorbereitet …")) return;
+        benchmark=null;
+        worker.execute(()->BenchmarkChat.run(this,handle));
+    }
     static byte[] utf8(String text) { return text.getBytes(StandardCharsets.UTF_8); }
 
     static long rssKb() {
@@ -392,11 +415,11 @@ public final class BonsaiApp extends Application {
     int thermalStatus() {
         return Build.VERSION.SDK_INT>=29 ? ((PowerManager)getSystemService(POWER_SERVICE)).getCurrentThermalStatus() : -1;
     }
-    private double batteryTemperature() {
+    double batteryTemperature() {
         Intent battery=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         return battery==null ? -1 : battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,-10)/10.0;
     }
-    private String modelSha256() throws Exception {
+    String modelSha256() throws Exception {
         return fileSha256(modelFile());
     }
     private String fileSha256(File source) throws Exception {
@@ -447,6 +470,9 @@ public final class BonsaiApp extends Application {
     }
 
     void runBenchmark() {
+        if(!BenchmarkControls.show(this)) runLegacyBenchmark();
+    }
+    void runLegacyBenchmark() {
         if(!loaded) { error="Für den Benchmark bitte zuerst ein Modell laden."; notifyUi(); return; }
         if(!begin("Modellprüfsumme wird berechnet …")) return;
         benchmark=null; benchmarkProgress="Modellprüfsumme wird berechnet …";
@@ -466,7 +492,7 @@ public final class BonsaiApp extends Application {
                     .put("model_metadata",readReport("model-metadata.json"))
                     .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("context_tokens",selectedContext).put("threads",selectedThreads).put("max_output_tokens",128)
-                    .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention",false)
+                    .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention_requested",prefs.getBoolean("flashAttention",false)).put("kv_q8_requested",prefs.getBoolean("kvQ8",false))
                     .put("thinking",false).put("seed",42).put("prompt",prompt).put("runs",runs)
                     .put("thermal_before",thermalStatus()).put("battery_celsius_before",batteryTemperature())
                     .put("rss_baseline_kb",baseline).put("rss_sample_interval_ms",250)

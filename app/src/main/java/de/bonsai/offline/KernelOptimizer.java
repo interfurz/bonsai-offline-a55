@@ -146,7 +146,7 @@ final class KernelOptimizer {
             a.prefs.edit().putBoolean("gpu",winner.gpu).putInt("threads",winner.threads)
                 .putInt("batchThreads",winner.batchThreads).putInt("microBatch",winner.microBatch)
                 .putBoolean("flashAttention",winner.flashAttention).putBoolean("kvQ8",winner.kvQ8)
-                .putString("optimizedFor",a.profileIdentity(winner.gpu,winner.threads,winner.batchThreads,winner.microBatch)).apply();
+                .putString("optimizedFor",a.profileIdentity(winner.gpu,winner.threads,winner.batchThreads,winner.microBatch,winner.flashAttention,winner.kvQ8)).apply();
             a.warmPrefixOnWorker();
             committed=true; ready=true;
         } catch(Exception | LinkageError e) {

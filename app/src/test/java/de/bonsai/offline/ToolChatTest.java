@@ -30,7 +30,7 @@ public class ToolChatTest {
         static CountDownLatch partial,resume;
         @Implementation protected static void __staticInitializer__() {}
         @Implementation protected static void clearCache(long handle) { clears++; }
-        @Implementation protected static void commitTurn(long handle,byte[][] roles,byte[][] contents) { committedRoles=roles;committedTexts=contents; }
+        @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] contents) { committedRoles=roles;committedTexts=contents;return BonsaiApp.utf8("{}"); }
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) {}
         @Implementation protected static void stop(long handle) { finish.countDown(); }

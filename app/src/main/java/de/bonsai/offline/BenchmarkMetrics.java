@@ -15,8 +15,13 @@ final class BenchmarkMetrics {
     }
     void add(JSONObject stats) { rounds.put(stats); }
     JSONObject finish(JSONObject last, double commitMs) throws Exception {
+        return finish(last,commitMs,new JSONObject());
+    }
+    JSONObject finish(JSONObject last,double commitMs,JSONObject committed) throws Exception {
         JSONObject result = new JSONObject(last.toString());
-        for (String key : new String[]{"output_tokens","reasoning_tokens","reused_prompt_tokens","decoded_prompt_tokens","prefill_ms","generation_ms","cleanup_ms"}) {
+        java.util.Iterator<String> keys=committed.keys();
+        while(keys.hasNext()) {String key=keys.next();result.put(key,committed.get(key));}
+        for (String key : new String[]{"prompt_tokens","output_tokens","reasoning_tokens","reused_prompt_tokens","decoded_prompt_tokens","prefill_ms","generation_ms","cleanup_ms","cleanup_decoded_tokens","injected_tokens","dropped_turns"}) {
             double total=0;
             for(int i=0;i<rounds.length();i++) total+=rounds.getJSONObject(i).optDouble(key,0);
             result.put(key,total);

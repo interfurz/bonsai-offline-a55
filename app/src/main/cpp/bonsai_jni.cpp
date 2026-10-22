@@ -47,7 +47,7 @@ struct Engine {
         evicted_turns=0;cached.clear();
         if(context)llama_memory_clear(llama_get_memory(context.get()),true);
     }
-    void unload() { evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
+    void unload() { ++cache_resets;reset_reason="unload";evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
 };
 Engine & engine(jlong handle) {
     if (!handle) throw std::runtime_error("Native Engine fehlt.");
@@ -178,7 +178,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_de_bonsai_offline_NativeEngine_clearCache(JNIEnv * env,jclass,jlong handle) {
     try { engine(handle).clear_cache(); } catch(const std::exception & ex) { fail(env,ex); }
 }
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,jobjectArray roles,jobjectArray contents) {
     try {
         auto & e=engine(handle);
@@ -194,9 +194,15 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
             input.messages.push_back(std::move(m));env->DeleteLocalRef(r);env->DeleteLocalRef(c);
         }
         retain_window(e,input);
-        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);sync_cache(e,tokens,false);
+        auto start=Clock::now();
+        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);auto reused=sync_cache(e,tokens,false);
+        return result_bytes(env,common_json({{"cached_tokens",e.cached.size()},
+            {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
+            {"commit_decoded_tokens",tokens.size()-reused},{"commit_native_ms",elapsed(start)},
+            {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason}}).dump());
     } catch(const std::exception & ex) {
-        if(handle)engine(handle).clear_cache();fail(env,ex);
+        if(handle)engine(handle).clear_cache("commit_error");
+        fail(env,ex);return nullptr;
     }
 }
 
@@ -410,7 +416,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             {"score_ms",prefill + decode * 128.0 / steps},
             {"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
             {"fingerprint",std::to_string(fingerprint)}, {"signature",signature}, {"top_tokens",top_tokens}}).dump());
-    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache("probe_error");fail(env,ex);return nullptr; }
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
@@ -421,7 +427,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         if (!e.context || !e.model) throw std::runtime_error("Bitte zuerst ein Modell laden.");
         if (limit < 16 || limit > 2048) throw std::runtime_error("Ungueltiges Antwortlimit.");
         if(e.stop) {
-            e.clear_cache();
+            e.clear_cache("stopped");
             return result_bytes(env,common_json({{"prompt_tokens",0},{"output_tokens",0},{"prefill_ms",0},
                 {"first_token_ms",0},{"generation_ms",0},{"tokens_per_second",0},{"stopped",true},{"limit_reached",false}}).dump());
         }
@@ -516,7 +522,8 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             input.messages.push_back(std::move(answer));input.add_generation_prompt=false;
             int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_decoded=clean.size()-sync_cache(e,clean,false);
         }
-        return result_bytes(env, common_json({{"prompt_tokens",tokens.size()}, {"output_tokens",generated},
+        return result_bytes(env, common_json({{"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
+            {"prompt_tokens",tokens.size()}, {"output_tokens",generated},
             {"prefill_ms",prefill_ms}, {"first_token_ms",first_token_ms},
             {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},
             {"first_visible_token_ms",first_visible_token_ms},{"reasoning_tokens",reasoning_tokens},{"reasoning_capped",reasoning_capped},{"injected_tokens",injected},
@@ -525,5 +532,5 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
             {"generation_ms",generation_ms}, {"tokens_per_second", generation_ms > 0 ? generated*1000.0/generation_ms : 0},
             {"stopped",e.stop.load()}, {"limit_reached",!eos && (answer_tokens>=limit || generated>=hard_limit)}}).dump());
-    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache();fail(env,ex);return nullptr; }
+    } catch (const std::exception & ex) { if(handle)engine(handle).clear_cache("generate_error");fail(env,ex);return nullptr; }
 }

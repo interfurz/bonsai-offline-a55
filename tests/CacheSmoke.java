@@ -19,6 +19,34 @@ public final class CacheSmoke {
         return stats;
     }
     static void require(boolean condition,String message) { if(!condition)throw new AssertionError(message); }
+    static void incremental(long handle) throws Exception {
+        NativeEngine.clearCache(handle);
+        List<String> roles=new ArrayList<>(List.of("system")),texts=new ArrayList<>(List.of("You are helpful."));
+        int previousCached=0;
+        for(int turn=0;turn<3;turn++) {
+            roles.add("user");texts.add("Question "+turn+". Answer OK.");
+            JSONObject stats=generate(handle,roles,texts,"root ::= \"<think>hidden</think>OK\"",16);
+            require(answer.equals("OK"),"Reasoning in history");
+            if(turn>0)require(stats.getInt("reused_prompt_tokens")==previousCached,"Old prompt decoded again: "+stats);
+            require(stats.getInt("decoded_prompt_tokens")==stats.getInt("prompt_tokens")-stats.getInt("reused_prompt_tokens"),"Inconsistent decode count");
+            roles.add("assistant");texts.add("<think>hidden</think>"+answer);
+            JSONObject committed=new JSONObject(new String(NativeEngine.commitTurn(handle,
+                roles.stream().map(CacheSmoke::bytes).toArray(byte[][]::new),texts.stream().map(CacheSmoke::bytes).toArray(byte[][]::new)),StandardCharsets.UTF_8));
+            texts.set(texts.size()-1,answer);
+            previousCached=committed.getInt("cached_tokens");
+            require(previousCached==committed.getInt("kv_positions"),"KV ledger mismatch");
+            require(committed.getInt("commit_decoded_tokens")==0,"Generate did not already clean reasoning");
+            for(String text:texts)require(!text.contains("hidden") && !text.contains("<think>"),"Reasoning retained in history");
+            NativeEngine.configure(handle,turn%2+1,2,32);
+            System.out.println("Host turn "+(turn+1)+": reused="+stats.getInt("reused_prompt_tokens")+", decoded="+stats.getInt("decoded_prompt_tokens")+", clean KV="+previousCached);
+        }
+        // Only after all three uninterrupted turns: cold rendering must give exactly
+        // the same KV size as the live reasoning-free cache.
+        NativeEngine.clearCache(handle);
+        JSONObject cold=new JSONObject(new String(NativeEngine.commitTurn(handle,
+            roles.stream().map(CacheSmoke::bytes).toArray(byte[][]::new),texts.stream().map(CacheSmoke::bytes).toArray(byte[][]::new)),StandardCharsets.UTF_8));
+        require(previousCached==cold.getInt("cached_tokens"),"Reasoning remained in live KV");
+    }
     public static void main(String[] args) throws Exception {
         long handle=NativeEngine.create();
         try {
@@ -57,28 +85,7 @@ public final class CacheSmoke {
             // A subsequent plain final answer must reuse the cleaned, reasoning-free context.
             JSONObject clean=generate(handle,List.of("user","assistant","user"),List.of("Answer.","OK","Continue."),"root ::= \"Done.\"",0);
             require(clean.getInt("reused_prompt_tokens")>0,"Cleaned prefix missing");
-            // Three real JNI turns. Compare each cleaned KV to the same cold prompt;
-            // reapplying a profile (including a thread-only change) must retain all old tokens.
-            NativeEngine.clearCache(handle);
-            roles=new ArrayList<>(List.of("system"));texts=new ArrayList<>(List.of("You are helpful."));
-            int previousCached=0;
-            for(int turn=0;turn<3;turn++) {
-                roles.add("user");texts.add("Question "+turn+". Answer OK.");
-                JSONObject incremental=generate(handle,roles,texts,"root ::= \"<think>hidden</think>OK\"",16);
-                require(answer.equals("OK"),"Reasoning in history");
-                if(turn>0) require(incremental.getInt("reused_prompt_tokens")==previousCached,"Old prompt decoded again: "+incremental);
-                require(incremental.getInt("decoded_prompt_tokens")==incremental.getInt("prompt_tokens")-incremental.getInt("reused_prompt_tokens"),"Inconsistent decode count");
-                roles.add("assistant");texts.add("<think>hidden</think>"+answer);
-                NativeEngine.commitTurn(handle,roles.stream().map(CacheSmoke::bytes).toArray(byte[][]::new),texts.stream().map(CacheSmoke::bytes).toArray(byte[][]::new));
-                texts.set(texts.size()-1,answer);
-                previousCached=incremental.getInt("cached_tokens");
-                require(previousCached==incremental.getInt("kv_positions"),"KV ledger mismatch");
-                // Cold replay proves no hidden reasoning positions remain, not just a small cache.
-                NativeEngine.clearCache(handle);
-                JSONObject replay=generate(handle,roles.subList(0,roles.size()-1),texts.subList(0,texts.size()-1),"root ::= \"OK\"",0);
-                require(previousCached==replay.getInt("cached_tokens"),"Reasoning remains in KV");
-                NativeEngine.configure(handle,turn%2+1,2,32);
-            }
+            incremental(handle);
             NativeEngine.clearCache(handle);
             roles=new ArrayList<>(List.of("system"));texts=new ArrayList<>(List.of("You are helpful."));
             boolean dropped=false;
