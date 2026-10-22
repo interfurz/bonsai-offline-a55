@@ -27,7 +27,7 @@ import java.util.zip.InflaterInputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Read-only access to the Python export. No network, model loading or corpus copy. */
+/** Read-only access to the Python export with optional local query inference. */
 final class KnowledgeSearch {
     static final int MAX_HITS=3, MAX_TEXT=600, MAX_HEADING=160, MAX_SOURCE=240, MAX_QUERY=256;
     static final int DIM=256, CANDIDATES=20, MAX_ORIGINAL_BYTES=32768;
@@ -35,6 +35,7 @@ final class KnowledgeSearch {
     interface QueryEncoder {
         String model();
         float[] encode(String query) throws Exception;
+        default float[] encode(String query,BooleanSupplier cancelled) throws Exception {return encode(query);}
     }
     private final File database,vectors,ivf;
     private final int nprobe,rrfK;
@@ -56,8 +57,15 @@ final class KnowledgeSearch {
         File ivf=resolve(internal,directory,config.getProperty("ivf","knowledge.ivf"));
         if(!ivf.isFile() && config.containsKey("ivf"))throw new IOException("IVF-Index fehlt: "+ivf.getName());
         try {
+            String encoderModel=config.getProperty("encoder_model",EmbeddingGemma2Encoder.MODEL);
+            QueryEncoder queryEncoder;
+            if(encoderModel.equals("hash-v1"))queryEncoder=new SampleEncoder();
+            else if(encoderModel.equals(EmbeddingGemma2Encoder.MODEL))queryEncoder=new EmbeddingGemma2Encoder(
+                resolve(internal,directory,config.getProperty("encoder_path","embeddinggemma-2-Q8_0.gguf")),
+                Integer.parseInt(config.getProperty("encoder_threads","4")));
+            else throw new IllegalArgumentException("Unbekanntes encoder_model: "+encoderModel);
             return new KnowledgeSearch(resolve(internal,directory,config.getProperty("database","knowledge.sqlite")),
-                resolve(internal,directory,config.getProperty("vectors","vectors.i8")),ivf.isFile()?ivf:null,new SampleEncoder(),
+                resolve(internal,directory,config.getProperty("vectors","vectors.i8")),ivf.isFile()?ivf:null,queryEncoder,
                 Integer.parseInt(config.getProperty("nprobe","16")),Integer.parseInt(config.getProperty("rrf_k","60")));
         } catch(IllegalArgumentException e){throw new IOException("Ungültige RAG-Suchkonfiguration: "+e.getMessage(),e);}
     }
@@ -82,9 +90,25 @@ final class KnowledgeSearch {
                 try(Cursor c=db.rawQuery("SELECT value FROM metadata WHERE key='embedding_model'",null)) {
                     if(c.moveToFirst())model=c.getString(0);
                 }
-                if(encoder!=null && encoder.model().equals(model)) {
-                    float[] vector=encoder.encode(query);
-                    semantic=ivf==null?vectorRanks(vector,cancelled):mappedIndex(ivf).search(vector,nprobe,CANDIDATES,cancelled,true,false).ranking();
+                // Existing fixture installations continue to work without configuration.
+                QueryEncoder selected="hash-v1".equals(model) && encoder instanceof EmbeddingGemma2Encoder?new SampleEncoder():encoder;
+                if(selected!=null && selected.model().equals(model)) {
+                    boolean compatible=true;
+                    if(EmbeddingGemma2Encoder.MODEL.equals(model)) {
+                        try(Cursor c=db.rawQuery("SELECT value FROM metadata WHERE key='embedding_profile'",null)) {
+                            compatible=c.moveToFirst() && EmbeddingGemma2Encoder.PROFILE.equals(c.getString(0));
+                        }
+                    }
+                    float[] vector=null;
+                    if(!compatible)warning="Nur Textsuche: EmbeddingGemma-2-Index mit aktuellem RAG-Export neu erstellen (embedding_profile).";
+                    else try {vector=selected.encode(query,cancelled);}
+                    catch(CancellationException e){throw e;}
+                    catch(Exception | LinkageError e) {
+                        check(cancelled);
+                        warning="Nur Textsuche: Query-Encoder fehlgeschlagen: "+clip(String.valueOf(e.getMessage()),160);
+                    }
+                    check(cancelled);
+                    if(vector!=null)semantic=ivf==null?vectorRanks(vector,cancelled):mappedIndex(ivf).search(vector,nprobe,CANDIDATES,cancelled,true,false).ranking();
                 }
                 else warning="Nur Textsuche: passender Query-Encoder für "+clip(model,100)+" fehlt.";
             }
