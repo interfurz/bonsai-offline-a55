@@ -13,15 +13,17 @@ def fts_query(query):
     return " OR ".join('"' + word + '"' for word in re.findall(r"[^\W_]+", query.lower())[:32])
 
 
-def fuse(rankings, limit=MAX_HITS):
+def fuse(rankings, limit=MAX_HITS, rrf_k=60):
+    if rrf_k < 0:
+        raise ValueError("rrf_k must be nonnegative")
     scores = {}
     for ranking in rankings:
         for rank, chunk_id in enumerate(ranking, 1):
-            scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (60 + rank)
+            scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (rrf_k + rank)
     return sorted(scores, key=lambda key: (-scores[key], key))[:limit]
 
 
-def search(database, query, vectors=None, top_k=MAX_HITS, backend=None):
+def search(database, query, vectors=None, top_k=MAX_HITS, backend=None, ivf=None, nprobe=16, rrf_k=60):
     if not isinstance(query, str) or not query.strip() or len(query) > MAX_QUERY:
         raise ValueError("query must contain 1..256 characters")
     if not 1 <= top_k <= MAX_HITS:
@@ -33,16 +35,21 @@ def search(database, query, vectors=None, top_k=MAX_HITS, backend=None):
         match = fts_query(query)
         lexical = [row[0] for row in db.execute("SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts),rowid LIMIT 20", (match,))] if match else []
         semantic = []
-        if vectors:
+        if vectors or ivf:
             name = db.execute("SELECT value FROM metadata WHERE key='embedding_model'").fetchone()
             if not name:
                 raise ValueError("Embedding model metadata missing")
             backend = backend or encoder(name[0])
             if backend.name != name[0]:
                 raise ValueError("Query encoder does not match index model")
-            semantic = vector_ranks(vectors, backend.encode([query], query=True)[0])
+            vector = backend.encode([query], query=True)[0]
+            if ivf:
+                from .ivf import IvfIndex
+                semantic = IvfIndex(ivf).search(vector, nprobe=nprobe)['ids']
+            else:
+                semantic = vector_ranks(vectors, vector)
         hits = []
-        for chunk_id in fuse([lexical, semantic], top_k):
+        for chunk_id in fuse([lexical, semantic], top_k, rrf_k):
             row = db.execute("SELECT article_id,title,heading,source,text_zlib FROM chunks WHERE id=?", (chunk_id,)).fetchone()
             if not row:
                 raise ValueError("Vector chunk ID missing from database")

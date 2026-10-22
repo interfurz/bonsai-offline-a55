@@ -36,11 +36,16 @@ final class KnowledgeSearch {
         String model();
         float[] encode(String query) throws Exception;
     }
-    private final File database,vectors;
+    private final File database,vectors,ivf;
+    private final int nprobe,rrfK;
     private final QueryEncoder encoder;
     KnowledgeSearch(File database,File vectors) { this(database,vectors,new SampleEncoder()); }
     KnowledgeSearch(File database,File vectors,QueryEncoder encoder) {
-        this.database=database;this.vectors=vectors;this.encoder=encoder;
+        this(database,vectors,null,encoder,16,60);
+    }
+    KnowledgeSearch(File database,File vectors,File ivf,QueryEncoder encoder,int nprobe,int rrfK) {
+        if(nprobe<1 || rrfK<0)throw new IllegalArgumentException("nprobe muss positiv und rrf_k nichtnegativ sein.");
+        this.database=database;this.vectors=vectors;this.ivf=ivf;this.encoder=encoder;this.nprobe=nprobe;this.rrfK=rrfK;
     }
     static KnowledgeSearch forStore(ChatStore store) throws IOException {
         File internal=new File(store.getReadableDatabase().getPath()).getParentFile().getParentFile();
@@ -48,8 +53,13 @@ final class KnowledgeSearch {
         Properties config=new Properties();
         File settings=new File(directory,"config.properties");
         if(settings.isFile())try(InputStream in=new FileInputStream(settings)){config.load(in);}
-        return new KnowledgeSearch(resolve(internal,directory,config.getProperty("database","knowledge.sqlite")),
-            resolve(internal,directory,config.getProperty("vectors","vectors.i8")));
+        File ivf=resolve(internal,directory,config.getProperty("ivf","knowledge.ivf"));
+        if(!ivf.isFile() && config.containsKey("ivf"))throw new IOException("IVF-Index fehlt: "+ivf.getName());
+        try {
+            return new KnowledgeSearch(resolve(internal,directory,config.getProperty("database","knowledge.sqlite")),
+                resolve(internal,directory,config.getProperty("vectors","vectors.i8")),ivf.isFile()?ivf:null,new SampleEncoder(),
+                Integer.parseInt(config.getProperty("nprobe","16")),Integer.parseInt(config.getProperty("rrf_k","60")));
+        } catch(IllegalArgumentException e){throw new IOException("Ungültige RAG-Suchkonfiguration: "+e.getMessage(),e);}
     }
     private static File resolve(File internal,File directory,String path) throws IOException {
         File file=(new File(path).isAbsolute()?new File(path):new File(directory,path)).getCanonicalFile();
@@ -67,17 +77,20 @@ final class KnowledgeSearch {
             List<Long> lexical=lexical(db,query);
             List<Long> semantic=new ArrayList<>();
             String warning="";
-            if(vectors!=null && vectors.isFile()) {
+            if(ivf!=null || (vectors!=null && vectors.isFile())) {
                 String model="";
                 try(Cursor c=db.rawQuery("SELECT value FROM metadata WHERE key='embedding_model'",null)) {
                     if(c.moveToFirst())model=c.getString(0);
                 }
-                if(encoder!=null && encoder.model().equals(model))semantic=vectorRanks(encoder.encode(query),cancelled);
+                if(encoder!=null && encoder.model().equals(model)) {
+                    float[] vector=encoder.encode(query);
+                    semantic=ivf==null?vectorRanks(vector,cancelled):mappedIndex(ivf).search(vector,nprobe,CANDIDATES,cancelled,true,false).ranking();
+                }
                 else warning="Nur Textsuche: passender Query-Encoder für "+clip(model,100)+" fehlt.";
             }
             Map<Long,Double> scores=new HashMap<>();
             for(List<Long> ranking:java.util.Arrays.asList(lexical,semantic))for(int i=0;i<ranking.size();i++)
-                scores.merge(ranking.get(i),1.0/(61+i),Double::sum);
+                scores.merge(ranking.get(i),1.0/(rrfK+1.0+i),Double::sum);
             List<Long> ids=new ArrayList<>(scores.keySet());
             ids.sort(Comparator.<Long>comparingDouble(id->-scores.get(id)).thenComparingLong(id->id));
             JSONArray hits=new JSONArray();
@@ -192,6 +205,158 @@ final class KnowledgeSearch {
     private static void check(BooleanSupplier cancelled) {
         if(cancelled.getAsBoolean())throw new CancellationException("Abgebrochen.");
     }
+    /** One immutable mapped snapshot, shared by queries; vector bytes never enter the heap. */
+    static final class IvfIndex {
+        static final int HEADER_BYTES=128, MAP_BYTES=256*1024*1024;
+        final int clusters;
+        final long count;
+        final float scale;
+        private final ByteBuffer metadata;
+        private final ByteBuffer[] pages;
+        private final long centersOffset,idsOffset;
+        private final long[] offsets;
+        IvfIndex(File file) throws IOException {
+            if(!file.isFile())throw new IOException("IVF-Index fehlt: "+file.getName());
+            try(java.io.RandomAccessFile source=new java.io.RandomAccessFile(file,"r");
+                java.nio.channels.FileChannel channel=source.getChannel()) {
+                if(channel.size()<HEADER_BYTES)throw invalid("Header abgeschnitten");
+                ByteBuffer header=channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY,0,HEADER_BYTES).order(ByteOrder.LITTLE_ENDIAN);
+                byte[] magic=new byte[8];header.get(magic);
+                int version=header.getInt(),headerBytes=header.getInt(),dimension=header.getInt();
+                clusters=header.getInt();count=header.getLong();scale=header.getFloat();int flags=header.getInt();
+                long offsetsOffset=header.getLong();centersOffset=header.getLong();idsOffset=header.getLong();
+                long vectorsOffset=header.getLong(),fileBytes=header.getLong();header.getLong(); // training seed
+                for(int i=88;i<HEADER_BYTES;i++)if(header.get(i)!=0)throw invalid("Reservierte Headerbytes");
+                if(!new String(magic,StandardCharsets.US_ASCII).equals("BRAGIVF1") || version!=1 || headerBytes!=HEADER_BYTES
+                    || dimension!=DIM || clusters<1 || count<0 || count>Long.MAX_VALUE/(DIM+8L)
+                    || !Float.isFinite(scale) || scale<=0 || flags!=1)throw invalid("Header/Version/Dimension/Skalierung");
+                long expectedCenters=HEADER_BYTES+((long)clusters+1)*8;
+                long expectedIds=expectedCenters+(long)clusters*DIM*4;
+                long expectedVectors=((expectedIds+count*8+4095)/4096)*4096;
+                if(offsetsOffset!=HEADER_BYTES || centersOffset!=expectedCenters || idsOffset!=expectedIds
+                    || vectorsOffset!=expectedVectors || vectorsOffset>Integer.MAX_VALUE
+                    || fileBytes!=vectorsOffset+count*DIM || fileBytes!=channel.size())throw invalid("Dateigröße/Offsets");
+                metadata=channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY,0,vectorsOffset).order(ByteOrder.LITTLE_ENDIAN);
+                offsets=new long[clusters+1];
+                for(int i=0;i<=clusters;i++) {
+                    offsets[i]=metadata.getLong((int)(HEADER_BYTES+(long)i*8));
+                    if(offsets[i]<0 || offsets[i]>count || (i>0 && offsets[i]<offsets[i-1]))throw invalid("Cluster-Offsets");
+                }
+                if(offsets[0]!=0 || offsets[clusters]!=count)throw invalid("Cluster-Grenzen");
+                for(long at=centersOffset;at<idsOffset;at+=4)
+                    if(!Float.isFinite(metadata.getFloat((int)at)))throw invalid("Zentroid enthält ungültige Werte");
+                int pageCount=(int)((count*DIM+MAP_BYTES-1)/MAP_BYTES);
+                pages=new ByteBuffer[pageCount];
+                for(int i=0;i<pageCount;i++) {
+                    long relative=(long)i*MAP_BYTES;
+                    pages[i]=channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY,vectorsOffset+relative,
+                        Math.min(MAP_BYTES,count*DIM-relative));
+                }
+            } catch(IllegalArgumentException | IndexOutOfBoundsException e) {
+                throw new IOException("Ungültiger IVF-Index: "+e.getMessage(),e);
+            }
+        }
+        private static IOException invalid(String detail){return new IOException("Ungültiger IVF-Index: "+detail);}
+        IvfResult search(float[] input,int nprobe,int topK,BooleanSupplier cancelled,boolean positiveOnly,boolean fullScan) throws IOException {
+            if(input==null || input.length!=DIM || nprobe<1 || topK<1 || topK>10000)throw invalid("Query/nprobe/Top-k");
+            check(cancelled);
+            double norm=0;
+            for(float value:input) {
+                if(!Float.isFinite(value))throw invalid("Query-Vektor");
+                norm+=(double)value*value;
+            }
+            norm=Math.sqrt(norm);
+            float[] query=new float[DIM];int[] quantized=new int[DIM];
+            for(int d=0;d<DIM;d++) {
+                query[d]=norm==0?0:(float)(input[d]/norm);
+                double value=(double)query[d]/scale;
+                quantized[d]=(int)Math.max(-127,Math.min(127,Math.copySign(Math.floor(Math.abs(value)+.5),value)));
+            }
+            int probes=fullScan?clusters:Math.min(nprobe,clusters);
+            int[] chosen=new int[probes];double[] distances=new double[probes];
+            java.util.Arrays.fill(distances,Double.POSITIVE_INFINITY);
+            long start=System.nanoTime();
+            if(fullScan)for(int i=0;i<clusters;i++)chosen[i]=i;
+            else for(int cluster=0;cluster<clusters;cluster++) {
+                if((cluster&63)==0)check(cancelled);
+                double distance=0;int at=(int)(centersOffset+(long)cluster*DIM*4);
+                for(int d=0;d<DIM;d++) {
+                    double center=metadata.getFloat(at+d*4);
+                    distance+=center*center-2*center*query[d];
+                }
+                if(distance>=distances[probes-1])continue; // equal distances keep the lower cluster ID
+                int position=probes-1;
+                while(position>0 && distance<distances[position-1]) {
+                    chosen[position]=chosen[position-1];distances[position]=distances[position-1];position--;
+                }
+                chosen[position]=cluster;distances[position]=distance;
+            }
+            long centroidNanos=System.nanoTime()-start;start=System.nanoTime();
+            IntHeap heap=new IntHeap(topK);long scanned=0;
+            for(int cluster:chosen) {
+                check(cancelled);
+                long position=offsets[cluster],end=offsets[cluster+1];scanned+=end-position;
+                while(position<end) {
+                    long relative=position*DIM;
+                    int page=(int)(relative/MAP_BYTES),at=(int)(relative%MAP_BYTES);
+                    ByteBuffer bytes=pages[page];
+                    long until=Math.min(end,((long)page+1)*MAP_BYTES/DIM);
+                    for(;position<until;position++,at+=DIM) {
+                        if((position&1023)==0)check(cancelled);
+                        int dot=0;
+                        for(int d=0;d<DIM;d++)dot+=quantized[d]*bytes.get(at+d);
+                        if((!positiveOnly || dot>0) && heap.mayEnter(dot)) {
+                            long id=metadata.getLong((int)(idsOffset+position*8));
+                            if(id<=0)throw invalid("Chunk-ID");
+                            heap.add(id,dot);
+                        }
+                    }
+                }
+            }
+            long scanNanos=System.nanoTime()-start;
+            long[] ids=new long[heap.size];int[] dots=new int[heap.size];
+            for(int i=ids.length-1;i>=0;i--){ids[i]=heap.ids[0];dots[i]=heap.dots[0];heap.remove();}
+            return new IvfResult(ids,dots,centroidNanos,scanNanos,scanned);
+        }
+    }
+    static final class IvfResult {
+        final long[] ids;final int[] dots;final long centroidNanos,scanNanos,scanned;
+        IvfResult(long[] ids,int[] dots,long centroidNanos,long scanNanos,long scanned) {
+            this.ids=ids;this.dots=dots;this.centroidNanos=centroidNanos;this.scanNanos=scanNanos;this.scanned=scanned;
+        }
+        List<Long> ranking(){List<Long> result=new ArrayList<>(ids.length);for(long id:ids)result.add(id);return result;}
+    }
+    /** Primitive min-heap: weakest score / largest ID at root; no per-vector allocation. */
+    private static final class IntHeap {
+        final long[] ids;final int[] dots;int size;
+        IntHeap(int capacity){ids=new long[capacity];dots=new int[capacity];}
+        boolean mayEnter(int dot){return size<ids.length || dot>=dots[0];}
+        private boolean weaker(int a,int b){return dots[a]<dots[b] || (dots[a]==dots[b] && ids[a]>ids[b]);}
+        private void swap(int a,int b){long id=ids[a];ids[a]=ids[b];ids[b]=id;int dot=dots[a];dots[a]=dots[b];dots[b]=dot;}
+        void add(long id,int dot) {
+            if(size==ids.length) {
+                if(dot<dots[0] || (dot==dots[0] && id>=ids[0]))return;
+                ids[0]=id;dots[0]=dot;sink();
+            } else {
+                int at=size++;ids[at]=id;dots[at]=dot;
+                while(at>0 && weaker(at,(at-1)/2)){int parent=(at-1)/2;swap(at,parent);at=parent;}
+            }
+        }
+        void remove(){--size;if(size>0){ids[0]=ids[size];dots[0]=dots[size];sink();}}
+        private void sink(){int at=0;while(at*2+1<size){int child=at*2+1;if(child+1<size && weaker(child+1,child))child++;if(!weaker(child,at))break;swap(at,child);at=child;}}
+    }
+    private static File cachedIvfFile;
+    private static long cachedIvfLength,cachedIvfModified;
+    private static IvfIndex cachedIvf;
+    private static synchronized IvfIndex mappedIndex(File file) throws IOException {
+        File canonical=file.getCanonicalFile();
+        if(cachedIvf==null || !canonical.equals(cachedIvfFile) || file.length()!=cachedIvfLength || file.lastModified()!=cachedIvfModified) {
+            IvfIndex fresh=new IvfIndex(file);
+            cachedIvf=fresh;cachedIvfFile=canonical;cachedIvfLength=file.length();cachedIvfModified=file.lastModified();
+        }
+        return cachedIvf;
+    }
+
     /** Must remain identical to rag.embeddings.HashEncoder; fixtures only. */
     static final class SampleEncoder implements QueryEncoder {
         public String model(){return "hash-v1";}
