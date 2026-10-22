@@ -1,11 +1,15 @@
 # A55-Echtwelttest: Debugausgaben und persönliche Nutzererfahrung
 
-Stand: 22. Oktober 2026. Dieser Plan folgt auf die abgeschlossene
-[Projektanalyse/Roadmap](ROADMAP.md). Das Repository wurde dafür erneut geprüft:
-funktionaler Stand `5584c6379195fa2f6f33001234ffa4c2def3eba3`, danach `main`
-bei `b2ab5a7` mit ausschließlich verschobenen Dokumentations-/Historiedateien.
-Encoder (#12), Wikipedia (#13) und Wikidata (#14) sind integriert.
+Stand: 22. Oktober 2026, erneute Prüfung nach #15/#17. Dieser Plan folgt auf die
+[Projektanalyse/Roadmap](ROADMAP.md). Geprüfter `main`-Stand:
+`1753b1fd2f13ab4196bd99517d21629311acdb20`. Neben Encoder (#12), Wikipedia (#13)
+und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
+(#15) und optischen 16-dp-Iconvarianten (#17) integriert.
 **Ein physischer A55-Test wurde hier noch nicht ausgeführt.**
+
+Beim erneuten Abruf liegen keine neuen A55-Logs oder persönlichen
+Nutzungsergebnisse vor. Die Renderaufnahmen/138 Tests aus der Iconvalidierung
+sind Hostbelege mit Testinhalten; sie ersetzen deinen Durchlauf nicht.
 
 Ziel ist ein gemeinsamer Befund aus **deinen echten Aufgaben, deinem Eindruck
 und dem dazu passenden Geräteprotokoll**. Ein schneller Benchmark allein reicht
@@ -116,10 +120,12 @@ nicht verfügbar kennzeichnen. Weder Root noch Umgehungen voraussetzen.
 
 Aktuelle UI laut Quellcode:
 
-1. Modell laden, **Leistung → Benchmark öffnen → Benchmark starten**.
-2. Im Dialog **Benchmark-Modus → Messoptionen** wählen.
-3. **Turn-Statistik in Logcat (BonsaiTurn)** einschalten und **Übernehmen**.
-4. Für die erste Sitzung: Prefix-Warmup an, Flash Attention aus, Q8-KV aus;
+1. Über **Menü öffnen → Modell** das Modell laden. Alternativ öffnet **Plus**
+   links in der Chatbar Modell/Einstellungen. Zurück zum Chat per Dialog-Schließen.
+2. **Menü öffnen → Leistung → Benchmark öffnen → Benchmark starten**.
+3. Im Dialog **Benchmark-Modus → Messoptionen** wählen.
+4. **Turn-Statistik in Logcat (BonsaiTurn)** einschalten und **Übernehmen**.
+5. Für die erste Sitzung: Prefix-Warmup an, Flash Attention aus, Q8-KV aus;
    CPU-Microbatch 32, vier Threads, Kontext 4096, Antwortlimit 512, GBNF aus.
    Bestehende abweichende Einstellungen zuerst dokumentieren. Kein Optimizerlauf
    mitten in einem Vergleich: Er kann das aktive Profil ändern.
@@ -127,6 +133,8 @@ Aktuelle UI laut Quellcode:
 Der Weg läuft über den Benchmarkdialog, startet beim Öffnen der Messoptionen
 aber noch keinen Benchmark. Wenn die installierte APK diesen Dialog nicht hat,
 das als Versions-/Bedienbefund notieren und ihren vorhandenen Export benutzen.
+Aktuell gibt es keine unteren Modell-/Leistungs-Tabs: Beide Ansichten sind
+native Pop-ups aus der Seitenleiste. Die Plus-Aktion öffnet keinen Wissensimport.
 Nach Profiländerungen den tatsächlich angewandten Backendwert prüfen: Ein
 automatischer Fallback kann vom angeforderten Vulkanprofil abweichen.
 
@@ -241,12 +249,21 @@ abweichende Formulierungen sind deshalb nicht automatisch ein Rechenfehler.
 | L02 | Dieselbe lange Aufgabe; 30 Sekunden zu einer anderen App wechseln, zurückkehren | Lauf wird fortgesetzt/abgeschlossen und Antwort gespeichert; kein doppelter Turn. Vordergrundbenachrichtigung/WakeLock prüfen. |
 | L03 | Lange Aufgabe starten, Bildschirm 60 Sekunden ausschalten, wieder öffnen | Ergebnis oder nachvollziehbarer Zustand, kein Verlust gespeicherter Chats; Benachrichtigungs-Abbruch in separatem Durchlauf prüfen. |
 | X01 | Chatliste öffnen, zwischen Testchats wechseln, einen Testchat archivieren und wiederherstellen | Bedienweg verständlich, Chat erhalten, neue Antwort bezieht sich auf richtigen Verlauf. Kein Löschen echter Chats für den Test. |
+| X02 | Vor dem Modellladen einen Entwurf schreiben, über Plus das Modell-Pop-up und über Seitenmenü Leistung öffnen/schließen; danach Tastatur öffnen und längeren Text eingeben | Entwurf erhalten, Senden ohne Modell gesperrt; Modell-/Leistungsaktionen und Chatbar werden nicht von Tastatur/Systemleisten verdeckt. Kein Tabwechsel voraussetzen. |
+| X03 | Während C02 und L01 Lichtzustände an Chatbar, neuester Antwort und geöffnetem Pop-up beobachten; einen erfolgreichen Lauf und einen Abbruch vergleichen | Lichtzustand und Textstatus stimmen überein. Nach Erfolg kurz Done, ungefähr 1,8 s danach Idle; nach Fehler/Abbruch kein grüner Erfolgshinweis. Licht ist kein Fortschritts-/Inferenznachweis. |
+| X04 | Im System Animationen ausschalten, App erneut öffnen; separat Energiesparen einschalten und später Ausgangseinstellungen wiederherstellen | Dekorative Bewegung ruht, Bedienung/Status/Abbruch funktionieren weiter. Dies ist eine eigene UX-Sitzung; Energiesparwerte nicht mit normalem Latenzprofil vergleichen. |
+| X05 | Helles/dunkles Theme und große Systemschrift (bis 200 %) prüfen; Metadaten, Kopieren und „Neu generieren“ bedienen | 16-dp-Metadaten unterscheidbar/lesbar, Kopieren funktioniert, neue Antwortvariante als eigener Chat erhält Original. Kleine Glyphen dürfen nicht mit kleinen Touchflächen verwechselt werden. |
+| X06 | TalkBack aktivieren, Kopfaktionen, Plus, Senden/Stop, Pop-up-Schließen und Antwortaktionen der Reihe nach bedienen | Namen/Fokusreihenfolge verständlich, Status nicht ausschließlich über Farbe vermittelt; keine ungewollten Aktionen. Anschließend eigene normale Bedienkonfiguration wiederherstellen. |
 
 Für L01–L03 ist „keine automatische Wiederaufnahme nach Android-Prozesskill“
 der dokumentierte Ist-Zustand. Appwechsel ist kein Prozesskill. Wenn ein Lauf
 abbricht, zuerst Exit-Info/Logcat prüfen, bevor der Befund als Modell-/Cachefehler
 eingeordnet wird. Erzwungenen Stopp erst in einer getrennten Diagnosesitzung nach
 Sicherung aller Antworten testen; er soll Inferenz beenden, nicht fortsetzen.
+
+Seit #15/#17 gehören X02–X06 zur gezielten zweiten UX-Sitzung. Deine spontanen
+Eindrücke zu Licht, Lesbarkeit und Bedienelementen schon bei U01–U03 notieren;
+nicht erst nach Erklärung der beabsichtigten Gestaltung bewerten.
 
 ## 5. Datenabhängige RAG- und Wikidata-Tests
 
@@ -282,7 +299,7 @@ den letzten Benchmark unter `benchmark.json` und überschreibt ihn beim nächste
 
 ### B01: kalter Einzelprompt und B02: fünf verbundene Turns
 
-1. **Leistung → Benchmark öffnen → Benchmark starten → Bisheriger
+1. **Menü öffnen → Leistung → Benchmark öffnen → Benchmark starten → Bisheriger
    Einzelprompt-Benchmark**: ein Warmup, drei gemessene Läufe, Cache je Lauf leer.
    Danach **JSON exportieren**, etwa `cpu-single-run1.json`.
 2. Im selben Modusdialog **5 Fragen als zusammenhängender Chat**: Export
@@ -346,6 +363,18 @@ Reine IVF-/Wikidata-Gerätemikrobenchmarks existieren als DEX-Helfer unter
 Agent bereitet sie bei Bedarf vor. Sie messen den jeweiligen Scanner/Abfragepfad,
 ersetzen aber nicht App-Encoder, Toolrouting, Quellenantwort oder Nutzererfahrung.
 
+### G01: Zeichnung und Inferenz getrennt eingrenzen
+
+Bei Ruckeln im neuen UI in einem eigenen Diagnoselauf vor und nach dem Fall
+`adb shell dumpsys gfxinfo de.bonsai.offline.debug framestats` sichern. Optional
+vor diesem isolierten Lauf dessen Statistik mit `adb shell dumpsys gfxinfo
+de.bonsai.offline.debug reset` zurücksetzen. Erst Idle mit offener Tastatur,
+dann Streaming/Scrollen, anschließend Pop-up/Seitenleiste beobachten; denselben
+Fall mit ausgeschalteten Systemanimationen wiederholen. Keine zusätzliche
+Inferenzprofilauswahl ändern. Gfxinfo kann Frames des UI-Fensters eingrenzen,
+beweist aber weder Encoder-/Vulkanrechenzeit noch GPU-Energiebedarf. Der
+33-ms-Taktgeber ist keine gemessene konstante 30-fps-Ausgabe des A55.
+
 ## 7. Dein Feedback pro Testfall
 
 Kurze, freie Aussagen sind erwünscht. „Nach 20 Sekunden wusste ich nicht, ob
@@ -372,6 +401,7 @@ Bedienung/Status verständlich: 1 2 3 4 5
 Vertrauen in Antwort/Quellen: 1 2 3 4 5 / keine Quellen erwartet
 
 Wo war ich unsicher oder genervt?
+Licht/Bewegung: hilfreich / neutral / ablenkend; Metadaten/Icons lesbar?
 Was hat gut funktioniert?
 Ruckeln, Zeichensalat, Appwechsel, Hitzegefühl, Abbruch oder sonstige Auffälligkeit:
 Würde ich dieselbe Aufgabe morgen wieder damit machen? Warum?
@@ -445,6 +475,9 @@ L01–L03/X01 erfasst **oder mit konkretem Blocker markiert** sind, dein Feedbac
 vorliegt und der Agent eine priorisierte Auswertung geschrieben hat. Das ist
 noch keine Produktfreigabe. RAG-/Vulkan-/Vollindexfreigaben benötigen jeweils
 ihre Daten-/Korrektheits-/Gerätegates aus der Roadmap.
+
+Die zweite UX-Sitzung deckt X02–X06 und bei Bedarf G01 ab; ihre Ergebnisse
+stehen bis zu deinem echten Gerätedurchlauf weiter aus.
 
 Die Auswertung beantwortet: Was funktioniert auf **deinem A55** tatsächlich?
 Was stört dich im Alltag am meisten? Welche technischen Belege erklären es,

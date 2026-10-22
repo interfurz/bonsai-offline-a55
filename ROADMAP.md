@@ -4,17 +4,19 @@ Stand: **22. Oktober 2026**. Zielgerät: Samsung Galaxy A55 5G, Exynos 1480,
 Xclipse 530, ARM64, 8 GB RAM, Android 16 / One UI 8.x.
 
 Diese Datei ist eine Analyse und Arbeitsplanung. Sie implementiert keine Features.
-Die wesentliche Grundlage ist `main` bei
-`5584c6379195fa2f6f33001234ffa4c2def3eba3`, einschließlich der gemergten
-PRs #12 (EmbeddingGemma 2), #13 (Wikipedia) und #14 (Wikidata).
+Die aktualisierte Grundlage ist `main` bei
+`1753b1fd2f13ab4196bd99517d21629311acdb20`, einschließlich der gemergten
+PRs #12 (EmbeddingGemma 2), #13 (Wikipedia), #14 (Wikidata), #15 (native
+Chatoberfläche mit Lichtzuständen) und #17 (Icon-Familie).
 Die angezeigte Appversion bleibt 0.4.5. Die veröffentlichte
 0.4.5-APK und `BUILD-INFO.json` beziehen sich dagegen auf `39b1391…`, also auf einen
 älteren Stand **ohne** diesen Encoder. Quellstand, Appversion und ausgelieferte APK
 müssen bei jeder Validierung getrennt erfasst werden.
 
-Die nach Abschluss der Analyse erneut geprüfte `main`-Änderung `b2ab5a7`
-verschiebt nur ältere Dokumentationsdateien; der hier beschriebene Anwendungscode
-bleibt identisch. Der ergänzende [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md)
+Die Erstanalyse beruhte auf `5584c63…`, danach folgte die reine Dokumentations-
+verschiebung `b2ab5a7`. Seitdem ändern #15/#17 Java-Oberfläche, Zeichnung und
+Assets; LLM-/Embedding-/RAG-/Wikidata-Kernpfade bleiben gegenüber dieser Basis
+unverändert. Der ergänzende [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md)
 verbindet vorhandene Debugausgaben, Geräteversuche und persönliches Nutzerfeedback.
 
 ## A. Projektziel und Definition of Done
@@ -88,7 +90,9 @@ unterschiedlichen Commits oder Testsuiten addiert.
 | Komponente / Umfang | Status | Begründung und verbleibende Grenze |
 | --- | --- | --- |
 | Offline-Berechtigungsgrenze | Implementiert und verifiziert | `app/src/main/AndroidManifest.xml`, aktueller Lauf von `scripts/check_project.py`: vier Dienst-/Wake-/Benachrichtigungsrechte, kein INTERNET. |
-| Native Java-Oberfläche, Streaming, Chats/Archive | Implementiert, aber nicht auf Zielhardware verifiziert | `MainActivity.java`, `BonsaiApp.java`, `ChatStore.java`, `ReplyStream.java`; Robolectric in `AppExperienceTest`, `ChatStoreTest`, `ToolChatTest`. Keine aktuelle A55-Abnahme. |
+| Native Java-Oberfläche, Streaming, Chats/Archive | Implementiert, aber nicht auf Zielhardware verifiziert | #15: Chat als Hauptansicht, Modell/Leistung als Pop-ups über Seitenmenü, Modell zusätzlich über Plus in der Chatbar; keine festen unteren Tabs. `AppExperienceTest` prüft Entwürfe, Streaming und Navigation; A55-Tastatur/Touch/TalkBack offen. |
+| Appweite Lichtzustände / reduzierte Bewegung | Implementiert, aber nicht auf Zielhardware verifiziert | `PulsingBorder.java`, #15, `docs/UI-REDESIGN.md`: Java-Canvas, gemeinsame 33-ms-Callbacks, Idle/Generating/Done; Pause bei verdeckten Flächen, Activity-Stopp, ausgeschalteten Systemanimationen/Energiesparen im Code getestet. Kein Nachweis von 30 fps, Energiebedarf oder ungestörter echter Inferenz auf dem A55. |
+| Icon-Familie / optische Kleinvarianten | Implementiert und verifiziert | #17, `BonsaiIcons.java`, `design/icons/QA.md`, `validation.json`: Host-/native Renderprüfungen für Tint, 16-dp-Varianten und Touchziele. Erneuter Assetcheck: 37 SVG/XML-Paare bestanden. Lesbarkeit/Bedienung auf echtem A55 offen. |
 | Hintergrundinferenz, WakeLock, Abbruch | Implementiert, aber nicht auf Zielhardware verifiziert | `InferenceService.java`, `BackgroundInferenceTest.java`; Android-Prozesskill beendet die Berechnung, kein automatischer Neustart. Samsung-Lebenszyklus separat testen. |
 | GGUF-Import und dateigebundene Freigabe | Implementiert, aber nicht auf Zielhardware verifiziert | `ModelIntegrity.java`, Importpfad in `BonsaiApp`, `ModelIntegrityTest`/`ModelApprovalTest`. SHA-Abweichung ist kein alleiniger Beweis beschädigter Gewichte; explizite Freigabe bleibt möglich. |
 | Bonsai 2 4B / CPU / PQ-/Hadamard-Pfade | Implementiert, aber nicht auf Zielhardware verifiziert | `bonsai_jni.cpp`, `reference_cpu.cpp`, `BackendGuard.java`; echte Host-/QEMU-Modellprüfungen in `VALIDATION-0.4.0.md`. QEMU ist kein Exynos-Gerätetest. |
@@ -141,10 +145,10 @@ neue Dokumentvektoren, neue Zentroiden/IVF und erneute Qualitätsabnahme. Alte
 
 ### GitHub- und Test-Snapshot dieser Analyse
 
-GitHub-Branches, alle 14 bisherigen PRs, offene Issues und aktuelle Actions waren
-zugänglich. Im abschließenden Snapshot waren #12/#13/#14 gemergt und keine
-weiteren PRs offen; auch keine eigenständigen offenen Issues im abgefragten
-Issue-Snapshot. Ein Branch ist kein Beweis, dass gerade ein Agent läuft.
+GitHub-Branches, alle 17 bisherigen PRs, Releases, offene Issues und aktuelle
+Actions waren beim erneuten Abruf zugänglich. #12/#13/#14/#15/#17 sind gemergt;
+offen ist der eigene Dokumentations-PR #16. Keine eigenständigen offenen Issues
+im abgefragten Issue-Snapshot. Ein Branch ist kein Beweis, dass gerade ein Agent läuft.
 
 | Arbeit | Referenz / Integrationsstand |
 | --- | --- |
@@ -152,9 +156,12 @@ Issue-Snapshot. Ein Branch ist kein Beweis, dass gerade ein Agent läuft.
 | EmbeddingGemma 2 | [#12](https://github.com/interfurz/bonsai-offline-a55/pull/12): gemergt am 22.10.2026; Head `bdddacd…`, Merge `a72f9e5…`. |
 | Wikipedia | [#13](https://github.com/interfurz/bonsai-offline-a55/pull/13): gemergt, Merge `bcea0974b41c6d364bbb1a092ffecc7f3ff93ca5`, Head `1e835f33dd60db83d51dbc94741f78a22b061cfe`. Dokumentation: `rag/WIKIPEDIA.md`, `rag/validation/wikipedia/`. |
 | Wikidata | [#14](https://github.com/interfurz/bonsai-offline-a55/pull/14): gemergt, Merge `5584c6379195fa2f6f33001234ffa4c2def3eba3`, Head `83d8e2f8ba542be29ceaa40ee2bd7059de5fb4a7`; enthält kombinierten Wikipedia-/Encoder-Stand. Dokumentation: `wikidata/VALIDATION.md`. |
+| Native UI / Licht | [#15](https://github.com/interfurz/bonsai-offline-a55/pull/15): gemergt, Merge `aae5381c168ddd8b782fb2cec986299833e930d9`, Head `06ed473…`. Dokumentation: `docs/UI-REDESIGN.md`, `docs/design-qa.md`; 135 dokumentierte Host-/Robolectric-Tests. |
+| Icons | [#17](https://github.com/interfurz/bonsai-offline-a55/pull/17): gemergt, Merge `1753b1f…`, Head `e662997…`; baut auf #15 auf. `design/icons/validation.json` dokumentiert 138 Tests, null Fehler/übersprungene Tests, null Lintfehler, acht bestehende Warnungen und einen CPU-Debug-APK-Hash. |
 | Wiktionary | Kein entsprechender Branch oder PR im Snapshot. |
 
-Während der Analyse ausgeführt, ohne Anwendungscode zu ändern:
+Während der Erstanalyse auf `5584c63…` ausgeführt, ohne Anwendungscode zu ändern
+(die unveränderten Kernpfade wurden beim Update nicht unnötig erneut getestet):
 
 - `python3 scripts/check_project.py`: bestanden; Manifest/XML, JNI-Namen,
   Runtime-Patchtest sowie kompilierte UTF-8-/Conversation-State-Hostchecks.
@@ -171,8 +178,10 @@ Während der Analyse ausgeführt, ohne Anwendungscode zu ändern:
   ausgeführt. Es wurden durch diese Analyse keine Feature-PRs gemergt.
 - `./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug`
   scheiterte beim Gradle-Download mit `java.net.ConnectException: Connection refused`.
-  Android SDK/NDK und CMake sind hier nicht eingerichtet; Android-Tests, Lint und
-  APK wurden in dieser Analyse **nicht** erneut erfolgreich ausgeführt.
+  Android-Tests/Lint/APK wurden in der Erstanalyse deshalb **nicht** lokal erneut
+  erfolgreich ausgeführt. Beim Update ist unter `/workspace/.cloud-setup/activate.sh`
+  eine eingerichtete JDK-/SDK-/NDK-/Gradle-Umgebung verfügbar; der frühere Setupfehler
+  ist damit kein grundsätzlich weiterhin fehlendes Buildsystem.
 - Keine Modellgewichte geladen, kein physisches A55/ADB, keine RTX-4060-Messung,
   kein vollständiger Dump und keine neuen Geräte-/Geschwindigkeitsbenchmarks.
 
@@ -182,9 +191,20 @@ acht Warnungen und `physical_a55_tested=false`. Die neuere Encoder-Validierung
 meldet 112 Android-/Robolectric-Tests, 22 Python-Tests und einen ARM64-CPU-Build.
 Die integrierte #14-Validierung meldet 129 Android-Tests einschließlich 17
 Wikidata-Tests sowie 39 RAG-Tests nach Einbindung von Wikipedia. Diese Zahlen
-beschreiben verschiedene Stände. Beim letzten Actions-Snapshot waren die
-Android-/Vulkan-Läufe auf `5584c63…` noch nicht abgeschlossen; RAG-CI auf
-`bcea097…` und Wikidata-/RAG-CI auf `83d8e2f…` waren erfolgreich.
+beschreiben verschiedene Stände. Neu geprüft: `python3 scripts/check_icons.py`
+bestanden; kein neuer A55-Log, kein Nutzerfeedback und kein Geräteergebnis
+bereitgestellt. Die Signierdatei für den gewünschten Folgerelease ist kein
+Gerätenachweis.
+
+| Neuer CI-Nachweis | Ergebnis / genaue Grenze |
+| --- | --- |
+| [Android auf `5584c63…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39812613552) / [CPU+Vulkan](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39812613332) | Inzwischen beide erfolgreich abgeschlossen; die frühere Angabe „läuft noch“ ist überholt. |
+| [CPU+Vulkan auf UI-Merge `aae5381…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39816068693) | Erfolgreich. Jobschritte für Release-Unit-Tests, Lint, vollständigen unsignierten APK-Build und native Konfigurations-/APK-Prüfung einzeln geprüft. Enthält #15, noch nicht #17. |
+| [CPU auf Icon-Head `e662997…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39816736338) | Erfolgreich; Hostchecks, CPU-Referenzkernel, Unit-Tests/Build/Lint-Schritt und Artefaktuploads erfolgreich. Enthält bereits #15. |
+| `main`-Merge `1753b1f…` | Beim Updateabruf waren CPU-Run 39817850473 und CPU/Vulkan-Run 39817850218 noch aktiv; deren Erfolg nicht aus dem Branchlauf ableiten. |
+
+Keiner dieser CI-/Rendernachweise belegt physische A55-Inferenz, echte UI-Bildrate,
+Encoder-RAM, Retrievallatenz oder persönliche Nutzerzufriedenheit.
 
 ## C. Zielarchitektur und Datenverträge
 
@@ -682,6 +702,11 @@ Datensatz, Begründung und Entscheidung vor dem großen Export dokumentiert werd
   inkompatible Signatur ohne Datenverlust erklären/abfangen; vollständige
   Offline-Ersteinrichtung und ≥60 Minuten gemischte Chat-/RAG-/Toollast,
   Display aus, Appwechsel, Kill/Neustart und knapper Speicher.
+- **Zusätzliche UI-Abnahme seit #15/#17:** Tastatur-/Dialoginsets, 200-%-Schrift,
+  TalkBack, 16-dp-Metadaten/48-dp-Ziele, Kopieren/Antwortvarianten und
+  Idle/Generating/Done während echter Inferenz prüfen. Bei deaktivierten
+  Systemanimationen/Energiesparen müssen die Effekte ruhen; Fehler/Abbruch
+  dürfen keinen Erfolgssaum auslösen. Bildrate/Energiebedarf getrennt messen.
 - **Akzeptanz:** keine ANRs/ungeklärten Abbrüche oder verlorenen gespeicherten
   Daten, kein versehentlich wachgehaltener Dienst nach Ende; bekannte Einschränkungen
   dokumentiert. Paket/VersionCode/Signatur/Hashes/16-KiB-Alignment und Berechtigungen
@@ -784,8 +809,9 @@ Details und historische Zertifikate: [SIGNIEREN.md](SIGNIEREN.md).
 
 ## G. Parallele Entwicklung und Branch-/PR-Grenzen
 
-Die drei bekannten Datenarbeiten sind inzwischen integriert: #12 Encoder,
-#13 Wikipedia, #14 Wikidata. Keine parallelen Ersatzimplementierungen planen.
+Die drei bekannten Datenarbeiten sind integriert: #12 Encoder, #13 Wikipedia,
+#14 Wikidata; zusätzlich #15 UI und #17 Icons. Keine parallelen
+Ersatzimplementierungen oder konkurrierenden UI-/Iconredesigns planen.
 Vor jeder Zuweisung erneut Branch-/PR-Head und bereits laufende Arbeit abfragen;
 die bloße Existenz eines alten Branches ist keine aktive Belegung.
 
@@ -818,8 +844,8 @@ neue Featureänderung hineinziehen.
 
 ## H. Priorisierte nächsten Schritte
 
-1. **Aktuellen integrierten Stand als Test-APK eindeutig identifizieren.**
-   #12/#13/#14 sind in `main`; alte 0.4.5-Releasebelege genügen dafür nicht.
+1. **Aktuellen integrierten Stand als Test-/Release-APK eindeutig identifizieren.**
+   #12/#13/#14/#15/#17 sind in `main`; alte 0.4.5-Releasebelege genügen dafür nicht.
    CPU-/Vulkan-CI, Runtimebackport, Signatur und Updateweg dokumentieren.
 2. **M0.1/M0.4 auf dem echten A55 durchführen.** Korrekte offizielle PQ2_0-Datei,
    verständliche CPU-Antworten und gemeinsamer Bonsai-/Encoder-Peak sind die
