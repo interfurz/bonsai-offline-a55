@@ -1,0 +1,98 @@
+{
+  "scope": "host; vector-only; warm/cold OS cache uncontrolled; query encoding excluded",
+  "model": "hash-v1",
+  "int8_bytes": 13416,
+  "float_bytes": 154016,
+  "queries": [
+    {
+      "query": "Was ist die Hauptstadt von Deutschland?",
+      "int8_top3": [
+        1,
+        10,
+        33
+      ],
+      "float_top3": [
+        1,
+        10,
+        33
+      ],
+      "overlap_at3": 1.0,
+      "int8_recall": 1.0,
+      "float_recall": 1.0,
+      "int8_ms": 0.7243190000281174,
+      "float_ms": 1.2895209999896906
+    },
+    {
+      "query": "Wie funktioniert Photosynthese bei Pflanzen?",
+      "int8_top3": [
+        2,
+        16,
+        40
+      ],
+      "float_top3": [
+        2,
+        16,
+        40
+      ],
+      "overlap_at3": 1.0,
+      "int8_recall": 1.0,
+      "float_recall": 1.0,
+      "int8_ms": 0.45612900009928126,
+      "float_ms": 1.2704429999530475
+    },
+    {
+      "query": "Was ist der nat\u00fcrliche Satellit der Erde?",
+      "int8_top3": [
+        3,
+        17,
+        24
+      ],
+      "float_top3": [
+        3,
+        17,
+        24
+      ],
+      "overlap_at3": 1.0,
+      "int8_recall": 1.0,
+      "float_recall": 1.0,
+      "int8_ms": 0.46334000001024833,
+      "float_ms": 1.2796559999515011
+    },
+    {
+      "query": "Welche chemische Formel hat Wasser?",
+      "int8_top3": [
+        4,
+        1,
+        31
+      ],
+      "float_top3": [
+        4,
+        1,
+        31
+      ],
+      "overlap_at3": 1.0,
+      "int8_recall": 1.0,
+      "float_recall": 1.0,
+      "int8_ms": 0.4396550000365096,
+      "float_ms": 1.309791000039695
+    },
+    {
+      "query": "Wohin m\u00fcndet der Rhein?",
+      "int8_top3": [
+        6,
+        3,
+        24
+      ],
+      "float_top3": [
+        6,
+        3,
+        24
+      ],
+      "overlap_at3": 1.0,
+      "int8_recall": 1.0,
+      "float_recall": 1.0,
+      "int8_ms": 0.4297099999348575,
+      "float_ms": 1.2725960000352643
+    }
+  ]
+}

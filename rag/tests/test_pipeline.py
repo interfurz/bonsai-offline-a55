@@ -29,6 +29,12 @@ class ChunkingTests(unittest.TestCase):
         self.assertIn("Einleitung.", chunks[0].text)
         self.assertIn("Grüne Blätter.", chunks[0].text)
 
+    def test_large_sibling_sections_keep_distinct_heading_paths(self):
+        wiki = "== Natur ==\n" + "Lebende Pflanzen. " * 30 + "\n=== Blätter ===\n" + "Grüne Blätter. " * 30 + "\n== Nutzung ==\n" + "Holz bearbeiten. " * 30
+        chunks = chunk_article("1", "Baum", wiki, "q")
+        self.assertEqual(["Baum / Natur", "Baum / Natur / Blätter", "Baum / Nutzung"],
+                         [c.heading for c in chunks])
+
     def test_large_unicode_and_unbroken_sections_split_without_loss(self):
         for text in ("Wälder 🌳 wachsen. " * 700, "ü" * 7000):
             chunks = chunk_article("1", "Wald", text, "q")
@@ -75,6 +81,43 @@ class SearchTests(unittest.TestCase):
             self.assertIn("Überblick", hits[0]["heading"])
             self.assertLessEqual(len(hits), 3)
             self.assertTrue(all(len(hit["text"]) <= 600 for hit in hits))
+
+    def test_long_text_is_bounded_and_index_ids_stay_unique(self):
+        source = Path(self.temp.name) / "long.jsonl"
+        source.write_text(json.dumps(dict(id="100", title="Langtext", source="fixture://long",
+                                         text="Photosynthese Pflanzen Lichtenergie. " * 600)))
+        database = Path(self.temp.name) / "long.sqlite"
+        build(source, database)
+        with sqlite3.connect(database) as db:
+            self.assertGreater(db.execute("SELECT count(*) FROM chunks").fetchone()[0], 1)
+        hits = search(database, "Photosynthese")
+        self.assertEqual(3, len(hits))
+        self.assertEqual(3, len({hit["chunk_id"] for hit in hits}))
+        self.assertTrue(all(len(hit["text"]) == 600 for hit in hits))
+
+    def test_model_backend_applies_task_prompts_and_rejects_mismatch(self):
+        class WrongEncoder:
+            name = "other-model"
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            search(self.db, "Berlin", self.vectors, backend=WrongEncoder())
+        # Exercise task-specific model methods without downloading a model.
+        from rag.embeddings import ModelEncoder
+        class Array:
+            def tolist(self):
+                return [[1.0] * 768]
+        class Model:
+            def encode_query(self, texts, **kwargs):
+                self.task = "query"
+                return Array()
+            def encode_document(self, texts, **kwargs):
+                self.task = "document"
+                return Array()
+        backend = ModelEncoder.__new__(ModelEncoder)
+        backend.model = Model()
+        backend.encode(["question"], query=True)
+        self.assertEqual("query", backend.model.task)
+        backend.encode(["document"])
+        self.assertEqual("document", backend.model.task)
 
     def test_empty_lexical_query_and_escaped_fts_syntax(self):
         self.assertEqual([], search(self.db, "zzzzzxxyy"))
