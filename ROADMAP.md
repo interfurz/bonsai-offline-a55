@@ -5,11 +5,11 @@ Xclipse 530, ARM64, 8 GB RAM, Android 16 / One UI 8.x.
 
 Diese Datei ist eine Analyse und Arbeitsplanung. Sie implementiert keine Features.
 Die aktualisierte Grundlage ist `main` bei
-`1753b1fd2f13ab4196bd99517d21629311acdb20`, einschließlich der gemergten
+`efcd87a0b02fbc0325fbc30a20ce9b1dac291a15`, einschließlich der gemergten
 PRs #12 (EmbeddingGemma 2), #13 (Wikipedia), #14 (Wikidata), #15 (native
 Chatoberfläche mit Lichtzuständen) und #17 (Icon-Familie).
-Für den gewünschten Release wird die Appversion auf **0.5**, Versionscode **13**,
-angehoben. Die ältere veröffentlichte
+Releasecode **0.5**, Versionscode **13**, ist über #18 integriert; der lokale
+CPU/Vulkan-Build und die tatsächliche signierte APK sind geprüft. Die ältere veröffentlichte
 0.4.5-APK und deren Buildnachweis beziehen sich dagegen auf `39b1391…`, also auf einen
 älteren Stand **ohne** diesen Encoder. Quellstand, Appversion und ausgelieferte APK
 müssen bei jeder Validierung getrennt erfasst werden.
@@ -94,6 +94,7 @@ unterschiedlichen Commits oder Testsuiten addiert.
 | Native Java-Oberfläche, Streaming, Chats/Archive | Implementiert, aber nicht auf Zielhardware verifiziert | #15: Chat als Hauptansicht, Modell/Leistung als Pop-ups über Seitenmenü, Modell zusätzlich über Plus in der Chatbar; keine festen unteren Tabs. `AppExperienceTest` prüft Entwürfe, Streaming und Navigation; A55-Tastatur/Touch/TalkBack offen. |
 | Appweite Lichtzustände / reduzierte Bewegung | Implementiert, aber nicht auf Zielhardware verifiziert | `PulsingBorder.java`, #15, `docs/UI-REDESIGN.md`: Java-Canvas, gemeinsame 33-ms-Callbacks, Idle/Generating/Done; Pause bei verdeckten Flächen, Activity-Stopp, ausgeschalteten Systemanimationen/Energiesparen im Code getestet. Kein Nachweis von 30 fps, Energiebedarf oder ungestörter echter Inferenz auf dem A55. |
 | Icon-Familie / optische Kleinvarianten | Implementiert und verifiziert | #17, `BonsaiIcons.java`, `design/icons/QA.md`, `validation.json`: Host-/native Renderprüfungen für Tint, 16-dp-Varianten und Touchziele. Erneuter Assetcheck: 37 SVG/XML-Paare bestanden. Lesbarkeit/Bedienung auf echtem A55 offen. |
+| v0.5-Releaseartefakt / Signatur / Ausrichtung | Implementiert und verifiziert | `release/0.5/build-info.json`, Signaturprotokoll und SHA256: lokal aus `main` gebaut, ARM64/CPU/Vulkan, nicht debuggbar, 138 Release-Tests, null Lintfehler/acht Warnungen; APK-/ELF-16-KiB-Ausrichtung und unveränderte Payload nach Signierung geprüft. Keine A55-Installation oder Inferenz. |
 | Hintergrundinferenz, WakeLock, Abbruch | Implementiert, aber nicht auf Zielhardware verifiziert | `InferenceService.java`, `BackgroundInferenceTest.java`; Android-Prozesskill beendet die Berechnung, kein automatischer Neustart. Samsung-Lebenszyklus separat testen. |
 | GGUF-Import und dateigebundene Freigabe | Implementiert, aber nicht auf Zielhardware verifiziert | `ModelIntegrity.java`, Importpfad in `BonsaiApp`, `ModelIntegrityTest`/`ModelApprovalTest`. SHA-Abweichung ist kein alleiniger Beweis beschädigter Gewichte; explizite Freigabe bleibt möglich. |
 | Bonsai 2 4B / CPU / PQ-/Hadamard-Pfade | Implementiert, aber nicht auf Zielhardware verifiziert | `bonsai_jni.cpp`, `reference_cpu.cpp`, `BackendGuard.java`; echte Host-/QEMU-Modellprüfungen in `VALIDATION-0.4.0.md`. QEMU ist kein Exynos-Gerätetest. |
@@ -146,9 +147,11 @@ neue Dokumentvektoren, neue Zentroiden/IVF und erneute Qualitätsabnahme. Alte
 
 ### GitHub- und Test-Snapshot dieser Analyse
 
-GitHub-Branches, alle 17 bisherigen PRs, Releases, offene Issues und aktuelle
+GitHub-Branches, PRs, Releases, offene Issues und aktuelle
 Actions waren beim erneuten Abruf zugänglich. #12/#13/#14/#15/#17 sind gemergt;
-offen ist der eigene Dokumentations-PR #16. Keine eigenständigen offenen Issues
+anschließend wurden auf ausdrücklichen Wunsch #16 (Dokumentation) und #18
+(Version/Signierhinweise für v0.5) nach Konflikt-/Prüfkontrolle gemergt.
+Keine eigenständigen offenen Issues
 im abgefragten Issue-Snapshot. Ein Branch ist kein Beweis, dass gerade ein Agent läuft.
 
 | Arbeit | Referenz / Integrationsstand |
@@ -187,7 +190,7 @@ Während der Erstanalyse auf `5584c63…` ausgeführt, ohne Anwendungscode zu ä
   kein vollständiger Dump und keine neuen Geräte-/Geschwindigkeitsbenchmarks.
 
 Vorhandene, nicht mit einem neuen lokalen Lauf zu verwechselnde Evidenz:
-`BUILD-INFO.json` meldet für die ältere Release-APK 106 Tests, null Lintfehler,
+`release/0.4.5/build-info.json` meldet für die ältere Release-APK 106 Tests, null Lintfehler,
 acht Warnungen und `physical_a55_tested=false`. Die neuere Encoder-Validierung
 meldet 112 Android-/Robolectric-Tests, 22 Python-Tests und einen ARM64-CPU-Build.
 Die integrierte #14-Validierung meldet 129 Android-Tests einschließlich 17
@@ -202,10 +205,38 @@ Gerätenachweis.
 | [Android auf `5584c63…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39812613552) / [CPU+Vulkan](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39812613332) | Inzwischen beide erfolgreich abgeschlossen; die frühere Angabe „läuft noch“ ist überholt. |
 | [CPU+Vulkan auf UI-Merge `aae5381…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39816068693) | Erfolgreich. Jobschritte für Release-Unit-Tests, Lint, vollständigen unsignierten APK-Build und native Konfigurations-/APK-Prüfung einzeln geprüft. Enthält #15, noch nicht #17. |
 | [CPU auf Icon-Head `e662997…`](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39816736338) | Erfolgreich; Hostchecks, CPU-Referenzkernel, Unit-Tests/Build/Lint-Schritt und Artefaktuploads erfolgreich. Enthält bereits #15. |
-| `main`-Merge `1753b1f…` | Beim Updateabruf waren CPU-Run 39817850473 und CPU/Vulkan-Run 39817850218 noch aktiv; deren Erfolg nicht aus dem Branchlauf ableiten. |
+| `main`-Merge `1753b1f…` | CPU-Run 39817850473 und CPU/Vulkan-Run 39817850218 sind inzwischen beide erfolgreich abgeschlossen. |
 
 Keiner dieser CI-/Rendernachweise belegt physische A55-Inferenz, echte UI-Bildrate,
 Encoder-RAM, Retrievallatenz oder persönliche Nutzerzufriedenheit.
+
+### Release v0.5: neue lokale Nachweise
+
+Die signierte APK wurde lokal aus `main`-Commit `efcd87a…` mit dem
+prüfsummengebundenen Vulkan-SDK 1.4.363.0, NDK 28.2.13676358 und dem geprüften
+Runtimebackport gebaut. Neue lokale Releaseprüfungen: 138 Tests in CPU- sowie
+Vulkan-Buildkonfiguration ohne Fehler/übersprungene Tests, Lint null Fehler/acht
+Warnungen, 39 RAG-/Wikipedia-, 14 Wikidata- und vier weitere Python-Tests ohne
+Fehler/übersprungene Tests. Damit ist der frühere lokale Setupblocker erledigt.
+
+Die tatsächliche APK hat **68.172.532 Bytes**, enthält die Encoder-/Wikidata-/
+Licht-/Iconklassen, aber keine Modellgewichte, Wissens-DBs oder IVF-Dateien.
+Manifest, Signatur, alle enthaltenen Bibliotheken und ZIP-/ELF-Ausrichtung sind
+geprüft; Signing verändert keine der ZIP-Dateipayloads. Hashes, Herkunft,
+CI-Status und Grenzen: [Buildnachweis](release/0.5/build-info.json),
+[Signatur](release/0.5/signature-verification.txt),
+[Updatevergleich](release/0.5/update-compatibility.json).
+Die APK stammt nicht aus einem heruntergeladenen CI-Artefakt: Der Artefaktspeicher
+verweigerte den Download. Ein erster CI-Testversuch scheiterte am Robolectric-
+Abhängigkeitsdownload; beim unveränderten zweiten Versuch bestand die Teststufe.
+Der unabhängige CPU/Vulkan-CI-Lauf 39821276142 ist im zweiten Versuch
+vollständig erfolgreich abgeschlossen: Tests, Lint, nativer APK-Build,
+Konfigurations-/APK-Prüfung und Artefaktbereitstellung. Der Buildnachweis hält
+den genauen Versuch und die lokale Herkunft der signierten APK getrennt fest.
+Direkte Release-Asset-Uploads wurden mit HTTP 401 abgewiesen; APK/Hashes werden
+über feste Commits des bestehenden `downloads`-Branches verlinkt.
+
+A55-Abnahme und persönliche Nutzererfahrung bleiben vollständig ausstehend.
 
 ## C. Zielarchitektur und Datenverträge
 
@@ -693,8 +724,11 @@ Datensatz, Begründung und Entscheidung vor dem großen Export dokumentiert werd
 
 #### M6.3 – Signierung, Offline-Einrichtung und Dauerbetrieb freigeben
 
-- **Priorität / Status / parallel:** P1 / Geplant / ja für Dokumentation/CI,
+- **Priorität / Status / parallel:** P1 / In Entwicklung / ja für Dokumentation/CI,
   nein während thermischer Gerätevergleichsläufe.
+- **Erledigter Teilumfang:** v0.5 lokal gebaut/signiert, Binär-/Signatur- und
+  Versionsvergleich mit tatsächlicher 0.4.4-APK geprüft. Geräteupdate, Datenexport,
+  Offline-Ersteinrichtung und Dauerbetrieb sind dadurch noch nicht abgenommen.
 - **Aufgabe / Module:** Releaseworkflows, `SIGNIEREN.md`, Installations-/Export-
   und Migrationsabläufe; neue APK-Provenienz für integrierten Code statt alter 0.4.5-Metadaten.
 - **Voraussetzungen / Abhängigkeiten:** M1/M2, gewählter Signierschlüssel,
@@ -733,7 +767,9 @@ Tatsächlich vorhandene kleine Artefakte: Android-RAG-Fixture `knowledge.sqlite`
 Wikipedia-XML-Fixture-DB 184.320 Bytes mit 3 Inhaltsartikeln/20 Chunks und
 Wikidata-Fixture-DB 53.248 Bytes. Das sind Testdaten, keine realistische
 Kompressions-/Skalierungshochrechnung. Die ältere 0.4.5-APK hat laut
-`BUILD-INFO.json` 68.084.780 Bytes, keine eingebetteten Wissensdaten/Encodergewichte.
+`release/0.4.5/build-info.json` 68.084.780 Bytes, keine eingebetteten Wissensdaten/Encodergewichte.
+Die neue signierte v0.5-APK hat gemessen 68.172.532 Bytes; ihr Buildnachweis
+steht unter `release/0.5/` und in der aktuellen `BUILD-INFO.json`.
 
 Reine Formatberechnung, **keine gemessenen Vollkorpusdateien**:
 
@@ -849,9 +885,10 @@ neue Featureänderung hineinziehen.
 
 ## H. Priorisierte nächsten Schritte
 
-1. **Aktuellen integrierten Stand als Test-/Release-APK eindeutig identifizieren.**
-   #12/#13/#14/#15/#17 sind in `main`; alte 0.4.5-Releasebelege genügen dafür nicht.
-   CPU-/Vulkan-CI, Runtimebackport, Signatur und Updateweg dokumentieren.
+1. **Verifizierte v0.5-APK für den A55-Durchlauf verwenden.**
+   Der integrierte Stand ist gebaut und signiert; APK-Hash und Release-/
+   Updatevergleich unter `release/0.5/` verwenden. Vor Installation die aktuelle
+   A55-Signieridentität prüfen: kein direktes Update von 0.4.5/0.3.0 mit diesem Schlüssel.
 2. **M0.1/M0.4 auf dem echten A55 durchführen.** Korrekte offizielle PQ2_0-Datei,
    verständliche CPU-Antworten und gemeinsamer Bonsai-/Encoder-Peak sind die
    wichtigsten Geräteunsicherheiten. Vulkan nachgeordnet separat prüfen.
