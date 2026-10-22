@@ -314,24 +314,24 @@ public final class BonsaiApp extends Application {
         long userId=store.add(chat,"user",input,"");
         messages.add(new ChatStore.Message(userId,"user",input,""));
         List<ChatStore.Message> history=new ArrayList<>(messages);
-        ChatStore.Message answer=new ChatStore.Message(0,"assistant","",""); messages.add(answer); notifyUi();
+        messages.add(new ChatStore.Message(0,"assistant","","")); notifyUi();
         final int limit=maxTokens();
         worker.execute(() -> {
-            ByteArrayOutputStream output=new ByteArrayOutputStream(); String issue="", detail="";
+            String text="", issue="", detail="";
             try {
-                byte[][] roles=new byte[history.size()+1][], texts=new byte[history.size()+1][];
-                roles[0]=utf8("system"); texts[0]=utf8("Du bist ein hilfreicher Assistent. Antworte auf Deutsch, sofern die Person keine andere Sprache wünscht.");
-                for(int i=0;i<history.size();i++) { roles[i+1]=utf8(history.get(i).role); texts[i+1]=utf8(history.get(i).text); }
-                JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,chunk -> {
-                    output.write(chunk,0,chunk.length); String value=new String(output.toByteArray(),StandardCharsets.UTF_8);
-                    main.post(() -> { answer.text=value; if(!cancelled) status="Antwort wird geschrieben …"; notifyUi(); });
-                }),StandardCharsets.UTF_8));
+                ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts)->{
+                    ByteArrayOutputStream output=new ByteArrayOutputStream();
+                    JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
+                        chunk->output.write(chunk,0,chunk.length)),StandardCharsets.UTF_8));
+                    return new ToolLoop.Result(new String(output.toByteArray(),StandardCharsets.UTF_8),stats);
+                },()->cancelled);
+                text=result.text;
+                JSONObject stats=result.stats;
                 final double speed=stats.getDouble("tokens_per_second");
                 main.post(()->liveTokensPerSecond=speed);
                 detail=String.format(Locale.GERMAN,"%.1f Tokens/s · %d Tokens · %.1f s bis zum ersten Token%s",stats.getDouble("tokens_per_second"),stats.getInt("output_tokens"),stats.getDouble("first_token_ms")/1000,
                     stats.getBoolean("stopped") ? " · abgebrochen" : stats.getBoolean("limit_reached") ? " · Antwortlimit erreicht" : "");
             } catch(Exception | LinkageError e) { issue=reason(e); detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort"; }
-            String text=new String(output.toByteArray(),StandardCharsets.UTF_8);
             try {
                 if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
                 else store.removeMessage(userId);  // Do not leave an unanswered user turn in model history.
