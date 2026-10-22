@@ -141,8 +141,8 @@ Toolformat: `<tool>{"name":"suche","args":{"query":"Berlin"}}</tool>`.
 Die JSON-Treffer enthalten Text, Quelle, Überschrift und eine stabile
 `citation`-Nummer innerhalb der Antwort. Quellen aus tatsächlich zurückgegebenen
 Treffern werden an die Endantwort angehängt: bei `[n]`-Zitaten unter „Quellen“,
-sonst transparent unter „Suchquellen“. Höchstens drei verschiedene Chunks pro
-Antwort; Tool-Anfragen und rohe JSON-Ergebnisse bleiben aus dem sichtbaren und
+sonst transparent unter „Suchquellen“. Höchstens drei Treffer pro Tool-Aufruf (bei zwei Suchen höchstens sechs
+Quellen pro Antwort); Tool-Anfragen und rohe JSON-Ergebnisse bleiben aus dem sichtbaren und
 persistierten Verlauf heraus. Die Quellenliste überlebt den Chat-Neustart als
 Teil der Endantwort. Sie beweist keine inhaltlich korrekte Verwendung durch das LLM.
 
