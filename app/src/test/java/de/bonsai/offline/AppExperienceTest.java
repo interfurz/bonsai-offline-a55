@@ -141,6 +141,34 @@ public class AppExperienceTest {
         }
         File folder=new File("build/ui-captures");folder.mkdirs();try(FileOutputStream out=new FileOutputStream(new File(folder,name+".png"))){image.compress(Bitmap.CompressFormat.PNG,100,out);}image.recycle();
     }
+    private void captureAnswerFooter(String capture) throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity activity=controller.get();BonsaiApp app=(BonsaiApp)activity.getApplication();
+            app.loaded=true;app.messages.clear();
+            app.messages.add(new ChatStore.Message(1,"user","Wie speichert ein Wald Wasser?",""));
+            String answer="Ein Wald speichert Wasser im Boden. Wurzeln, Humus und Moose nehmen Regen auf und geben ihn langsam wieder ab.";
+            String metrics="11,6 Tokens/s · 40 Tokens · 1,8 s bis zum ersten Token";
+            app.messages.add(new ChatStore.Message(2,"assistant",answer,metrics));app.notifyUi();idleUi();
+            View root=activity.getWindow().getDecorView();
+            View copy=described(root,"Antwort kopieren"),retry=described(root,"Neu generieren – Variante als eigenen Chat speichern");
+            assertTrue(copy instanceof android.widget.ImageButton);assertNotNull(retry);assertTrue(retry.isEnabled());
+            copy.performClick();
+            android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+            assertEquals(answer,clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+            TextView detail=(TextView)field(activity,"liveDetail");assertEquals(metrics,detail.getContentDescription().toString());
+            assertEquals(3,((android.text.Spanned)detail.getText()).getSpans(0,detail.length(),android.text.style.ImageSpan.class).length);
+            assertNull(find(root,"Eine neue Variante wird als eigener Chat gespeichert."));
+            screenshot(root,capture);
+            app.loaded=false;app.notifyUi();assertFalse(described(root,"Neu generieren – Variante als eigenen Chat speichern").isEnabled());
+        }
+    }
+    @Test public void answerFooterIconsAndCopyWorkInLightTheme() throws Exception { captureAnswerFooter("answer-icons-light"); }
+    @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
+    public void answerFooterIconsAndCopyWorkInDarkTheme() throws Exception { captureAnswerFooter("answer-icons-dark"); }
+    @Test @Config(qualifiers="w360dp-h800dp-night-xhdpi")
+    public void answerFooterWrapsAtLargeTextSize() throws Exception {
+        org.robolectric.RuntimeEnvironment.setFontScale(1.5f);captureAnswerFooter("answer-icons-large-text");
+    }
     @Test public void welcomeAndPerformanceAreNavigable() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();View root=a.getWindow().getDecorView();
