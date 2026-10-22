@@ -21,6 +21,7 @@ final class NativeEngine {
     }
     static native byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,Stream callback,byte[] grammar,int reasoningBudget);
     static native void configure(long handle, int threads, int batchThreads, int microBatch);
+    static native void configureAdvanced(long handle,int threads,int batchThreads,int microBatch,boolean flashAttention,boolean kvQ8);
     static native byte[] probe(long handle, int steps);
     private NativeEngine() {}
 }

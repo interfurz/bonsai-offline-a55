@@ -100,7 +100,7 @@ public final class BonsaiApp extends Application {
     int microBatch() { return prefs.getInt("microBatch",gpu()?1:32); }
     String profileIdentity() { return profileIdentity(gpu(),threads(),batchThreads(),microBatch()); }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+prefs.getBoolean("flashAttention",false)+":"+prefs.getBoolean("kvQ8",false)+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {

@@ -13,21 +13,29 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Measures the existing native kernels; never changes weights, precision or context size. */
+/** Measures the existing native kernels; keeps weights and context size; optional attention/KV experiments require opt-in. */
 final class KernelOptimizer {
     static final class Profile {
-        final boolean gpu;
+        final boolean gpu,flashAttention,kvQ8;
         final int threads, batchThreads, microBatch;
         Profile(boolean gpu, int threads, int batchThreads, int microBatch) {
+            this(gpu,threads,batchThreads,microBatch,false,false);
+        }
+        Profile(boolean gpu,int threads,int batchThreads,int microBatch,boolean flashAttention,boolean kvQ8) {
+            if(kvQ8 && !flashAttention)throw new IllegalArgumentException("Q8 KV benötigt Flash Attention");
+            this.flashAttention=flashAttention;this.kvQ8=kvQ8;
             this.gpu=gpu; this.threads=threads; this.batchThreads=batchThreads; this.microBatch=microBatch;
         }
-        String key() { return (gpu?"Vulkan":"CPU")+" · "+threads+"T / "+batchThreads+"T · µ"+microBatch; }
+        String key() { return (gpu?"Vulkan":"CPU")+" · "+threads+"T / "+batchThreads+"T · µ"+microBatch+(flashAttention?" · FA":"")+(kvQ8?" · Q8 KV":""); }
         JSONObject json() throws Exception {
-            return new JSONObject().put("gpu",gpu).put("threads",threads).put("batch_threads",batchThreads).put("micro_batch",microBatch);
+            return new JSONObject().put("gpu",gpu).put("threads",threads).put("batch_threads",batchThreads).put("micro_batch",microBatch).put("flash_attention",flashAttention).put("kv_q8",kvQ8);
         }
     }
-    static Profile current(BonsaiApp a) { return new Profile(a.gpu(),a.threads(),a.batchThreads(),a.microBatch()); }
-    static void configure(long handle, Profile p) { NativeEngine.configure(handle,p.threads,p.batchThreads,p.microBatch); }
+    static Profile current(BonsaiApp a) { return new Profile(a.gpu(),a.threads(),a.batchThreads(),a.microBatch(),a.prefs.getBoolean("flashAttention",false),a.prefs.getBoolean("kvQ8",false)); }
+    static void configure(long handle, Profile p) {
+        if(p.flashAttention || p.kvQ8) NativeEngine.configureAdvanced(handle,p.threads,p.batchThreads,p.microBatch,p.flashAttention,p.kvQ8);
+        else NativeEngine.configure(handle,p.threads,p.batchThreads,p.microBatch);
+    }
     static String load(BonsaiApp a,long handle,Profile p) throws Exception {
         NativeEngine.referenceCpu(!p.gpu && a.cpuCompatibility);
         JSONObject r=new JSONObject(new String(NativeEngine.load(handle,BonsaiApp.utf8(a.modelFile().getAbsolutePath()),a.context(),p.threads,p.gpu),StandardCharsets.UTF_8));
@@ -49,6 +57,12 @@ final class KernelOptimizer {
             for(int t:new int[]{2,4,6,8}) { Profile p=new Profile(false,t,t,32); unique.put(p.key(),p); }
             for(int t:new int[]{4,8}) { Profile p=new Profile(false,t,8,128); unique.put(p.key(),p); }
         }
+        if(original.flashAttention) {
+            // Only requested experiments enter the existing differential/timing probes.
+            for(int u:new int[]{1,8,32,128}) {
+                Profile p=new Profile(gpu,4,4,u,true,original.kvQ8);unique.put(p.key(),p);
+            }
+        }
         return new ArrayList<>(unique.values());
     }
     @android.annotation.SuppressLint("ApplySharedPref") // Durable crash marker, written only on the worker.
@@ -67,11 +81,11 @@ final class KernelOptimizer {
                 .put("model",a.modelName()).put("model_bytes",a.modelFile().length()).put("model_modified",a.modelFile().lastModified())
                 .put("context",a.context()).put("thermal_before",initialThermal).put("thermal_policy","observe_only").put("timestamp",java.time.Instant.now().toString())
                 .put("objective","192 prompt tokens + estimated 128 decode tokens; fixed token replay, 2 measured runs after warm-up")
-                .put("precision","Original model weights; F16 KV; flash attention disabled").put("trials",trials);
+                .put("precision","Original weights; baseline F16 KV/FA off; optional profiles carry explicit precision flags").put("trials",trials);
             List<Profile> all=profiles(original,original.gpu);
             if(compare && BuildConfig.VULKAN_BUILD) all.addAll(profiles(original,!original.gpu));
             boolean loadedBackend=original.gpu, haveContext=a.loaded;
-            String reference=""; Boolean referenceGpu=null;
+            String reference="", referenceGroup="";
             for(int i=0;i<all.size();i++) {
                 if(a.cancelled) throw new IllegalStateException("Abgebrochen.");
                 int thermal=a.thermalStatus();
@@ -93,7 +107,8 @@ final class KernelOptimizer {
                         throw new IllegalStateException("Kernel weicht von der CPU-Referenz ab.");
                     if(!one.getString("fingerprint").equals(two.getString("fingerprint")))
                         throw new IllegalStateException("Kernel-Ergebnisse waren nicht reproduzierbar.");
-                    if(referenceGpu==null || referenceGpu!=p.gpu) { reference=one.getString("fingerprint"); referenceGpu=p.gpu; }
+                    String group=p.gpu+":"+p.flashAttention+":"+p.kvQ8;
+                    if(!referenceGroup.equals(group)) { reference=one.getString("fingerprint"); referenceGroup=group; }
                     if(!reference.equals(one.getString("fingerprint")))
                         throw new IllegalStateException("Kernel-Ergebnis weicht vom Referenzprofil dieses Backends ab.");
                     double score=(one.getDouble("score_ms")+two.getDouble("score_ms"))/2;
@@ -130,7 +145,9 @@ final class KernelOptimizer {
             write(a,"optimizer.json",report);
             a.prefs.edit().putBoolean("gpu",winner.gpu).putInt("threads",winner.threads)
                 .putInt("batchThreads",winner.batchThreads).putInt("microBatch",winner.microBatch)
+                .putBoolean("flashAttention",winner.flashAttention).putBoolean("kvQ8",winner.kvQ8)
                 .putString("optimizedFor",a.profileIdentity(winner.gpu,winner.threads,winner.batchThreads,winner.microBatch)).apply();
+            a.warmPrefixOnWorker();
             committed=true; ready=true;
         } catch(Exception | LinkageError e) {
             issue=e.getMessage()==null?e.toString():e.getMessage();
