@@ -28,7 +28,7 @@ public class SearchChatTest {
         @Implementation protected static long create(){return 1;}
         @Implementation protected static void resetStop(long handle){}
         @Implementation protected static void clearCache(long handle){}
-        @Implementation protected static void commitTurn(long handle,byte[][] roles,byte[][] texts){}
+        @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] texts){return "{}".getBytes(StandardCharsets.UTF_8);}
         @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] texts,int tokens,int seed,NativeEngine.Stream stream,byte[] grammar,int budget) {
             String answer=++calls==1?"<tool>{\"name\":\"suche\",\"args\":{\"query\":\"Photosynthese\"}}</tool>":"Pflanzen nutzen Lichtenergie. [1]";
             stream.onBytes(answer.getBytes(StandardCharsets.UTF_8));
