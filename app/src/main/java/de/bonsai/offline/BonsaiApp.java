@@ -327,13 +327,17 @@ public final class BonsaiApp extends Application {
         worker.execute(() -> {
             String text="", issue="", detail="";
             final int[] reasoningBudget={600};
+            BenchmarkMetrics metrics=new BenchmarkMetrics();
             try {
                 ToolLoop.Result result=ToolLoop.run(history,store,(roles,texts,grammar)->{
-                    ReplyStream output=new ReplyStream(grammarEnabled,value->main.post(()->{
+                    ReplyStream output=new ReplyStream(grammarEnabled,value->{
+                        metrics.visible(value);
+                        main.post(()->{
                         if(!cancelled) { answer.text=value;status="Antwort wird geschrieben …";notifyUi(); }
-                    }));
+                    });});
                     JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,roles,texts,limit,-1,
                         output,grammar,grammarEnabled?0:reasoningBudget[0]),StandardCharsets.UTF_8));
+                    metrics.add(stats);
                     reasoningBudget[0]=Math.max(0,reasoningBudget[0]-stats.optInt("reasoning_tokens",0));
                     return new ToolLoop.Result(output.text(),stats);
                 },()->cancelled,grammarEnabled);
@@ -342,12 +346,13 @@ public final class BonsaiApp extends Application {
                 committedRoles[0]=utf8("system");committedTexts[0]=utf8(ToolLoop.systemPrompt(grammarEnabled));
                 for(int i=0;i<history.size();i++) { committedRoles[i+1]=utf8(history.get(i).role);committedTexts[i+1]=utf8(history.get(i).text); }
                 committedRoles[history.size()+1]=utf8("assistant");committedTexts[history.size()+1]=utf8(text);
+                long commitStart=android.os.SystemClock.elapsedRealtime();
                 NativeEngine.commitTurn(handle,committedRoles,committedTexts);
-                JSONObject stats=result.stats;
+                JSONObject stats=metrics.finish(result.stats,android.os.SystemClock.elapsedRealtime()-commitStart);
+                if(prefs.getBoolean("turnDebugLog",false)) android.util.Log.d("BonsaiTurn",stats.toString());
                 final double speed=stats.getDouble("tokens_per_second");
                 main.post(()->liveTokensPerSecond=speed);
-                detail=String.format(Locale.GERMAN,"%.1f Tokens/s · %d Tokens · %.1f s bis zum ersten Token%s",stats.getDouble("tokens_per_second"),stats.getInt("output_tokens"),stats.optDouble("first_visible_token_ms",stats.getDouble("first_token_ms"))/1000,
-                    stats.getBoolean("stopped") ? " · abgebrochen" : stats.getBoolean("limit_reached") ? " · Antwortlimit erreicht" : "");
+                detail=BenchmarkMetrics.detail(stats);
             } catch(Exception | LinkageError e) { issue=reason(e); detail=cancelled ? "Abgebrochen" : "Unvollständige Antwort"; }
             try {
                 if(!text.isEmpty()) store.add(chat,"assistant",text,detail);
