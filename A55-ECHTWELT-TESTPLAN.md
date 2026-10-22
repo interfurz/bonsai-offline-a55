@@ -2,7 +2,7 @@
 
 Stand: 22. Oktober 2026, erneute Prüfung nach #15/#17. Dieser Plan folgt auf die
 [Projektanalyse/Roadmap](ROADMAP.md). Geprüfter `main`-Stand:
-`1753b1fd2f13ab4196bd99517d21629311acdb20`. Neben Encoder (#12), Wikipedia (#13)
+`efcd87a0b02fbc0325fbc30a20ce9b1dac291a15` (v0.5, nach #16/#18). Neben Encoder (#12), Wikipedia (#13)
 und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
 (#15) und optischen 16-dp-Iconvarianten (#17) integriert.
 **Ein physischer A55-Test wurde hier noch nicht ausgeführt.**
@@ -10,6 +10,10 @@ und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
 Beim erneuten Abruf liegen keine neuen A55-Logs oder persönlichen
 Nutzungsergebnisse vor. Die Renderaufnahmen/138 Tests aus der Iconvalidierung
 sind Hostbelege mit Testinhalten; sie ersetzen deinen Durchlauf nicht.
+Die neue CPU/Vulkan-APK ist inzwischen lokal gebaut, signiert und binär geprüft;
+[Buildnachweis](release/0.5/build-info.json) und
+[Updatevergleich](release/0.5/update-compatibility.json) identifizieren genau das
+Artefakt. Der lokale Build ist kein physischer A55-Test.
 
 Ziel ist ein gemeinsamer Befund aus **deinen echten Aufgaben, deinem Eindruck
 und dem dazu passenden Geräteprotokoll**. Ein schneller Benchmark allein reicht
