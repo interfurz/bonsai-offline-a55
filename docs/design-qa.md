@@ -46,7 +46,7 @@ No remaining P0/P1/P2 visual or interaction findings in the inspected captures.
 
 ## Verification
 
-- 109 native Java/Robolectric tests pass; ARM64 CPU debug APK builds. Android
+- 132 native Java/Robolectric tests pass; ARM64 CPU debug APK builds. Android
   Lint: zero errors, eight pre-existing configuration/inline-text warnings.
 - Contrasts for normal, muted, accent, warning and error text, primary actions,
   badges and controls verified by the existing palette tests.

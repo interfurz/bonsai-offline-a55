@@ -87,7 +87,7 @@ Weitere Ansichten: [Seitenleiste](ui/sidebar-dark.png), [Modell](ui/model-light.
 [große Schrift](ui/large-text-dark.png), [Abschluss](ui/glow-done-dark.png).
 
 Validierung: `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug`
-erfolgreich: **109 Tests, 0 Fehler**, ARM64-CPU-Debug-APK und Lint ohne Fehler
+erfolgreich: **132 Tests, 0 Fehler**, ARM64-CPU-Debug-APK und Lint ohne Fehler
 (acht bestehende Warnungen zu Konfiguration und deutschen Inline-Texten).
 Ein physischer A55-Test für Bildrate, Tastatur, TalkBack und parallele echte
 Modellinferenz bleibt erforderlich. Es ist kein Gerät angeschlossen.
