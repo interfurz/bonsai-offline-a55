@@ -12,14 +12,18 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.SweepGradient;
 import android.os.PowerManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.FrameLayout;
+import java.util.ArrayList;
 
 /** Native, offline interpretation of Paper's PulsingBorder; no WebView or GL context.
  * Cached shaders follow the rounded perimeter. Drawing never changes child layout.
  */
 final class PulsingBorder extends FrameLayout {
+    enum Mode { BORDER, AMBIENT, RAIL }
     enum State {
         IDLE(.45f,.12f,.2f,.08f,.18f,3,.35f,
             new int[]{0xff2b5cff,0xff7a3cff,0xff00c2ff}),
@@ -49,6 +53,7 @@ final class PulsingBorder extends FrameLayout {
     private final DesignTokens tokens;
     private final PowerManager powerManager;
     private final float density,radius,strength;
+    private final Mode mode;
     private State state=State.IDLE,previous=State.IDLE;
     private float phase,transition=1;
     private long lastFrame,nextPowerCheck;
@@ -57,11 +62,17 @@ final class PulsingBorder extends FrameLayout {
 
     public PulsingBorder(Context context) {this(context,new DesignTokens(context.getResources()),30,1);}
     PulsingBorder(Context context,DesignTokens tokens,float radius,float strength) {
-        super(context);this.tokens=tokens;this.radius=radius;this.strength=strength;
+        this(context,tokens,radius,strength,Mode.BORDER);
+    }
+    PulsingBorder(Context context,DesignTokens tokens,float radius,float strength,Mode mode) {
+        super(context);this.tokens=tokens;this.radius=radius;this.strength=strength;this.mode=mode;
         density=getResources().getDisplayMetrics().density;
         powerManager=(PowerManager)context.getSystemService(Context.POWER_SERVICE);
         setWillNotDraw(false);setClipChildren(false);setClipToPadding(false);
-        int inset=Math.round(9*density);setPadding(inset,inset,inset,inset);
+        int inset=Math.round(9*density);
+        if(mode==Mode.AMBIENT)setPadding(0,0,0,0);
+        else if(mode==Mode.RAIL)setPadding(Math.round(12*density),0,0,0);
+        else setPadding(inset,inset,inset,inset);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         for(State preset:State.values()) {
             halos[preset.ordinal()]=new RadialGradient[preset.colors.length];
@@ -72,6 +83,7 @@ final class PulsingBorder extends FrameLayout {
     }
 
     State getState(){return state;}
+    Mode getMode(){return mode;}
     boolean isFrameScheduled(){return scheduled;}
     void setState(State next) {
         if(state==next)return;
@@ -91,21 +103,39 @@ final class PulsingBorder extends FrameLayout {
     }
     private void schedule() {
         if(!scheduled&&shouldRunFrames()&&motionEnabled()) {
-            scheduled=true;lastFrame=SystemClock.uptimeMillis();postDelayed(frame,33);
+            scheduled=true;lastFrame=SystemClock.uptimeMillis();Frames.add(this);
         }
     }
-    private void stop(){removeCallbacks(frame);scheduled=false;lastFrame=0;}
-    private final Runnable frame=new Runnable(){
-        @Override public void run() {
-            scheduled=false;
-            if(!shouldRunFrames()||!motionEnabled()){invalidate();return;}
-            long now=SystemClock.uptimeMillis();
-            float elapsed=Math.min(.1f,(now-lastFrame)/1000f);lastFrame=now;
-            phase=(phase+elapsed*state.speed*.08f)%1;
-            transition=Math.min(1,transition+elapsed/.65f);
-            invalidate();scheduled=true;postDelayed(this,33);
+    private void stop(){Frames.remove(this);scheduled=false;lastFrame=0;}
+    private void advance(long now) {
+        float elapsed=Math.min(.1f,(now-lastFrame)/1000f);lastFrame=now;
+        phase=(phase+elapsed*state.speed*.08f)%1;
+        transition=Math.min(1,transition+elapsed/.65f);invalidate();
+    }
+    /** One frame callback for every visible light, instead of one timer per surface. */
+    private static final class Frames {
+        private static final Handler main=new Handler(Looper.getMainLooper());
+        private static final ArrayList<PulsingBorder> lights=new ArrayList<>();
+        private static boolean pending;
+        private static final Runnable tick=new Runnable(){
+            @Override public void run(){
+                pending=false;long now=SystemClock.uptimeMillis();
+                for(int i=lights.size()-1;i>=0;i--){
+                    PulsingBorder light=lights.get(i);
+                    if(!light.shouldRunFrames()||!light.motionEnabled()){
+                        lights.remove(i);light.scheduled=false;light.invalidate();
+                    }else light.advance(now);
+                }
+                post();
+            }
+        };
+        static void add(PulsingBorder light){lights.add(light);post();}
+        static void remove(PulsingBorder light){
+            lights.remove(light);
+            if(lights.isEmpty()){main.removeCallbacks(tick);pending=false;}
         }
-    };
+        private static void post(){if(!pending&&!lights.isEmpty()){pending=true;main.postDelayed(tick,33);}}
+    }
     @Override protected void onAttachedToWindow(){super.onAttachedToWindow();schedule();}
     @Override protected void onDetachedFromWindow(){stop();super.onDetachedFromWindow();}
     @Override protected void onWindowVisibilityChanged(int visibility) {
@@ -114,17 +144,24 @@ final class PulsingBorder extends FrameLayout {
     @Override protected void onVisibilityChanged(View changed,int visibility) {
         super.onVisibilityChanged(changed,visibility);
         // View's constructor may dispatch this before our fields are initialized.
-        if(frame!=null){if(isShown())schedule();else stop();}
+        if(paint!=null){if(isShown())schedule();else stop();}
     }
     @Override public void onWindowFocusChanged(boolean focused) {
         super.onWindowFocusChanged(focused);if(focused)schedule();else stop();
     }
     @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) {
         super.onSizeChanged(w,h,oldw,oldh);
+        if(mode==Mode.AMBIENT){bounds.set(0,0,w,h);return;}
         float inset=9*density,r=Math.min(radius*density,(h-2*inset)/2);
         bounds.set(inset,inset,w-inset,h-inset);inner.set(bounds);inner.inset(2*density,2*density);
         perimeter.reset();perimeter.addRoundRect(bounds,r,r,Path.Direction.CW);measure.setPath(perimeter,true);
         interior.reset();interior.addRoundRect(inner,Math.max(0,r-2*density),Math.max(0,r-2*density),Path.Direction.CW);
+        if(mode==Mode.RAIL){
+            bounds.set(0,0,w,h);interior.reset();perimeter.reset();
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            perimeter.moveTo(6*density,12*density);perimeter.lineTo(6*density,Math.max(12*density,h-12*density));
+            measure.setPath(perimeter,false);
+        }
         for(State preset:State.values()) {
             int[] colors=new int[preset.colors.length+1];
             System.arraycopy(preset.colors,0,colors,0,preset.colors.length);colors[colors.length-1]=colors[0];
@@ -133,14 +170,37 @@ final class PulsingBorder extends FrameLayout {
     }
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);if(bounds.isEmpty())return;
-        paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(tokens.raised);
-        canvas.drawPath(perimeter,paint);
-        paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(density);paint.setColor(tokens.subtleBorder);
-        canvas.drawPath(perimeter,paint);
+        if(mode==Mode.BORDER){
+            paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(tokens.raised);
+            canvas.drawPath(perimeter,paint);
+            paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(density);paint.setColor(tokens.subtleBorder);
+            canvas.drawPath(perimeter,paint);
+        }
         boolean animate=motionEnabled();float mix=animate?transition:1;
-        if(mix<1)drawLight(canvas,previous,1-mix);
-        drawLight(canvas,state,mix);
+        if(mode==Mode.AMBIENT){
+            if(mix<1)drawAmbient(canvas,previous,1-mix);
+            drawAmbient(canvas,state,mix);
+        }else{
+            if(mix<1)drawLight(canvas,previous,1-mix);
+            drawLight(canvas,state,mix);
+        }
         paint.setShader(null);paint.setAlpha(255);
+    }
+    private void drawAmbient(Canvas canvas,State preset,float opacity){
+        float w=getWidth(),h=getHeight(),drift=(float)Math.sin(phase*Math.PI*2);
+        float size=Math.min(w*.9f,h*.6f);
+        paint.setStyle(Paint.Style.FILL);
+        // Edge pools leave the central reading area quiet; no full-screen colour wash.
+        for(int i=0;i<2;i++){
+            float x=i==0?w*(.92f+.08f*drift):w*(.02f-.07f*drift);
+            float y=i==0?h*(.08f+.035f*drift):h*(.88f-.045f*drift);
+            RadialGradient halo=halos[preset.ordinal()][i%preset.colors.length];
+            spotMatrix.setScale(size,size);spotMatrix.postTranslate(x,y);halo.setLocalMatrix(spotMatrix);
+            paint.setShader(halo);
+            float level=tokens.dark?28+36*preset.intensity:16+24*preset.intensity;
+            paint.setAlpha(Math.min(255,Math.round(level*strength*opacity)));
+            canvas.drawCircle(x,y,size,paint);
+        }
     }
     private void drawLight(Canvas canvas,State preset,float opacity) {
         SweepGradient shader=borders[preset.ordinal()];if(shader==null)return;

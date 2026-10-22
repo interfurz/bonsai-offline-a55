@@ -6,7 +6,7 @@ Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu ges
 
 ## UI-Überarbeitung im aktuellen Quellcode
 
-Die Oberfläche verwendet ruhige neutrale Flächen, einen nahezu schwarzen Dark Mode und violette Aktionen. Der Chat ist die Hauptansicht, ohne Chat/Work-Umschalter. Modell, Leistung und Verlauf sind über das Menü links oben erreichbar. Eine native Java-Umsetzung des gewünschten Pulsing-Border-Effekts beleuchtet Chatbar und ausgewählte Aktionen: Blau/Violett im Leerlauf, mehrfarbig beim Generieren und kurz Grün nach erfolgreichem Abschluss. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
+Die Oberfläche verwendet ruhige neutrale Flächen, einen nahezu schwarzen Dark Mode und violette Aktionen. Der Chat ist die Hauptansicht, ohne Chat/Work-Umschalter. Modell, Leistung und Verlauf sind über das Menü links oben erreichbar. Eine native Java-Umsetzung des gewünschten Pulsing-Border-Effekts beleuchtet Chatbar, Bildschirmränder, neueste Antwort, Seitenleiste sowie Modell-/Leistungskarten und Hauptaktionen: Blau/Violett im Leerlauf, mehrfarbig beim Generieren und kurz Grün nach erfolgreichem Abschluss. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
 
 Animationen berücksichtigen Systemanimationen, Energiesparmodus und den Activity-Lebenszyklus. „Neu generieren“ speichert eine Antwortvariante als eigenen Chat und erhält den ursprünglichen Verlauf.
 

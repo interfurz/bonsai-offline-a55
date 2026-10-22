@@ -46,7 +46,7 @@ No remaining P0/P1/P2 visual or interaction findings in the inspected captures.
 
 ## Verification
 
-- 132 native Java/Robolectric tests pass; ARM64 CPU debug APK builds. Android
+- 135 native Java/Robolectric tests pass; ARM64 CPU debug APK builds. Android
   Lint: zero errors, eight pre-existing configuration/inline-text warnings.
 - Contrasts for normal, muted, accent, warning and error text, primary actions,
   badges and controls verified by the existing palette tests.
@@ -60,3 +60,23 @@ No remaining P0/P1/P2 visual or interaction findings in the inspected captures.
 These are native test renders with fixture messages/model state. There is no
 attached Android device; A55 frame rate, keyboard insets, TalkBack and real
 inference under simultaneous animation remain device checks. No browser applies.
+
+
+## App-wide lighting iteration
+
+The requested extension adds low-opacity moving edge pools to the chat, drawer
+and settings dialogs; a narrow light rail to the newest assistant reply; and
+weaker contours to model/performance cards, primary actions and the selected
+conversation. The composer remains the strongest outline. Text, older messages
+and ordinary settings rows do not animate.
+
+New evidence: `docs/ui/app-light-model-dark.png`,
+`docs/ui/app-light-performance-dark.png`, `docs/ui/app-light-sidebar-dark.png`,
+and refreshed ready, generating, completion, light-theme and large-font captures.
+The normal and 200 % font views retain reachable primary actions. Icon geometry
+and assets are outside this iteration.
+
+A shared frame callback replaces per-surface timers. The activity's light groups
+pause covered views and deregister removed popup/chat/drawer contents. Tests
+verify state propagation, completion reset, released surfaces and selected-chat
+navigation; reduced-motion and power-saving checks continue to pass.
