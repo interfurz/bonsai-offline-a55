@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_primary">#F5F5F7</color>
+    <color name="icon_secondary">#A6A6B0</color>
+    <color name="icon_selected">#C4ADFF</color>
+    <color name="icon_on_action">#FFFFFF</color>
+</resources>

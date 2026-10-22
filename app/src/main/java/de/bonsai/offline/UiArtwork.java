@@ -11,7 +11,8 @@ import android.view.View;
 
 /** Local vector artwork: crisp at every density, with no image or network dependency. */
 final class UiArtwork {
-    static Drawable icon(String kind, int color, int size) {
+    static Drawable icon(Context context, String kind, int color, int size) {
+        if(BonsaiIcons.resource(kind)!=0)return BonsaiIcons.icon(context,kind,color,size);
         Drawable d = new Glyph(kind, color);
         d.setBounds(0, 0, size, size);
         return d;
@@ -29,28 +30,8 @@ final class UiArtwork {
             p.setStrokeCap(Paint.Cap.ROUND); p.setStrokeJoin(Paint.Join.ROUND);
             path.reset();
             switch(kind) {
-                case "chat":
-                    c.drawRoundRect(3,3,21,17,4,4,p);
-                    path.moveTo(6,17);path.lineTo(6,21);path.lineTo(11,17);c.drawPath(path,p);
-                    c.drawLine(8,8,16,8,p);c.drawLine(8,12,13,12,p);break;
-                case "model":
-                    c.drawRoundRect(5,5,19,19,3,3,p);c.drawRoundRect(9,9,15,15,1,1,p);
-                    for(int i=8;i<=16;i+=8){c.drawLine(i,2,i,5,p);c.drawLine(i,19,i,22,p);c.drawLine(2,i,5,i,p);c.drawLine(19,i,22,i,p);}break;
-                case "performance":
-                    c.drawLine(4,20,4,13,p);c.drawLine(12,20,12,8,p);c.drawLine(20,20,20,3,p);
-                    path.moveTo(3,8);path.lineTo(10,3);path.lineTo(15,5);c.drawPath(path,p);break;
-                case "idea":
-                    c.drawCircle(12,9,6,p);c.drawLine(8,14,9,18,p);c.drawLine(16,14,15,18,p);
-                    c.drawLine(9,18,15,18,p);c.drawLine(10,21,14,21,p);break;
-                case "book":
-                    path.moveTo(12,5);path.quadTo(7,2,3,4);path.lineTo(3,19);path.quadTo(7,17,12,20);
-                    path.quadTo(17,17,21,19);path.lineTo(21,4);path.quadTo(17,2,12,5);path.lineTo(12,20);c.drawPath(path,p);break;
                 case "arrow":
                     c.drawLine(4,12,20,12,p);c.drawLine(15,7,20,12,p);c.drawLine(15,17,20,12,p);break;
-                case "copy":
-                    c.drawRoundRect(8,8,21,21,2,2,p);path.moveTo(16,4);path.lineTo(4,4);path.lineTo(4,16);c.drawPath(path,p);break;
-                case "refresh":
-                    c.drawArc(4,4,20,20,40,280,false,p);path.moveTo(20,3);path.lineTo(20,9);path.lineTo(14,9);c.drawPath(path,p);break;
                 case "shield":
                     path.moveTo(12,2);path.lineTo(20,5);path.lineTo(20,12);path.quadTo(20,18,12,22);
                     path.quadTo(4,18,4,12);path.lineTo(4,5);path.close();c.drawPath(path,p);

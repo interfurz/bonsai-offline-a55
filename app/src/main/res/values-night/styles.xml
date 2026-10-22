@@ -5,11 +5,11 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:colorAccent">#E6A7C1</item>
-        <item name="android:windowBackground">#1C151E</item>
-        <item name="android:colorBackground">#1C151E</item>
-        <item name="android:statusBarColor">#1C151E</item>
-        <item name="android:navigationBarColor">#1C151E</item>
+        <item name="android:colorAccent">#C4ADFF</item>
+        <item name="android:windowBackground">#050506</item>
+        <item name="android:colorBackground">#050506</item>
+        <item name="android:statusBarColor">#050506</item>
+        <item name="android:navigationBarColor">#050506</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

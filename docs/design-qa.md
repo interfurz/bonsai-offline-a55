@@ -1,29 +1,82 @@
-# Answer footer icons — visual QA
+# Minimal native chat and Java glow — design QA
 
 final result: passed
 
-## Target and evidence
+## Target
 
-- User references: `3060.jpg` (existing large buttons) and `3061.jpg` (compact icon-row style), supplied in `/tmp/codex-remote-attachments/01a1614b-c1cf-77d4-a61d-bf6df55c60b7/f452f797-112b-485d-a30d-7c68a9bfcde8/` as `1-3060.jpg` / `2-3061.jpg`.
-- Native Android implementation: `docs/ui/answer-icons-dark.png` and `docs/ui/answer-icons-large-text.png`; additional light-theme capture: `app/build/ui-captures/answer-icons-light.png`.
-- Regular viewport: 412 × 892 dp, 824 × 1784 pixels, density 2. Large-text viewport: 360 × 800 dp, 720 × 1600 pixels, density 2, font scale 1.5.
-- State: completed answer with three metrics, copy available and latest-answer regeneration enabled. Light/dark themes inspected. Copy to clipboard and disabled regeneration without a loaded model tested.
-- Combined source/implementation evidence opened for comparison: `app/build/ui-captures/answer-icons-comparison.png`. Focused before/after comparison for the large-font correction: `app/build/ui-captures/answer-icons-wrap-comparison.png`.
-- The user references are zoomed crops without a declared device density. Compare compact layout and relative icon hierarchy, rather than claiming a pixel-identical recreation. The screenshot's speaker/share/menu controls are not requested app functions. The native app retains its existing palette and its two existing actions.
+The user's two mobile reference screenshots establish a dark chat with generous
+empty space, round header actions, bottom suggestions, a capsule composer, and a
+left drawer. The user explicitly removed the Chat/Work switch from scope.
+The Paper Shaders snippet supplies three effect presets. This implementation is
+native Android Java; the gradient-based effect interprets the reference rather
+than claiming WebGL pixel equivalence.
 
-## Findings and iteration
+## Evidence and review
 
-1. Initial native render: normal-size footer matched the requested compact structure. At font scale 1.5, the `s` unit could wrap alone and inline icons sat too low. P2, blocked until fixed. Evidence: `app/build/ui-captures/answer-icons-large-text-before.png`.
-2. Fixed with non-breaking spacing inside each metric and baseline-aligned image spans. Re-captured and inspected the full screen and the combined before/after crop. The timer metric now wraps as a complete icon/value/unit group. No actionable P0/P1/P2 findings remain.
+Native Robolectric captures in `app/build/ui-captures/`:
 
-## Fidelity surfaces
+- `ready-dark.png`: 375 × 812 dp; minimal ready chat and reachable composer.
+- `history-dark.png`: 375 × 812 dp; drawer and anchored new-chat action.
+- `welcome-light.png`: 412 × 892 dp; first-use model import and draft entry.
+- `glow-generating-dark.png` and `glow-done-dark.png`: 412 × 892 dp;
+  cyan/magenta/coral/amber active border and green/cyan completion border.
+- `large-text-chat.png`, `large-text-Modell.png`, `large-text-Leistung.png`:
+  375 × 812 dp, font scale 2; wrapping and primary action reachability.
+- `model-light.png`, `performance-light.png`: native settings dialogs.
+- `tablet-light.png`, `tablet-model-popup.png`: 1024 × 900 dp; capped reading width.
 
-- Typography: existing Android system font, 12sp metadata and unchanged response typography. Full original metric descriptions remain available to accessibility services and tooltips.
-- Spacing/layout: small 16dp metric icons; larger 28dp action-icon canvases in 48dp touch targets, with an 8dp gap between targets. No full-width regeneration button or permanent explanatory paragraph. Large text wraps between metric groups.
-- Colors: existing Bonsai light/dark muted-foreground colors and transparent action backgrounds; native ripple feedback and visible disabled opacity.
-- Assets: official Google Material Symbols Rounded paths in Android VectorDrawables, sharp at both tested densities. Provenance and Apache-2.0 attribution included in the app's third-party notices. No generated raster UI or emoji icons.
-- Copy/content: copying and regeneration keep their behavior. Regeneration's separate-chat explanation moves to its tooltip/content description. No unsupported speaker/share functionality added.
+The supplied reference images and the native rendered images were visually
+inspected. This is a redesign using the requested layout; prompt text and menu
+items reflect actual offline Bonsai functions. The app does not add unsupported
+image generation, microphone or voice controls from the reference.
+
+## Findings and fixes
+
+1. Initial light halos had a visible square falloff around circular actions.
+   Constrained local highlight rendering to layered strokes of the rounded
+   perimeter; inspected the next captures.
+2. Centered the title and subtitle themselves inside the header's weighted area.
+3. Removed the disabled send button's rectangular surface; retained the round
+   target, disabled opacity, and separate background-independent focus outline.
+4. Test-only native offscreen captures can reuse stale text RenderNodes between
+   repeated bitmap draws of the same Activity. The completion capture now uses
+   its own fresh Activity; functional state checks remain separate.
+
+No remaining P0/P1/P2 visual or interaction findings in the inspected captures.
 
 ## Verification
 
-77 Java/Robolectric tests pass, Android Lint has no errors (eight existing configuration/UI-text warnings), ARM64 debug APK builds. Screenshots come from native Android rendering through Robolectric, not a web prototype. No browser console applies. Physical-device/touch feedback remains untested.
+- 135 native Java/Robolectric tests pass; ARM64 CPU debug APK builds. Android
+  Lint: zero errors, eight pre-existing configuration/inline-text warnings.
+- Contrasts for normal, muted, accent, warning and error text, primary actions,
+  badges and controls verified by the existing palette tests.
+- Streaming reuses the same text view; draft, popup and conversation recreation,
+  copy, archive, deletion confirmation and answer-variant behaviors remain tested.
+- Effect states, completion timeout, error/cancel handling, hidden views, activity
+  lifecycle, reduced animation and power saving have explicit tests.
+- Shaders and paths are cached; frames run at approximately 30 fps and do not
+  modify layout or inference settings. Covered chat effects pause behind overlays.
+
+These are native test renders with fixture messages/model state. There is no
+attached Android device; A55 frame rate, keyboard insets, TalkBack and real
+inference under simultaneous animation remain device checks. No browser applies.
+
+
+## App-wide lighting iteration
+
+The requested extension adds low-opacity moving edge pools to the chat, drawer
+and settings dialogs; a narrow light rail to the newest assistant reply; and
+weaker contours to model/performance cards, primary actions and the selected
+conversation. The composer remains the strongest outline. Text, older messages
+and ordinary settings rows do not animate.
+
+New evidence: `docs/ui/app-light-model-dark.png`,
+`docs/ui/app-light-performance-dark.png`, `docs/ui/app-light-sidebar-dark.png`,
+and refreshed ready, generating, completion, light-theme and large-font captures.
+The normal and 200 % font views retain reachable primary actions. Icon geometry
+and assets are outside this iteration.
+
+A shared frame callback replaces per-surface timers. The activity's light groups
+pause covered views and deregister removed popup/chat/drawer contents. Tests
+verify state propagation, completion reset, released surfaces and selected-chat
+navigation; reduced-motion and power-saving checks continue to pass.
