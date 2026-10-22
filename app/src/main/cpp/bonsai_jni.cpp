@@ -39,7 +39,10 @@ struct Engine {
     std::vector<llama_token> cached;
     size_t evicted_turns=0;
     std::chrono::system_clock::time_point template_now=std::chrono::system_clock::now();
-    void clear_cache() {
+    size_t cache_resets=0;
+    std::string reset_reason="created";
+    void clear_cache(const char * reason="explicit") {
+        ++cache_resets;reset_reason=reason;
         evicted_turns=0;cached.clear();
         if(context)llama_memory_clear(llama_get_memory(context.get()),true);
     }
@@ -103,7 +106,7 @@ size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits
     auto keep=conversation_prefix(e.cached,tokens,logits);
     if(keep<e.cached.size()) {
         if(!llama_memory_seq_rm(llama_get_memory(e.context.get()),0,static_cast<llama_pos>(keep),-1)) {
-            e.clear_cache();keep=0;
+            e.clear_cache("suffix_removal_failed");keep=0;
         } else e.cached.resize(keep);
     }
     decode_tokens(e,tokens.data()+keep,tokens.size()-keep);
@@ -128,7 +131,7 @@ void retain_window(Engine & e,common_chat_templates_inputs & input) {
         }
     }
     // A caller supplied a different conversation without an explicit reset.
-    e.clear_cache();
+    e.clear_cache("conversation_window_changed");
 }
 std::vector<llama_token> fit_prompt(Engine & e,common_chat_templates_inputs & input,size_t reserve,int & dropped) {
     const auto vocab=llama_model_get_vocab(e.model.get());
@@ -296,6 +299,10 @@ Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle
             micro_batch < 1 || micro_batch > 256 || (micro_batch & (micro_batch - 1)))
             throw std::runtime_error("Ungueltiges Optimierungsprofil.");
         if (e.stop) throw std::runtime_error("Abgebrochen.");
+        // Thread counts can change without reallocating KV; identical profiles are a no-op.
+        if(e.context && llama_n_ubatch(e.context.get())==static_cast<uint32_t>(micro_batch)) {
+            llama_set_n_threads(e.context.get(),threads,batch_threads);return;
+        }
         auto cp = llama_context_default_params();
         cp.n_ctx = e.context_size;
         cp.n_batch = 256;
@@ -311,7 +318,7 @@ Java_de_bonsai_offline_NativeEngine_configure(JNIEnv * env, jclass, jlong handle
         cp.no_perf = false;
         cp.abort_callback = abort_compute;
         cp.abort_callback_data = &e;
-        e.evicted_turns=0;e.cached.clear();
+        e.clear_cache("configure_context");
         e.context.reset(); // Release the previous KV allocation before creating another.
         e.context.reset(llama_init_from_model(e.model.get(), cp));
         if (!e.context) throw std::runtime_error("Optimierungsprofil konnte keinen Kontext anlegen.");
@@ -330,7 +337,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             text += "Ein Wald speichert Wasser im Boden. Baeume nutzen Sonnenlicht und bilden neue Blaetter. ";
         auto tokens = tokenize(vocab, text);
         tokens.resize(std::min<size_t>(tokens.size(), 192));
-        e.clear_cache();
+        e.clear_cache("probe_start");
         auto start = Clock::now();
         const size_t batch = llama_n_batch(e.context.get());
         for (size_t i = 0; i < tokens.size(); i += batch) {
@@ -361,7 +368,7 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
             fingerprint = (fingerprint ^ static_cast<uint64_t>(best)) * 1099511628211ULL;
         }
         const double decode = elapsed(start);
-        e.clear_cache();
+        e.clear_cache("probe_end");
         return result_bytes(env, common_json({{"prefill_ms",prefill}, {"decode_ms",decode},
             {"decode_tokens",steps}, {"prompt_tokens",tokens.size()},
             {"tokens_per_second",steps * 1000.0 / std::max(decode, 0.001)},
@@ -409,6 +416,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         env->DeleteLocalRef(cb_class);
         if (!on_chunk) throw std::runtime_error("Streaming-Callback fehlt.");
         llama_perf_context_reset(e.context.get());
+        const auto cached_before=e.cached.size();
         auto start=Clock::now();
         const auto reused=sync_cache(e,tokens,true);
         double prefill_ms = elapsed(start), first_token_ms = 0;
@@ -462,20 +470,22 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         const double generation_ms = elapsed(generation_start);
         // Remove reasoning now, not only when the next user message arrives.
         auto cleanup_start=Clock::now();
-        if(e.stop)e.clear_cache();
+        size_t cleanup_decoded=0;
+        if(e.stop)e.clear_cache("stopped");
         else {
             std::string final=output.visible;
             if(!grammar_text.empty() && final.rfind("<final>",0)==0 && final.size()>=15 && final.compare(final.size()-8,8,"</final>")==0)
                 final=final.substr(7,final.size()-15);
             common_chat_msg answer;answer.role="assistant";answer.content=final;
             input.messages.push_back(std::move(answer));input.add_generation_prompt=false;
-            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);sync_cache(e,clean,false);
+            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_decoded=clean.size()-sync_cache(e,clean,false);
         }
         return result_bytes(env, common_json({{"prompt_tokens",tokens.size()}, {"output_tokens",generated},
             {"prefill_ms",prefill_ms}, {"first_token_ms",first_token_ms},
             {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},
             {"first_visible_token_ms",first_visible_token_ms},{"reasoning_tokens",reasoning_tokens},{"reasoning_capped",reasoning_capped},{"injected_tokens",injected},
-            {"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
+            {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason},{"cached_before",cached_before},
+            {"cleanup_decoded_tokens",cleanup_decoded},{"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
             {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
             {"generation_ms",generation_ms}, {"tokens_per_second", generation_ms > 0 ? generated*1000.0/generation_ms : 0},
             {"stopped",e.stop.load()}, {"limit_reached",!eos && (answer_tokens>=limit || generated>=hard_limit)}}).dump());
