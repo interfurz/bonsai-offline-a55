@@ -16194,7 +16194,8 @@ public licenses.
 Creative Commons may be contacted at creativecommons.org.
 
 ===== Bonsai original icon set =====
-18 purpose-drawn icons, SVG masters in design/icons/svg; MIT License.
+18 purpose-drawn icons with optical 16dp variants and the existing decorative
+message marker; SVG masters in design/icons/svg; MIT License.
 Copyright (c) 2026 Bonsai Offline contributors.
-No third-party icon geometry is used in these 18 assets.
+No third-party icon geometry is used in these assets.
 See the project LICENSE and design/icons/SOURCES.md.

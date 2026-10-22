@@ -1,19 +1,19 @@
-Funktion,SVG-Master,Android VectorDrawable,Java-Alias,Einsatz
-Menü,svg/ic_menu.svg,app/src/main/res/drawable/ic_menu.xml,menu,24 dp Standard
-Neuer Chat,svg/ic_new_chat.svg,app/src/main/res/drawable/ic_new_chat.xml,edit,24 dp Standard
-Plus,svg/ic_plus.svg,app/src/main/res/drawable/ic_plus.xml,plus,24 dp Standard
-Senden,svg/ic_send.svg,app/src/main/res/drawable/ic_send.xml,send,24 dp Standard
-Stop,svg/ic_stop.svg,app/src/main/res/drawable/ic_stop.xml,stop,24 dp Standard
-Schließen,svg/ic_close.svg,app/src/main/res/drawable/ic_close.xml,close,24 dp Standard
-Modell,svg/ic_model.svg,app/src/main/res/drawable/ic_model.xml,model,24 dp Standard
-Leistung,svg/ic_performance.svg,app/src/main/res/drawable/ic_performance.xml,performance,24 dp Standard
-Chatverlauf,svg/ic_history.svg,app/src/main/res/drawable/ic_history.xml,history,24 dp Standard
-Archiv,svg/ic_archive.svg,app/src/main/res/drawable/ic_archive.xml,archive,24 dp Standard
-Verstehen / Buch,svg/ic_book.svg,app/src/main/res/drawable/ic_book.xml,book,24 dp Standard
-Idee,svg/ic_idea.svg,app/src/main/res/drawable/ic_idea.xml,idea,24 dp Standard
-Kopieren,svg/ic_answer_copy.svg,app/src/main/res/drawable/ic_answer_copy.xml,copy,28 dp Aktion
-Neu generieren,svg/ic_answer_retry.svg,app/src/main/res/drawable/ic_answer_retry.xml,refresh,28 dp Aktion
-Geschwindigkeit,svg/ic_answer_speed.svg,app/src/main/res/drawable/ic_answer_speed.xml,speed,16 dp Metadaten
-Tokenanzahl,svg/ic_answer_count.svg,app/src/main/res/drawable/ic_answer_count.xml,count,16 dp Metadaten
-Zeit,svg/ic_answer_time.svg,app/src/main/res/drawable/ic_answer_time.xml,time,16 dp Metadaten
-Information,svg/ic_answer_info.svg,app/src/main/res/drawable/ic_answer_info.xml,info,16 dp Metadaten
+Funktion,SVG-Master,SVG 16 dp,VectorDrawable,VectorDrawable 16 dp,Java-Alias,Einsatz
+Menü,svg/ic_menu.svg,svg/ic_menu_16.svg,app/src/main/res/drawable/ic_menu.xml,app/src/main/res/drawable/ic_menu_16.xml,menu,24 dp Standard
+Neuer Chat,svg/ic_new_chat.svg,svg/ic_new_chat_16.svg,app/src/main/res/drawable/ic_new_chat.xml,app/src/main/res/drawable/ic_new_chat_16.xml,edit,24 dp Standard
+Plus,svg/ic_plus.svg,svg/ic_plus_16.svg,app/src/main/res/drawable/ic_plus.xml,app/src/main/res/drawable/ic_plus_16.xml,plus,24 dp Standard
+Senden,svg/ic_send.svg,svg/ic_send_16.svg,app/src/main/res/drawable/ic_send.xml,app/src/main/res/drawable/ic_send_16.xml,send,24 dp Standard
+Stop,svg/ic_stop.svg,svg/ic_stop_16.svg,app/src/main/res/drawable/ic_stop.xml,app/src/main/res/drawable/ic_stop_16.xml,stop,24 dp Standard
+Schließen,svg/ic_close.svg,svg/ic_close_16.svg,app/src/main/res/drawable/ic_close.xml,app/src/main/res/drawable/ic_close_16.xml,close,24 dp Standard
+Modell,svg/ic_model.svg,svg/ic_model_16.svg,app/src/main/res/drawable/ic_model.xml,app/src/main/res/drawable/ic_model_16.xml,model,24 dp Standard
+Leistung,svg/ic_performance.svg,svg/ic_performance_16.svg,app/src/main/res/drawable/ic_performance.xml,app/src/main/res/drawable/ic_performance_16.xml,performance,24 dp Standard
+Chatverlauf,svg/ic_history.svg,svg/ic_history_16.svg,app/src/main/res/drawable/ic_history.xml,app/src/main/res/drawable/ic_history_16.xml,history,24 dp Standard
+Archiv,svg/ic_archive.svg,svg/ic_archive_16.svg,app/src/main/res/drawable/ic_archive.xml,app/src/main/res/drawable/ic_archive_16.xml,archive,24 dp Standard
+Verstehen / Buch,svg/ic_book.svg,svg/ic_book_16.svg,app/src/main/res/drawable/ic_book.xml,app/src/main/res/drawable/ic_book_16.xml,book,24 dp Standard
+Idee,svg/ic_idea.svg,svg/ic_idea_16.svg,app/src/main/res/drawable/ic_idea.xml,app/src/main/res/drawable/ic_idea_16.xml,idea,24 dp Standard
+Kopieren,svg/ic_answer_copy.svg,svg/ic_answer_copy_16.svg,app/src/main/res/drawable/ic_answer_copy.xml,app/src/main/res/drawable/ic_answer_copy_16.xml,copy,28 dp Aktion
+Neu generieren,svg/ic_answer_retry.svg,svg/ic_answer_retry_16.svg,app/src/main/res/drawable/ic_answer_retry.xml,app/src/main/res/drawable/ic_answer_retry_16.xml,refresh,28 dp Aktion
+Geschwindigkeit,svg/ic_answer_speed.svg,svg/ic_answer_speed_16.svg,app/src/main/res/drawable/ic_answer_speed.xml,app/src/main/res/drawable/ic_answer_speed_16.xml,speed,16 dp Metadaten (eigene optische Variante)
+Tokenanzahl,svg/ic_answer_count.svg,svg/ic_answer_count_16.svg,app/src/main/res/drawable/ic_answer_count.xml,app/src/main/res/drawable/ic_answer_count_16.xml,count,16 dp Metadaten (eigene optische Variante)
+Zeit,svg/ic_answer_time.svg,svg/ic_answer_time_16.svg,app/src/main/res/drawable/ic_answer_time.xml,app/src/main/res/drawable/ic_answer_time_16.xml,time,16 dp Metadaten (eigene optische Variante)
+Information,svg/ic_answer_info.svg,svg/ic_answer_info_16.svg,app/src/main/res/drawable/ic_answer_info.xml,app/src/main/res/drawable/ic_answer_info_16.xml,info,16 dp Metadaten (eigene optische Variante)
