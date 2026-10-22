@@ -52,6 +52,9 @@ public final class MainActivity extends Activity {
     private ProgressBar popupProgress;
     private TextView statusAction, inputError;
     private ProgressBar statusProgress;
+    private PulsingBorder composerAura, headerAura, popupAura, drawerAura, welcomeAura;
+    private boolean effectsRunning;
+    private final Runnable settleGlow=()->setGlowState(PulsingBorder.State.IDLE);
     private int activeScreen;
     private boolean lastLoaded, lastModelPresent;
     private long busySince;
@@ -98,13 +101,16 @@ public final class MainActivity extends Activity {
             int width=Math.min(r-l,dp(DesignTokens.CONTENT_WIDTH));
             if(page.getLayoutParams().width!=width){page.getLayoutParams().width=width;page.requestLayout();}
         });
-        LinearLayout header=row(); header.setPadding(dp(16),dp(8),dp(16),dp(8));
-        header.addView(icon("menu","Menü öffnen",v -> showDrawer()));
-        LinearLayout heading=column(); heading.setPadding(dp(8),0,dp(8),0);
-        title=text("Bonsai",DesignTokens.TYPE_TITLE,TEXT); title.setTypeface(null,Typeface.BOLD); title.setAccessibilityHeading(true);
-        subtitle=text("Privat. Auf deinem Gerät.",DesignTokens.TYPE_META,MUTED);
-        heading.addView(title); heading.addView(subtitle); header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        newChat=icon("edit","Neuen Chat starten",v -> {app.newChat();input.setText("");navigate(0);});newChat.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));header.addView(newChat);page.addView(header);
+        LinearLayout header=row(); header.setPadding(dp(16),dp(4),dp(8),dp(4));
+        IconButton menuButton=icon("menu","Menü öffnen",v -> showDrawer());
+        menuButton.setBackground(interactiveBackground(PANEL,24));header.addView(menuButton);
+        LinearLayout heading=column(); heading.setPadding(dp(8),0,0,0);heading.setGravity(Gravity.CENTER);
+        title=text("Bonsai",DesignTokens.TYPE_SUBTITLE,TEXT); title.setTypeface(null,Typeface.BOLD); title.setAccessibilityHeading(true);
+        subtitle=text("Lokal & privat",DesignTokens.TYPE_META,MUTED);
+        title.setGravity(Gravity.CENTER);subtitle.setGravity(Gravity.CENTER);heading.addView(title); heading.addView(subtitle); header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        newChat=icon("edit","Neuen Chat starten",v -> {app.newChat();input.setText("");navigate(0);});newChat.setBackground(interactiveBackground(Color.TRANSPARENT,24));
+        headerAura=new PulsingBorder(this,tokens,24,.55f);headerAura.addView(newChat);
+        header.addView(headerAura);page.addView(header);
 
         statusCard=column();statusCard.setPadding(dp(16),dp(8),dp(16),dp(8));
         LinearLayout statusRow=row();state=text("",DesignTokens.TYPE_LABEL,MUTED);state.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -121,17 +127,18 @@ public final class MainActivity extends Activity {
     }
     private void createChatPage() {
         chatPage=column();
-        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setPadding(dp(24),dp(16),dp(24),dp(24));
+        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setPadding(dp(24),dp(16),dp(24),dp(8));scroll.setVerticalScrollBarEnabled(false);
         chat=column();scroll.addView(chat,new ScrollView.LayoutParams(-1,-1));chatPage.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         scroll.getViewTreeObserver().addOnScrollChangedListener(()->{
             View content=scroll.getChildAt(0);autoScroll=content==null||content.getHeight()-scroll.getScrollY()-scroll.getHeight()<dp(100);
         });
-        composerGroup=column();composerGroup.setPadding(dp(16),dp(8),dp(16),0);
-        TextView label=text("Deine Nachricht",DesignTokens.TYPE_LABEL,MUTED);label.setPadding(dp(8),0,0,dp(8));composerGroup.addView(label);
-        LinearLayout composer=row();composer.setGravity(Gravity.BOTTOM);composer.setPadding(dp(8),dp(4),dp(8),dp(4));composer.setBackground(outline(tokens.raised,DesignTokens.RADIUS_CARD));
-        input=new EditText(this);input.setId(View.generateViewId());label.setLabelFor(input.getId());input.setTextColor(TEXT);input.setHintTextColor(MUTED);input.setTextSize(DesignTokens.TYPE_BODY);
-        input.setHint("Stelle eine Frage …");input.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
-        input.setPadding(dp(8),dp(12),dp(8),dp(12));input.setMaxLines(4);input.setMinLines(1);
+        composerGroup=column();composerGroup.setPadding(dp(7),dp(2),dp(7),0);
+        composerAura=new PulsingBorder(this,tokens,30,1f);
+        LinearLayout composer=row();composer.setGravity(Gravity.CENTER_VERTICAL);composer.setPadding(dp(4),dp(4),dp(4),dp(4));
+        composer.addView(icon("plus","Modell und Einstellungen öffnen",v->settings()));
+        input=new EditText(this);input.setId(View.generateViewId());input.setContentDescription("Deine Nachricht");input.setTextColor(TEXT);input.setHintTextColor(MUTED);input.setTextSize(DesignTokens.TYPE_BODY);
+        input.setHint("Frag Bonsai …");input.setBackgroundColor(Color.TRANSPARENT);
+        input.setPadding(dp(4),dp(12),dp(4),dp(12));input.setMaxLines(4);input.setMinLines(1);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         composer.addView(input,new LinearLayout.LayoutParams(0,-2,1));
         send=icon("send","Nachricht senden",v->{
@@ -142,14 +149,14 @@ public final class MainActivity extends Activity {
                 v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 if(app.send(value)){pendingPrompt=draft;input.setText("");autoScroll=true;}
             }
-        });composer.addView(send);composerGroup.addView(composer);
+        });composer.addView(send);composerAura.addView(composer,new FrameLayout.LayoutParams(-1,-2));composerGroup.addView(composerAura);
         inputError=text("",DesignTokens.TYPE_LABEL,tokens.error);inputError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);composerGroup.addView(inputError);
         input.addTextChangedListener(new TextWatcher(){
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}
             public void onTextChanged(CharSequence s,int start,int before,int count){showInputError();updateSend();}
             public void afterTextChanged(Editable e){}
         });
-        TextView note=text("Offline verarbeitet · KI-Antworten können Fehler enthalten",DesignTokens.TYPE_META,MUTED);note.setGravity(Gravity.CENTER);note.setPadding(dp(8),dp(8),dp(8),dp(8));composerGroup.addView(note);
+        TextView note=text("Auf deinem Gerät. KI kann Fehler machen.",DesignTokens.TYPE_META,MUTED);note.setGravity(Gravity.CENTER);note.setPadding(dp(8),0,dp(8),dp(8));composerGroup.addView(note);
         chatPage.addView(composerGroup);
     }
     private void showInputError(){
@@ -177,13 +184,16 @@ public final class MainActivity extends Activity {
             popupProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);popupProgress.setMax(1000);
             popupProgress.setProgressTintList(android.content.res.ColorStateList.valueOf(ACCENT));popupStatusCard.addView(popupProgress,new LinearLayout.LayoutParams(-1,dp(4)));panel.addView(popupStatusCard);
             popupHost=new FrameLayout(this);panel.addView(popupHost,new LinearLayout.LayoutParams(-1,0,1));
-            sectionDialog.setContentView(panel);sectionDialog.setCanceledOnTouchOutside(true);
+            popupAura=new PulsingBorder(this,tokens,DesignTokens.RADIUS_CARD,.4f);
+            popupAura.addView(panel,new FrameLayout.LayoutParams(-1,-1));
+            popupAura.setState(composerAura.getState());
+            sectionDialog.setContentView(popupAura);sectionDialog.setCanceledOnTouchOutside(true);
             sectionDialog.setOnDismissListener(d->{
                 if(sectionDialog!=d)return;
                 sectionDialog=null;activeScreen=0;popupHost=null;popupTitle=null;popupState=null;popupAction=null;popupStatusCard=null;popupProgress=null;
-                modelPage=null;performancePage=null;performanceStatus=null;performanceResult=null;performanceStart=null;performanceCompare=null;performanceExport=null;performanceProgress=null;
+                popupAura=null;updateEffectVisibility();modelPage=null;performancePage=null;performanceStatus=null;performanceResult=null;performanceStart=null;performanceCompare=null;performanceExport=null;performanceProgress=null;
             });
-            sectionDialog.show();
+            sectionDialog.show();updateEffectVisibility();
             Window window=sectionDialog.getWindow();
             if(window!=null){
                 window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -213,16 +223,18 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);}
     @Override protected void onDestroy(){
-        app.main.removeCallbacks(progressTick);
+        app.main.removeCallbacks(progressTick);app.main.removeCallbacks(settleGlow);
         if(sectionDialog!=null){sectionDialog.setOnDismissListener(null);sectionDialog.dismiss();sectionDialog=null;}
         if(errorDialog!=null)errorDialog.dismiss();
         if(chatActionsDialog!=null)chatActionsDialog.dismiss();
         if(app.listener==uiListener)app.listener=null;
         super.onDestroy();
     }
-    @Override protected void onStart(){super.onStart();app.listener=uiListener;render();}
+    @Override protected void onStart(){super.onStart();effectsRunning=true;updateEffectVisibility();app.listener=uiListener;render();}
     @Override protected void onStop(){
-        app.main.removeCallbacks(progressTick);
+        effectsRunning=false;updateEffectVisibility();
+        app.main.removeCallbacks(progressTick);app.main.removeCallbacks(settleGlow);
+        if(!app.busy)setGlowState(PulsingBorder.State.IDLE);
         if(app.listener==uiListener)app.listener=null;
         super.onStop();
     }
@@ -240,7 +252,13 @@ public final class MainActivity extends Activity {
             if((!app.error.isEmpty()||app.cancelled)&&input.length()==0)input.setText(pendingPrompt);
             pendingPrompt="";
         }
-        subtitle.setText(app.loaded?app.backend+" · Modell bereit":!app.messages.isEmpty()?"Modell nicht geladen":"Privat. Auf deinem Gerät.");
+        subtitle.setText(app.loaded?"Modell bereit":!app.messages.isEmpty()?"Modell nicht geladen":"Lokal & privat");
+        if(app.busy){app.main.removeCallbacks(settleGlow);setGlowState(PulsingBorder.State.GENERATING);}
+        else if(lastBusy){
+            app.main.removeCallbacks(settleGlow);
+            setGlowState(app.error.isEmpty()&&!app.cancelled?PulsingBorder.State.DONE:PulsingBorder.State.IDLE);
+            if(effectsRunning)app.main.postDelayed(settleGlow,1800);
+        }
         updateStatus();updatePerformance();
         newChat.setEnabled(!app.busy);newChat.setAlpha(app.busy?.4f:1);updateSend();
         boolean modelChanged=lastLoaded!=app.loaded||lastModelPresent!=app.modelFile().isFile();
@@ -312,41 +330,48 @@ public final class MainActivity extends Activity {
         send.setAlpha(send.isEnabled()?1:.4f);send.invalidate();
         // Drafting the next question stays available while inference runs.
         input.setEnabled(true);
-        composerGroup.setVisibility(app.loaded||!app.messages.isEmpty()||input.length()>0?View.VISIBLE:View.GONE);
+        composerGroup.setVisibility(View.VISIBLE);
+        input.setHint(app.loaded?"Frag Bonsai …":"Nachricht vorbereiten …");
+    }
+    private void setGlowState(PulsingBorder.State value){
+        if(composerAura!=null)composerAura.setState(value);
+        if(popupAura!=null)popupAura.setState(value);
+    }
+    private void updateEffectVisibility(){
+        boolean chatVisible=effectsRunning&&drawer==null&&sectionDialog==null;
+        if(composerAura!=null)composerAura.setActive(chatVisible);
+        if(headerAura!=null)headerAura.setActive(chatVisible);
+        if(welcomeAura!=null)welcomeAura.setActive(chatVisible);
+        if(popupAura!=null)popupAura.setActive(effectsRunning);
+        if(drawerAura!=null)drawerAura.setActive(effectsRunning&&drawer!=null);
     }
     private void emptyState(){
-        chat.setGravity(Gravity.TOP);
-        LinearLayout hero=column();hero.setPadding(0,dp(8),0,dp(16));
-        LinearLayout privacy=row();TextView badge=badge("Privat auf deinem Gerät","shield");
-        if(app.loaded){
-            privacy.addView(badge,new LinearLayout.LayoutParams(0,-2,1));
-            privacy.addView(new UiArtwork.BonsaiScene(this,tokens),new LinearLayout.LayoutParams(dp(104),dp(80)));
-        }else{
-            hero.addView(new UiArtwork.BonsaiScene(this,tokens),new LinearLayout.LayoutParams(-1,dp(132)));
-            privacy.addView(badge);
-        }
-        addSpaced(hero,privacy,8);
-        TextView greeting=text(app.loaded?"Was möchtest du\nherausfinden?":"Gute Gedanken.\nGanz für dich.",DesignTokens.TYPE_HERO,TEXT);greeting.setTypeface(null,Typeface.BOLD);greeting.setLineSpacing(0,1.1f);greeting.setPadding(0,dp(8),0,dp(12));greeting.setAccessibilityHeading(true);hero.addView(greeting);
-        TextView caption=text(app.loaded?"Dein Modell ist bereit. Stelle eine Frage oder nutze einen Einstieg.":"Einmal ein Modell importieren. Danach Fragen stellen – auch ohne Internet.",DesignTokens.TYPE_BODY,MUTED);hero.addView(caption);
+        chat.setGravity(Gravity.BOTTOM);
+        LinearLayout hero=column();hero.setPadding(0,dp(24),0,dp(4));
+        welcomeAura=null;
         if(!app.loaded){
-            LinearLayout card=card();card.addView(badge(app.busy?"Wird vorbereitet":"DEIN ERSTER SCHRITT","model"),new LinearLayout.LayoutParams(-2,-2));
-            TextView step=text("Ein Modell für deine Gedanken",DesignTokens.TYPE_SUBTITLE,TEXT);step.setTypeface(null,Typeface.BOLD);addSpaced(card,step,12);
-            addSpaced(card,text("1. Modell öffnen   2. Frage stellen",DesignTokens.TYPE_LABEL,MUTED),8);
-            TextView start=primary(app.busy?"Vorgang läuft …":app.modelFile().isFile()?"Modell laden":"Modell importieren");start.setEnabled(!app.busy);start.setOnClickListener(v->{if(app.modelFile().isFile())app.loadModel();else pickModel();});addSpaced(card,start,16);
-            TextView hint=text("GGUF-Datei · bleibt auf diesem Gerät",DesignTokens.TYPE_META,MUTED);addSpaced(card,hint,12);addSpaced(hero,card,24);
+            TextView greeting=text("Gute Gedanken.\nGanz für dich.",DesignTokens.TYPE_HERO,TEXT);
+            greeting.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+            greeting.setLineSpacing(0,1.1f);greeting.setAccessibilityHeading(true);hero.addView(greeting);
+            addSpaced(hero,text("Dein KI-Assistent. Komplett offline.",DesignTokens.TYPE_BODY,MUTED),12);
+            TextView start=primary(app.busy?"Vorgang läuft …":app.modelFile().isFile()?"Modell laden":"Modell importieren");
+            start.setEnabled(!app.busy);
+            start.setOnClickListener(v->{if(app.modelFile().isFile())app.loadModel();else pickModel();});
+            welcomeAura=new PulsingBorder(this,tokens,24,.55f);
+            welcomeAura.setActive(effectsRunning&&drawer==null&&sectionDialog==null);
+            welcomeAura.addView(start,new FrameLayout.LayoutParams(-1,-2));addSpaced(hero,welcomeAura,24);
+            TextView hint=text("Lokale GGUF-Datei · bleibt auf deinem Gerät",DesignTokens.TYPE_META,MUTED);
+            hint.setPadding(dp(8),0,dp(8),dp(16));hero.addView(hint);
         }else{
-            addSpaced(hero,suggestion("Einfach verstehen","Komplexes auf den Punkt bringen","book","Erkläre mir ein schwieriges Thema einfach: "),24);
-            addSpaced(hero,suggestion("Eine Idee entwickeln","Gedanken sammeln und weiterdenken","idea","Hilf mir, eine Idee weiterzuentwickeln: "),8);
+            hero.addView(suggestion("Einfach verstehen","book","Erkläre mir ein schwieriges Thema einfach: "));
+            addSpaced(hero,suggestion("Eine Idee entwickeln","idea","Hilf mir, eine Idee weiterzuentwickeln: "),4);
         }
         chat.addView(hero,new LinearLayout.LayoutParams(-1,-2));
     }
-    private TextView suggestion(String label,String description,String glyph,String prompt){
-        android.text.SpannableString content=new android.text.SpannableString(label+"\n"+description);
-        content.setSpan(new android.text.style.StyleSpan(Typeface.BOLD),0,label.length(),0);
-        content.setSpan(new android.text.style.RelativeSizeSpan(DesignTokens.TYPE_LABEL/(float)DesignTokens.TYPE_BODY),label.length()+1,content.length(),0);
-        content.setSpan(new android.text.style.ForegroundColorSpan(MUTED),label.length()+1,content.length(),0);
-        TextView t=menuItem("");t.setText(content);t.setPadding(dp(16),dp(16),dp(16),dp(16));t.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
-        t.setCompoundDrawables(UiArtwork.icon(this,glyph,iconColor(R.color.icon_primary),dp(24)),null,UiArtwork.icon(this,"arrow",iconColor(R.color.icon_secondary),dp(24)),null);t.setCompoundDrawablePadding(dp(16));
+    private TextView suggestion(String label,String glyph,String prompt){
+        TextView t=menuItem(label);t.setTextColor(actionColors(MUTED));
+        t.setPadding(dp(8),dp(14),dp(8),dp(14));
+        t.setCompoundDrawables(UiArtwork.icon(this,glyph,iconColor(R.color.icon_secondary),dp(24)),null,null,null);t.setCompoundDrawablePadding(dp(16));
         t.setOnClickListener(v->{input.setText(prompt);input.setSelection(input.length());input.requestFocus();((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);});return t;
     }
     private void addMessage(ChatStore.Message m){
@@ -439,24 +464,25 @@ public final class MainActivity extends Activity {
         if(drawer!=null) return;
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
         drawer=new FrameLayout(this); drawer.setBackgroundColor(0x99000000); drawer.setOnClickListener(v->closeDrawer());
-        LinearLayout panel=column(); panel.setBackgroundColor(BG); panel.setPadding(dp(16),Math.max(dp(24),page.getPaddingTop()),dp(16),dp(24)); panel.setOnClickListener(v->{});
-        FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(Math.min(dp(315),getResources().getDisplayMetrics().widthPixels-dp(40)),-1);
+        LinearLayout panel=column(); panel.setBackgroundColor(PANEL); panel.setPadding(dp(20),Math.max(dp(24),page.getPaddingTop()),dp(20),Math.max(dp(16),page.getPaddingBottom())); panel.setOnClickListener(v->{});
+        FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(Math.min(dp(340),(int)(getResources().getDisplayMetrics().widthPixels*.84f)),-1);
         drawer.addView(panel,bounds);
         LinearLayout drawerHeader=row();
-        TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setCompoundDrawables(UiArtwork.icon(this,"leaf",ACCENT,dp(28)),null,null,null);brand.setCompoundDrawablePadding(dp(12));brand.setPadding(dp(10),0,0,0);drawerHeader.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
+        TextView brand=text("Bonsai",24,TEXT); brand.setTypeface(null,Typeface.BOLD); brand.setCompoundDrawables(UiArtwork.icon(this,"leaf",TEXT,dp(28)),null,null,null);brand.setCompoundDrawablePadding(dp(12));brand.setPadding(dp(10),0,0,0);drawerHeader.addView(brand,new LinearLayout.LayoutParams(0,-2,1));
         IconButton close=icon("close","Menü schließen",v->closeDrawer());drawerHeader.addView(close);panel.addView(drawerHeader);
         ScrollView menuScroll=new ScrollView(this);menuScroll.setFillViewport(true);LinearLayout menu=column();menuScroll.addView(menu);panel.addView(menuScroll,new LinearLayout.LayoutParams(-1,0,1));
-        TextView fresh=menuItem("Neuen Chat starten");decorateAction(fresh,"edit"); fresh.setEnabled(!app.busy); fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);}); addSpaced(menu,fresh,16);
-        TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));menu.addView(model);
+        TextView fresh=primary("Neuen Chat starten");fresh.setCompoundDrawables(UiArtwork.icon(this,"edit",iconColor(R.color.icon_on_action),dp(24)),null,null,null);fresh.setCompoundDrawablePadding(dp(12));fresh.setEnabled(!app.busy);
+        fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);});
+        drawerAura=new PulsingBorder(this,tokens,24,.65f);drawerAura.addView(fresh,new FrameLayout.LayoutParams(-1,-2));
+        panel.addView(drawerAura);
+        TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));addSpaced(menu,model,24);
         TextView performance=menuItem("Leistung");decorateAction(performance,"performance");performance.setOnClickListener(v->closeDrawer(()->navigate(2)));menu.addView(performance);
         TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); menu.addView(label);
         LinearLayout entries=column();menu.addView(entries);
         for(ChatStore.Chat c:app.store.chats(archived)) {
-            TextView item=menuItem(c.title);decorateAction(item,archived?"archive":"history"); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
-            if(c.id==app.currentChat) {
-                item.setBackground(interactiveBackground(PANEL,DesignTokens.RADIUS_SMALL));
-                item.getCompoundDrawables()[0].setTint(iconColor(R.color.icon_selected));
-            }
+            TextView item=menuItem(c.title); item.setMaxLines(2);item.setEllipsize(android.text.TextUtils.TruncateAt.END); item.setEnabled(!app.busy);
+            decorateAction(item,archived?"archive":"history");
+            if(c.id==app.currentChat){item.setBackground(interactiveBackground(tokens.accentSurface,DesignTokens.RADIUS_SMALL));item.setTextColor(ACCENT);item.getCompoundDrawables()[0].setTint(iconColor(R.color.icon_selected));}
             item.setOnClickListener(v->{closeDrawer();app.selectChat(c.id);input.setText("");navigate(0);});
             item.setOnLongClickListener(v->{showChatActions(c,archived);return true;}); entries.addView(item);
         }
@@ -464,10 +490,10 @@ public final class MainActivity extends Activity {
         archive.setOnClickListener(v->refreshDrawer(!archived));menu.addView(archive);
         TextView privacy=text("Alle Chats bleiben auf diesem Gerät.",14,MUTED); privacy.setPadding(dp(12),dp(16),0,0); menu.addView(privacy);
         if(app.store.chats(archived).isEmpty())entries.addView(text(archived?"Noch keine archivierten Chats.":"Noch keine Chats. Deine Gespräche erscheinen hier, sobald du eine Nachricht sendest.",16,MUTED));
-        TextView delete=menuItem("Aktuellen Chat löschen");delete.setTextColor(tokens.error);delete.setEnabled(!app.busy&&app.currentChat!=0);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Chat dauerhaft löschen?").setMessage("Alle Nachrichten dieses Chats werden von diesem Gerät gelöscht.").setNegativeButton("Behalten",null).setPositiveButton("Chat löschen",(d,w)->{app.deleteCurrentChat();closeDrawer();navigate(0);}).show());menu.addView(delete);
+        TextView delete=menuItem("Aktuellen Chat löschen");delete.setTextColor(tokens.error);delete.setEnabled(!app.busy&&app.currentChat!=0);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Chat dauerhaft löschen?").setMessage("Alle Nachrichten dieses Chats werden von diesem Gerät gelöscht.").setNegativeButton("Behalten",null).setPositiveButton("Chat löschen",(d,w)->{app.deleteCurrentChat();closeDrawer();navigate(0);}).show());if(app.currentChat!=0)menu.addView(delete);
         page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);page.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
         root.addView(drawer,new FrameLayout.LayoutParams(-1,-1));close.requestFocus();
-        drawerPanel=panel; drawerClosing=false;
+        drawerPanel=panel; drawerClosing=false;updateEffectVisibility();
         UiMotion.enter(panel,-bounds.width,0);
 
     }
@@ -506,7 +532,7 @@ public final class MainActivity extends Activity {
         if(drawer==null){if(afterClose!=null)afterClose.run();return;}
         if(drawerClosing)return;
         FrameLayout closing=drawer; drawerClosing=true;
-        Runnable done=()->{root.removeView(closing);if(drawer==closing)drawer=null;drawerClosing=false;page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);page.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);if(afterClose!=null)afterClose.run();};
+        Runnable done=()->{root.removeView(closing);if(drawer==closing){drawer=null;drawerAura=null;}drawerClosing=false;updateEffectVisibility();page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);page.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);if(afterClose!=null)afterClose.run();};
         UiMotion.exit(drawerPanel,-drawerPanel.getWidth(),done);
     }
 
@@ -643,11 +669,11 @@ public final class MainActivity extends Activity {
     private TextView menuItem(String s){
         TextView t=new ActionText();t.setText(s);t.setTextSize(DesignTokens.TYPE_BODY);t.setTextColor(actionColors(TEXT));t.setGravity(Gravity.CENTER_VERTICAL);t.setMinHeight(dp(DesignTokens.TOUCH_TARGET));t.setPadding(dp(12),dp(12),dp(12),dp(12));t.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));return t;
     }
-    private TextView primary(String s){TextView t=menuItem(s);t.setTypeface(null,Typeface.BOLD);t.setGravity(Gravity.CENTER);t.setTextColor(actionColors(tokens.onPrimary));t.setBackground(interactiveBackground(tokens.action,DesignTokens.RADIUS_SMALL));return t;}
+    private TextView primary(String s){TextView t=menuItem(s);t.setTypeface(null,Typeface.BOLD);t.setGravity(Gravity.CENTER);t.setTextColor(actionColors(tokens.onPrimary));t.setBackground(interactiveBackground(tokens.action,24));return t;}
     private android.content.res.ColorStateList actionColors(int normal){return new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{MUTED,normal});}
     private android.graphics.drawable.Drawable interactiveBackground(int fill,int radius){
         android.graphics.drawable.StateListDrawable states=new android.graphics.drawable.StateListDrawable();
-        states.addState(new int[]{-android.R.attr.state_enabled},round(PANEL,radius));
+        states.addState(new int[]{-android.R.attr.state_enabled},round(fill==Color.TRANSPARENT?Color.TRANSPARENT:PANEL,radius));
         GradientDrawable focus=round(fill,radius);focus.setStroke(dp(2),fill==tokens.action?tokens.onPrimary:ACCENT);states.addState(new int[]{android.R.attr.state_focused},focus);
         GradientDrawable hovered=round(fill,radius);hovered.setStroke(dp(1),fill==tokens.action?tokens.onPrimary:ACCENT);states.addState(new int[]{android.R.attr.state_hovered},hovered);
         states.addState(new int[]{},round(fill,radius));
