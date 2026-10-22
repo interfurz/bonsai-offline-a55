@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -28,11 +29,14 @@ def main():
     native = (ROOT / "app/src/main/cpp/bonsai_jni.cpp").read_text()
     for method in re.findall(r"native\s+\S+\s+(\w+)\(", bridge):
         assert f"Java_de_bonsai_offline_NativeEngine_{method}(" in native, method
+    embedding = (ROOT / "app/src/main/cpp/embedding_jni.cpp").read_text()
+    assert "Java_de_bonsai_offline_EmbeddingGemma2Encoder_00024Native_encode(" in embedding
     for file in [ROOT / "scripts/fetch_runtime.py", ROOT / "app/build.gradle"]:
         assert "e3de715222b2667c54a267441159a5729f11155e" in file.read_text()
     jar=ROOT / "gradle/wrapper/gradle-wrapper.jar"
     assert jar.read_bytes()[:2] == b"PK", "Gradle wrapper JAR missing"
     print("Manifest/XML, JNI names and runtime revision: passed")
+    subprocess.run([sys.executable, str(ROOT / "tests/test_runtime_backport.py")], check=True)
     compiler=shutil.which("g++") or shutil.which("clang++")
     if not compiler:
         raise RuntimeError("C++ compiler missing; streaming tests were not run")

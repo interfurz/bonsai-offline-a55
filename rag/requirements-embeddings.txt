@@ -1,2 +1,2 @@
 -r requirements.txt
-sentence-transformers>=5.1,<6
+sentence-transformers>=6.1,<7

@@ -118,6 +118,7 @@ class SearchTests(unittest.TestCase):
                 self.task = "document"
                 return Array()
         backend = ModelEncoder.__new__(ModelEncoder)
+        backend.name = "legacy-model"
         backend.model = Model()
         backend.encode(["question"], query=True)
         self.assertEqual("query", backend.model.task)
@@ -128,6 +129,46 @@ class SearchTests(unittest.TestCase):
         self.assertEqual([], search(self.db, "zzzzzxxyy"))
         self.assertEqual([], search(self.db, '" OR * ()'))
         self.assertEqual([], search(self.db, "!!!", self.vectors))
+
+    def test_gemma2_uses_exact_query_prefix_and_titled_documents(self):
+        from unittest.mock import patch
+        from rag.embeddings import DEFAULT_MODEL, GEMMA2_PROFILE, ModelEncoder
+        class Array:
+            def tolist(self):
+                return [[1.0] * 768]
+        class Model:
+            def encode(self, texts, **kwargs):
+                self.texts, self.kwargs = texts, kwargs
+                return Array()
+        backend = ModelEncoder.__new__(ModelEncoder)
+        backend.name, backend.model = DEFAULT_MODEL, Model()
+        backend.encode(["Warum wächst ein Baum? 🌳"], query=True)
+        self.assertEqual(["task: search result | query: Warum wächst ein Baum? 🌳"], backend.model.texts)
+        self.assertEqual("", backend.model.kwargs["prompt"])
+        backend.encode(["title: Wald | text: Bäume wachsen."])
+        self.assertEqual(["title: Wald | text: Bäume wachsen."], backend.model.texts)
+        # Exercise the exporter, not just the adapter: real title, output dimension and profile.
+        class BatchModel:
+            name = DEFAULT_MODEL
+            def __init__(self):
+                self.texts = []
+            def encode(self, texts, query=False):
+                self.texts.extend(texts)
+                return [[1.0] * 768 for _ in texts]
+        model = BatchModel()
+        output = self.db.parent / "gemma2.i8"
+        with patch("rag.embeddings.encoder", return_value=model):
+            embed(self.db, output, model=DEFAULT_MODEL, batch=50)
+        # Content-derived chunk IDs change iteration order; title and content
+        # must still reach the same document prompt, across all export batches.
+        berlin = [text for text in model.texts if text.startswith("title: Berlin | text: ")]
+        self.assertEqual(1, len(berlin))
+        self.assertIn("Berlin ist die Hauptstadt von Deutschland.", berlin[0])
+        with sqlite3.connect(self.db) as db:
+            metadata = dict(db.execute("SELECT key,value FROM metadata"))
+        self.assertEqual(DEFAULT_MODEL, metadata["embedding_model"])
+        self.assertEqual(GEMMA2_PROFILE, metadata["embedding_profile"])
+        self.assertEqual("256", metadata["embedding_dimension"])
 
     def test_missing_invalid_and_limits(self):
         with self.assertRaises(FileNotFoundError):

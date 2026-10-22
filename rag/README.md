@@ -56,11 +56,11 @@ Wiederaufnahme einer noch nicht vektorisierten DB ist in [WIKIPEDIA.md](WIKIPEDI
 ```sh
 pip install -r rag/requirements-embeddings.txt
 # Bei Bedarf PyTorch mit zur lokalen CUDA-Installation passendem Wheel installieren.
-# EmbeddingGemma setzt ggf. zuvor akzeptierte Modellbedingungen/HF-Zugang voraus.
+# Modellgewichte werden nur auf dem Laptop heruntergeladen, nie von der Android-App.
 python3 -m rag ingest /daten/dewiki-DATUM-pages-articles-multistream.xml.bz2 \
   rag/output/wiki.sqlite --limit 50
 python3 -m rag embed rag/output/wiki.sqlite rag/output/wiki.i8 \
-  --model google/embeddinggemma-300m --device cuda --batch 16 \
+  --model google/embeddinggemma-2 --device cuda --batch 16 \
   --reference rag/output/wiki.f32
 python3 -m rag search rag/output/wiki.sqlite 'Wie entsteht Sauerstoff in Pflanzen?' \
   --vectors rag/output/wiki.i8
@@ -69,9 +69,14 @@ python3 -m rag.compare rag/output/wiki.sqlite rag/output/wiki.i8 \
 # Für den späteren Voll-Lauf eine neue DB verwenden; siehe WIKIPEDIA.md.
 ```
 
-Der Modellname ist austauschbar (Sentence Transformers, `trust_remote_code=False`).
-`encode_document` und `encode_query` verwenden die modellspezifischen Prompts.
-Dokumente werden als Titel + Text eingebettet. Die ersten 256 Dimensionen werden
+Standard ist `google/embeddinggemma-2`, text-only mit Float32 und deaktivierten
+Vision-/Audio-Encodern. Queries erhalten exakt `task: search result | query: `,
+Dokumente das Format `title: {Titel} | text: {Text}`. Das Exportprofil
+`embeddinggemma2-search-v1` wird in der Datenbank hinterlegt. Alte 300M- und
+Hash-Indizes müssen für EmbeddingGemma 2 vollständig neu erzeugt werden.
+Andere Modellnamen bleiben möglich (Sentence Transformers, `trust_remote_code=False`);
+deren `encode_document` und `encode_query` verwenden modellspezifische Prompts.
+Die ersten 256 Dimensionen werden
 L2-normalisiert, pro Vektor symmetrisch auf [-127,127] quantisiert und samt Scale
 gespeichert. Sinnvolle Dimensionsreduktion hängt vom Modell ab (Matryoshka).
 Die optionale Referenz speichert alle nativen Dimensionen L2-normalisiert als
@@ -129,6 +134,10 @@ Optional `<filesDir>/rag/config.properties` (Java-Properties-Format):
 ```properties
 database=knowledge.sqlite
 vectors=vectors.i8
+# Standardwerte für den echten lokalen Query-Encoder:
+encoder_model=google/embeddinggemma-2
+encoder_path=embeddinggemma-2-Q8_0.gguf
+encoder_threads=4
 ```
 
 Relative Pfade gelten ab `<filesDir>/rag/`, absolute Pfade müssen im App-internen
@@ -138,17 +147,45 @@ Speicher liegen. Beispiel für einen per USB angeschlossenen **Debug**-Build:
 adb shell run-as de.bonsai.offline.debug mkdir -p files/rag
 adb exec-in run-as de.bonsai.offline.debug sh -c 'cat > files/rag/knowledge.sqlite' < rag/output/knowledge.sqlite
 adb exec-in run-as de.bonsai.offline.debug sh -c 'cat > files/rag/vectors.i8' < rag/output/vectors.i8
+adb exec-in run-as de.bonsai.offline.debug sh -c 'cat > files/rag/embeddinggemma-2-Q8_0.gguf' < /daten/embeddinggemma-2-Q8_0.gguf
 ```
 
 DB und Vektordatei müssen aus demselben Import/Embedding-Lauf stammen. Die Dateien
 sind nur lesbar geöffnet und werden nicht mit der App ausgeliefert. Fehlt die DB,
 kommt eine klare Tool-Fehlermeldung. Ohne Vektordatei funktioniert reine FTS-Suche.
-Der eingebaute `SampleEncoder` ist exakt kompatibel zu `hash-v1`.
-Für EmbeddingGemma ist ein separater lokaler Android-Query-Encoder nötig; die
-Schnittstelle `KnowledgeSearch.QueryEncoder` und der Konstruktor erlauben dessen
-Einbindung. **Ein solcher Modell-Runtime-Adapter ist hier nicht enthalten.**
-Passt der Encoder nicht zur Modell-Metadatenzeile, liefert das Tool FTS-Treffer
-mit Warnung und führt keine inkompatible Vektorsuche aus.
+`EmbeddingGemma2Encoder` führt das Textmodell über JNI auf der CPU aus. Die
+native Runtime ist um die offizielle Architektur `gemma-embedding2` ergänzt
+(siehe [Runtime-Backport](../runtime/README.md)). Die GGUF-Datei enthält Gewichte,
+Tokenizer und die trainierte 512→768-Projektion. Mean Pooling einschließlich
+Query-Prompt und BOS/EOS liefert 768 Werte; die ersten 256 werden anschließend
+erneut L2-normalisiert. Damit funktionieren sowohl INT8-Vollscan als auch IVF/RRF.
+FP16-Attention ist deaktiviert, da dieses Modell dort überlaufen kann.
+
+Geeignete Text-GGUFs sind bei
+[ggml-org/embeddinggemma-2-GGUF](https://huggingface.co/ggml-org/embeddinggemma-2-GGUF)
+verfügbar. Gewichte manuell herunterladen und Prüfsumme prüfen. Der getestete
+Q8_0-Stand hat Revision `58faf90940886df2d62be555c8765d00dac362c5` und SHA256
+`2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135`.
+Q8_0 ist eine Gewichtsquantisierung; der Korpus-Export läuft mit Float32.
+Die resultierende Suchqualität muss mit dem eigenen Datensatz bewertet werden.
+
+Das Modell wird erst während einer Vektorsuche geladen und samt Kontext vor
+der nächsten LLM-Runde wieder freigegeben. Es gibt keinen zusätzlichen dauerhaft
+residenten Encoder. Jede Suche bezahlt dadurch erneut Modellladezeit; während
+der Suche benötigen Bonsai und Encoder gemeinsam RAM. Ladefortschritt und
+CPU-Berechnung prüfen den vorhandenen Abbruchstatus. Encoder-Threads sind von
+den Einstellungen des generativen Modells getrennt (1–8, Standard 4).
+
+Fehlen Gewichte, passt der Modellname nicht oder fehlt das Exportprofil,
+liefert das Tool FTS-Treffer mit Warnung und verwendet keine inkompatiblen
+Query-Vektoren. Encoder-Fehler werden ebenfalls als FTS-Warnung ausgegeben;
+Abbruch wird weitergereicht. Der `SampleEncoder` bleibt für bestehende
+`hash-v1`-Testindizes automatisch verfügbar; explizit ist `encoder_model=hash-v1`
+möglich. Das Vorgängermodell `google/embeddinggemma-300m` wird auf Android nicht
+als EmbeddingGemma 2 behandelt.
+
+Modellspezifikation: [Google-Modellkarte](https://huggingface.co/google/embeddinggemma-2).
+Einrichtung und Testnachweise: [EmbeddingGemma-2-Validierung](VALIDATION-EMBEDDINGGEMMA2.md).
 
 Toolformat: `<tool>{"name":"suche","args":{"query":"Berlin"}}</tool>`.
 Die JSON-Treffer enthalten Text, Quelle, Überschrift und eine stabile

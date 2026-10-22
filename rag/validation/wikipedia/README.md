@@ -6,6 +6,13 @@ Keine Windows-, RTX-4060-, A55- oder Voll-Dump-Messung.
 
 ## Automatisierte Tests
 
+Integration nach EmbeddingGemma-PR #12: **39 Tests bestanden**, keine
+übersprungenen Tests; [integration-tests.txt](integration-tests.txt).
+Inhaltlich stabile Chunk-IDs verändern die Exportreihenfolge. Der bestehende
+EmbeddingGemma-Exporttest prüft deshalb die Zuordnung von Berlin-Titel und
+Berlin-Text über alle Batches, ohne Berlin als erste Zeile vorauszusetzen.
+Die produktive Embedding-Implementierung wurde dafür nicht geändert.
+
 `python -m unittest discover -s rag/tests -v`: **38 Tests erfolgreich**.
 Das vollständige Protokoll steht in [tests.txt](tests.txt). Die bisherigen
 RAG-/IVF-Tests wurden mit ausgeführt. Neu geprüft werden Markdown-Bereinigung,

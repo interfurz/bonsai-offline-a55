@@ -7,6 +7,7 @@
 #include "reference_cpu.h"
 #include "chat_sampler.h"
 #include "conversation_state.h"
+#include "runtime_init.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -241,8 +242,7 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
     try {
         auto & e = engine(handle);
         e.unload();
-        static std::once_flag init;
-        std::call_once(init, [] { ggml_backend_load_all(); llama_backend_init(); });
+        bonsai_runtime_init();
         if (e.stop) throw std::runtime_error("Abgebrochen.");
         if (context_size < 512 || context_size > 8192 || threads < 1 || threads > 8)
             throw std::runtime_error("Ungueltige Einstellungen.");
