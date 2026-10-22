@@ -1,0 +1,7 @@
+# Quellen und Lizenz
+
+Alle 18 SVG-Master, ihre optischen `_16`-Varianten und ihre Android-VectorDrawables wurden für diesen Auftrag neu aus geometrischen Pfaden konstruiert. Keine Material-Symbols-, Lucide-, Heroicons- oder anderen fremden Icon-Pfade; keine Rasterbilder, Fonts oder ImageGen-Traces. Konventionelle Metaphern: Chatblase, Chip, Blitz, Buch, Glühbirne, Dokumente, Rundpfeile, Tacho, Tokenraute, Uhr und Info-i im Kreis (ausdrücklich gewünschte Ausnahme von der ursprünglichen Vorgabe ohne Buchstaben).
+
+Lizenz: MIT, Copyright (c) 2026 Bonsai Offline contributors. Volltext: [LICENSE](LICENSE), identisch zur Projektlizenz. Die bisherigen sechs Material-Antworticons wurden vollständig ersetzt; ihre spezifische Attribution im App-Asset wurde entsprechend aktualisiert. Andere Drittanbieterhinweise bleiben erhalten.
+
+Arbeitsgrundlage: `interfurz/bonsai-offline-a55`, `main` bei `b2ab5a75499fe78da60b6f0fa699fb9cce4cca97`. Vorhandene Funktionsnamen, Ressourcen und Accessibility-Texte wurden aus dem Quellcode übernommen. Aktualisierter UI-Unterbau: PR #15, Commit `06ed47377990f3d1fd21f24388c3aad664d555e7`, bereits in main gemergt. Keine externe Designquelle. Das zusätzliche `ic_message` übernimmt die zuvor für die Autorenanzeige verwendete eigene Chatblasen-Geometrie unverändert; es hat dieselbe MIT-Lizenz. Das App-Logo, die Bonsai-Szene sowie die bestehenden Zusatzsymbole Blatt, Schutzschild und Richtungspfeil sind nicht Teil der 18 Originalmotive und behalten ihre bisherige Herkunft im Projekt.
