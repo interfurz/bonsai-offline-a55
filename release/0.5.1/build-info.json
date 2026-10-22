@@ -102,8 +102,8 @@
     "independent_ci_validation": {
       "id": 39833109407,
       "head_sha": "2dfe2c41d6fcfa58b2537171e204a815baec4897",
-      "status": "in_progress",
-      "conclusion": null,
+      "status": "completed",
+      "conclusion": "success",
       "run_attempt": 1,
       "html_url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/39833109407"
     },

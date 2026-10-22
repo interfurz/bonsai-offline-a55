@@ -32,8 +32,8 @@ Zertifikat und Versionscode. Der Release-Tag darf gegenüber diesem Buildcommit
 nur Dokumentation/Nachweise ergänzen; Anwendung und Buildquellen bleiben gleich.
 
 Ein unabhängiger [CPU/Vulkan-Actions-Lauf](https://github.com/interfurz/bonsai-offline-a55/actions/runs/39833109407)
-prüft denselben Quellcommit; sein tatsächlich beobachteter Status steht im
-Buildnachweis. Die veröffentlichte APK stammt aus dem lokalen Build, nicht aus
+ist für denselben Quellcommit vollständig erfolgreich abgeschlossen; Tests, Lint,
+nativer Build und APK-Konfiguration sind geprüft. Der Status steht im Buildnachweis. Die veröffentlichte APK stammt aus dem lokalen Build, nicht aus
 CI. Der Keystore und die Passwortdatei wurden nicht an CI oder Git übergeben.
 Direkte Release-Asset-Uploads antworten mit HTTP 401; APK und Prüfsumme liegen
 deshalb über feste Commitlinks im bestehenden `downloads`-Branch.
