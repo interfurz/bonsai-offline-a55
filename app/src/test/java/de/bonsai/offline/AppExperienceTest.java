@@ -326,7 +326,7 @@ public class AppExperienceTest {
             public void afterTextChanged(android.text.Editable text) {count[0]++;}
         };
     }
-    @Test public void decorativeFramesPauseForInferenceAndResumeAfterCompletion() throws Exception {
+    @Test public void decorativeFramesKeepMovingDuringInferenceAndStopWithActivity() throws Exception {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
             MainActivity a=controller.get();BonsaiApp app=(BonsaiApp)a.getApplication();
             controller.windowFocusChanged(true);
@@ -334,14 +334,63 @@ public class AppExperienceTest {
             assertTrue(composer.isFrameScheduled());assertTrue(ambient.isFrameScheduled());
             app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.busy=true;app.notifyUi();
             assertEquals(PulsingBorder.State.GENERATING,composer.getState());
-            assertFalse("Decorative redraws compete with inference",composer.isFrameScheduled());
-            assertFalse(ambient.isFrameScheduled());
-            controller.windowFocusChanged(false);controller.windowFocusChanged(true);
-            assertFalse("Focus changes must not restart effects during inference",composer.isFrameScheduled());
+            assertTrue("The work light must stay animated",composer.isFrameScheduled());
+            assertTrue(ambient.isFrameScheduled());
+            float phase=(float)field(composer,"phase"),ambientPhase=(float)field(ambient,"phase");
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));
-            assertFalse(ambient.isFrameScheduled());
+            assertTrue("Work colours continue moving",(float)field(composer,"phase")>phase);
+            assertTrue("Ambient pools continue moving",(float)field(ambient,"phase")>ambientPhase);
+            int[] frames=countLightFrames(composer,ambient);
+            assertTrue("Steady work border has a 24 fps ceiling",frames[0]>0&&frames[0]<=24);
+            assertTrue("Slow ambient motion has a 12 fps ceiling",frames[1]>0&&frames[1]<=12);
+            assertTrue("Ambient surfaces redraw less often than the border",frames[1]<frames[0]);
+            controller.windowFocusChanged(false);controller.windowFocusChanged(true);
+            assertTrue(composer.isFrameScheduled());
+            controller.pause().stop();assertFalse(composer.isFrameScheduled());assertFalse(ambient.isFrameScheduled());
+            phase=(float)field(composer,"phase");
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));
+            assertEquals("A stopped activity must not spend frames",phase,(float)field(composer,"phase"),0);
+            controller.start().resume().visible().windowFocusChanged(true);
+            assertTrue(composer.isFrameScheduled());assertTrue(ambient.isFrameScheduled());
             app.busy=false;app.notifyUi();assertTrue(composer.isFrameScheduled());assertTrue(ambient.isFrameScheduled());
         }
+    }
+    private static int[] countLightFrames(PulsingBorder first,PulsingBorder second) throws Exception {
+        PulsingBorder[] lights={first,second};long[] previous={(long)field(first,"lastFrame"),(long)field(second,"lastFrame")};
+        int[] frames={0,0};
+        for(int step=0;step<100;step++) {
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(10));
+            for(int i=0;i<lights.length;i++) {
+                long now=(long)field(lights[i],"lastFrame");
+                if(now!=previous[i]){frames[i]++;previous[i]=now;}
+            }
+        }
+        return frames;
+    }
+    @Test public void workLightBoundsDrawingPassesAndClipsTransparentHaloAreas() {
+        android.content.Context context=org.robolectric.RuntimeEnvironment.getApplication();
+        DesignTokens tokens=new DesignTokens(context.getResources());
+        for(PulsingBorder.Mode mode:PulsingBorder.Mode.values()) {
+            PulsingBorder light=new PulsingBorder(context,tokens,30,1,mode);
+            light.layout(0,0,824,mode==PulsingBorder.Mode.AMBIENT?1784:160);
+            light.setState(PulsingBorder.State.GENERATING);
+            Bitmap bitmap=Bitmap.createBitmap(light.getWidth(),light.getHeight(),Bitmap.Config.ARGB_8888);
+            DrawingBudgetCanvas canvas=new DrawingBudgetCanvas(bitmap);
+            light.onDraw(canvas);
+            if(mode==PulsingBorder.Mode.AMBIENT)assertEquals(2,canvas.circles);
+            else {
+                assertTrue("Steady work glow must stay below the old 18 effect strokes",canvas.paths<=14);
+                assertEquals("Each spotlight excludes its transparent surroundings",4,canvas.haloClips);
+            }
+            bitmap.recycle();
+        }
+    }
+    private static final class DrawingBudgetCanvas extends Canvas {
+        int paths,circles,haloClips;
+        DrawingBudgetCanvas(Bitmap bitmap){super(bitmap);}
+        @Override public void drawPath(android.graphics.Path path,android.graphics.Paint paint){paths++;super.drawPath(path,paint);}
+        @Override public void drawCircle(float x,float y,float radius,android.graphics.Paint paint){circles++;super.drawCircle(x,y,radius,paint);}
+        @Override public boolean clipRect(float left,float top,float right,float bottom){haloClips++;return super.clipRect(left,top,right,bottom);}
     }
     @Test public void regeneratedVariantPreservesOriginalAndCopiesOnlyEarlierTurns(){
         BonsaiApp app=(BonsaiApp)org.robolectric.RuntimeEnvironment.getApplication();ChatStore store=app.store;
@@ -450,8 +499,7 @@ public class AppExperienceTest {
             } finally {durationScale.invoke(null,1f);}
             org.robolectric.shadows.ShadowPowerManager power=org.robolectric.Shadows.shadowOf((android.os.PowerManager)a.getSystemService(android.content.Context.POWER_SERVICE));
             power.setIsPowerSaveMode(true);glow.setActive(true);assertFalse(glow.isFrameScheduled());
-            power.setIsPowerSaveMode(false);glow.setActive(true);assertFalse(glow.isFrameScheduled());
-            glow.setState(PulsingBorder.State.IDLE);assertTrue(glow.isFrameScheduled());
+            power.setIsPowerSaveMode(false);glow.setActive(true);assertTrue(glow.isFrameScheduled());
         }
     }
     @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
@@ -468,20 +516,21 @@ public class AppExperienceTest {
             assertEquals(PulsingBorder.Mode.RAIL,answer.getMode());
             assertEquals(PulsingBorder.State.GENERATING,backdrop.getState());
             assertEquals(PulsingBorder.State.GENERATING,answer.getState());
-            assertFalse(backdrop.isFrameScheduled());assertFalse(answer.isFrameScheduled());
+            assertTrue(backdrop.isFrameScheduled());assertTrue(answer.isFrameScheduled());
             View modelPopup=openSection(a,"Modell");
+            focusWindow(modelPopup);
             PulsingBorder model=(PulsingBorder)field(a,"modelAura");
             assertEquals(PulsingBorder.State.GENERATING,model.getState());
-            assertFalse("New pop-up surfaces also pause during inference",model.isFrameScheduled());
+            assertTrue("New pop-up surfaces keep the animated work state",model.isFrameScheduled());
             assertEquals(PulsingBorder.State.GENERATING,((PulsingBorder)field(a,"primaryAura")).getState());
             assertFalse("The covered app backdrop pauses",backdrop.isFrameScheduled());
             assertFalse("The covered answer pauses",answer.isFrameScheduled());
             assertNotNull(find(modelPopup,"Antworten anpassen"));screenshot(a,"app-light-model-dark");
-            openSection(a,"Leistung");
+            focusWindow(openSection(a,"Leistung"));
             assertFalse("Removed model surfaces leave the shared frame clock",model.isFrameScheduled());
             PulsingBorder performance=(PulsingBorder)field(a,"performanceAura");
             assertEquals(PulsingBorder.State.GENERATING,performance.getState());
-            assertFalse(performance.isFrameScheduled());
+            assertTrue(performance.isFrameScheduled());
             app.busy=false;app.notifyUi();
             assertEquals(PulsingBorder.State.DONE,performance.getState());
             assertEquals(PulsingBorder.State.DONE,((PulsingBorder)field(a,"primaryAura")).getState());
@@ -490,6 +539,12 @@ public class AppExperienceTest {
             assertEquals("Removed surfaces no longer receive state updates",PulsingBorder.State.GENERATING,model.getState());
             controller.pause().stop();assertFalse(performance.isFrameScheduled());
         }
+    }
+    private static void focusWindow(View decor) {
+        Object root=org.robolectric.util.ReflectionHelpers.callInstanceMethod(decor,"getViewRootImpl");
+        org.robolectric.shadows.ShadowViewRootImpl shadow=org.robolectric.shadow.api.Shadow.extract(root);
+        shadow.callWindowFocusChanged(true);
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
     }
     @Test @Config(qualifiers="w412dp-h892dp-night-xhdpi")
     public void selectedChatLightKeepsNavigationAndStopsAfterDrawerDismissal() throws Exception {

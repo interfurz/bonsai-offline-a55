@@ -53,7 +53,7 @@ und wandernde lokale Highlights erzeugen den Effekt. Farbwechsel werden über
 | Zustand | Darstellung | Auslöser |
 |---|---|---|
 | Idle | langsames Blau / Violett / Cyan | bereit oder Entwurf |
-| Generating | statisches Cyan / Magenta / Koralle / Amber | laufende Arbeit |
+| Generating | bewegtes Cyan / Magenta / Koralle / Amber | laufende Arbeit |
 | Done | kurzer grüner / cyanfarbener Saum | erfolgreicher Abschluss |
 
 Done geht nach 1,8 Sekunden in Idle über. Fehler und Abbruch lösen keinen Erfolgssaum aus.
@@ -71,15 +71,25 @@ Die Beleuchtung ist in der gesamten App verteilt und teilt denselben Zustand:
   25–60 % ihrer Stärke; Formulare und normale Menüeinträge haben keine Dauerkontur.
 
 `PulsingBorder` bietet die Modi BORDER, AMBIENT und RAIL. Ein gemeinsamer
-30-fps-Callback versorgt die sichtbaren Effekte im Leerlauf und nach Abschluss.
-Während laufender Berechnungen pausiert er vollständig; die Arbeitsfarben bleiben
-sichtbar. So konkurrieren dekorative CPU-/GPU-Zeichnungen nicht mit Inferenz,
-Modellladen oder Benchmarks. Die Activity verwaltet getrennte
+`Choreographer`-Callback synchronisiert die sichtbaren Effekte mit der
+Bildausgabe. Die Beleuchtung bleibt auch während Inferenz und Benchmarks animiert.
+Konturen haben im stabilen Arbeitszustand mindestens 42 ms Abstand zwischen
+Updates (höchstens ca. 24 fps), im Leerlauf 50 ms (20 fps). Die langsamen
+Hintergrundfelder benötigen nur alle 84 ms ein Update (höchstens ca. 12 fps).
+Kontur-Übergänge und der kurze Done-Zustand verwenden 34 ms (ca. 29 fps).
+Die tatsächliche Bildrate hängt von Display und Auslastung ab; der Bewegungsschritt
+richtet sich nach der verstrichenen Zeit. Der gemeinsame Taktgeber berücksichtigt
+für jede Fläche ihre nächste Fälligkeit. Die Activity verwaltet getrennte
 Gruppen für Hauptansicht, Chatinhalt, Pop-up und Seitenleiste. Ersetzte Inhalte
 werden aus dem Taktgeber und der Zustandsverteilung entfernt. Je Hauptansicht
 animieren höchstens vier Lichtflächen gleichzeitig.
 
-Die Bildrate ist auf ungefähr 30 fps begrenzt. Pfade, Shader und Matrizen werden
+Die Glühkontur verwendet drei statt fünf Bloom-Schichten und zwei statt drei
+Schichten je lokalem Highlight. Die Summe der Alpha-Gewichte bleibt erhalten;
+Farbpaletten, Spotanzahl, Bewegung und 650-ms-Farbwechsel
+bleiben erhalten. Jeder Highlight-Durchlauf wird auf das Quadrat seines
+Radialverlaufs begrenzt, außerhalb dessen der Shader ohnehin transparent ist.
+Der Umfang wird beim Größenwechsel berechnet. Pfade, Shader und Matrizen werden
 wiederverwendet; der Frame-Loop allokiert keine Zeichnungsobjekte. Animationen
 pausieren bei verlorener Fenstersichtbarkeit/-fokussierung, abgehängten Views,
 gestoppter Activity, deaktivierten Systemanimationen und Energiesparmodus.
