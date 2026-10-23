@@ -16,6 +16,7 @@ def main():
     w=sub.add_parser('wikidata-download');w.add_argument('snapshot')
     w=sub.add_parser('wikidata-profile');w.add_argument('output');w.add_argument('--date',required=True)
     w=sub.add_parser('wikidata-import');w.add_argument('source');w.add_argument('output');w.add_argument('--config',required=True);w.add_argument('--receipt',required=True);w.add_argument('--date',required=True);w.add_argument('--max-bytes',type=int,default=7000000000);w.add_argument('--resume',action='store_true')
+    w.add_argument('--bzip2-threads',type=int,default=1)
     d=sub.add_parser('download');d.add_argument('wiki',choices=['dewiki','dewikibooks','dewiktionary']);d.add_argument('snapshot');d.add_argument('--file')
     d=sub.add_parser('download-cleanup');d.add_argument('wiki',choices=['dewiki','dewikibooks','dewiktionary']);d.add_argument('snapshot')
     m=sub.add_parser('model');m.add_argument('--revision',default='914f7f89142e33e77833254d9c9b90c3cef7303b')
@@ -91,7 +92,7 @@ def main():
         if not receipt.get('upstream_verified') or Path(args.source).stat().st_size!=receipt['bytes'] or digest(args.source)!=receipt['sha256']:raise ValueError('Official whole-file verification required before Wikidata import')
         if not receipt['url'].startswith('https://dumps.wikimedia.org/wikidatawiki/entities/'+args.date.replace('-','')+'/'):raise ValueError('Wikidata snapshot date/receipt mismatch')
         Path(args.output).parent.mkdir(parents=True,exist_ok=True);require_space(Path(args.output).parent,args.max_bytes*3)
-        with _writer_lock(args.output):result=build(args.source,args.output,dump_date=args.date,config=json.loads(Path(args.config).read_text(encoding='utf-8-sig')),resume=args.resume,max_bytes=args.max_bytes,progress=lambda state:print(json.dumps(state),flush=True))
+        with _writer_lock(args.output):result=build(args.source,args.output,dump_date=args.date,config=json.loads(Path(args.config).read_text(encoding='utf-8-sig')),resume=args.resume,max_bytes=args.max_bytes,bzip2_threads=args.bzip2_threads,progress=lambda state:print(json.dumps(state),flush=True))
     elif args.command=='wikidata-download':
         from .download import wikidata
         result=wikidata(root,args.snapshot)

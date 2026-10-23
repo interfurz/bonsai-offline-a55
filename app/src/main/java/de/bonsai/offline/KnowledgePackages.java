@@ -187,6 +187,7 @@ final class KnowledgePackages {
                 String integrity=c.getString(0);
                 if(!"ok".equals(integrity) || c.moveToNext())throw new IOException("SQLite-Integritätsprüfung fehlgeschlagen: "+(integrity==null?"NULL":integrity.substring(0,Math.min(200,integrity.length()))));
             } finally {watcher.interrupt();}
+            validateSchema(db,type);
             String table=type.equals("rag")?"chunks":type.equals("wikidata")?"entity":type.equals("dictionary")?"entry":"reference_value";
             long expected=manifest.getJSONObject("counts").getLong(type.equals("rag")?"chunks":"records");
             try(Cursor c=db.rawQuery("SELECT count(*) FROM "+table,null)){if(!c.moveToFirst() || c.getLong(0)!=expected)throw new IOException("Datensatzanzahl stimmt nicht.");}
@@ -216,6 +217,25 @@ final class KnowledgePackages {
     }
     private static String scalar(SQLiteDatabase db,String sql) throws IOException {
         try(Cursor c=db.rawQuery(sql,null)){if(!c.moveToFirst())throw new IOException("DB-Metadaten fehlen.");return c.getString(0);}
+    }
+    private static void validateSchema(SQLiteDatabase db,String type) throws IOException {
+        // Application/user_version alone do not prove that runtime queries can
+        // be prepared. Only fixed column lists, never identifiers from a package.
+        String[] probes;
+        switch(type) {
+            case "rag":probes=new String[]{"SELECT id,article_id,title,heading,source,text_zlib FROM chunks LIMIT 0","SELECT id,title FROM articles LIMIT 0"};break;
+            case "wikidata":probes=new String[]{"SELECT id,datatype,revision,modified,loaded FROM entity LIMIT 0","SELECT entity,lang,kind,value,norm FROM term LIMIT 0","SELECT id,subject,property,rank,kind,target,amount,number,unit,time,precision,calendar,detail FROM statement LIMIT 0"};break;
+            case "dictionary":probes=new String[]{"SELECT id,page_id,lemma,norm,language,pos FROM entry LIMIT 0","SELECT id,lemma,source FROM page LIMIT 0","SELECT norm,entry_id FROM form LIMIT 0","SELECT entry_id,kind,ordinal,sense,value FROM detail LIMIT 0"};break;
+            case "tables":probes=new String[]{"SELECT id,kind,name,norm,value_text,decimal_text,unit,uncertainty_text,exact,status,source,source_version FROM reference_value LIMIT 0","SELECT norm,id FROM reference_alias LIMIT 0","SELECT symbol,dimension,scale,offset,source FROM unit LIMIT 0","SELECT norm,symbol FROM unit_alias LIMIT 0","SELECT id,name,norm,brands,basis,source,modified FROM food LIMIT 0","SELECT id,name,brands FROM food_fts LIMIT 0","SELECT food_id,name,value,unit,status FROM nutrient LIMIT 0"};break;
+            default:throw new IOException("Unbekanntes Datenbankschema.");
+        }
+        try {
+            for(String sql:probes)try(Cursor c=db.rawQuery(sql,null)){c.getColumnCount();}
+            if(type.equals("dictionary") && hasRow(db,"SELECT 1 FROM sqlite_master WHERE name='lexical_alias'")) {
+                try(Cursor c=db.rawQuery("SELECT norm,language,target_norm FROM lexical_alias LIMIT 0",null)){c.getColumnCount();}
+                try(Cursor c=db.rawQuery("SELECT norm,page_id,kind,text FROM unparsed LIMIT 0",null)){c.getColumnCount();}
+            }
+        } catch(android.database.sqlite.SQLiteException e){throw new IOException("Datenbankspalten passen nicht zur Schema-Version.",e);}
     }
     private static boolean hasRow(SQLiteDatabase db,String sql){try(Cursor c=db.rawQuery(sql,null)){return c.moveToFirst();}}
     private static void validateIndex(File stage,SQLiteDatabase corpus,long count,BooleanSupplier cancelled) throws Exception {

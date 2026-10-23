@@ -93,6 +93,10 @@ Nur `knowledge/active.json` entscheidet, welche Generation sichtbar ist. Größe
 freier Speicher (inklusive ID-Baum und Reserve), Hashes, Schema, SQLite-Integrität,
 FTS-/Chunk-IDs und IVF-/Chunk-IDs werden vor Aktivierung geprüft. ID-Prüfung
 verwendet einen temporären SQLite-Baum, keine vollständige Java-ID-Menge.
+Zusätzlich werden die für die festen Laufzeitabfragen nötigen Tabellen und
+Spalten vor Aktivierung kompiliert. Korrekte Datei-Hashes und eine behauptete
+Schema-Version allein reichen nicht. Fehlende Spalten verhindern das Update;
+die alte aktive Generation bleibt erhalten.
 
 FTS4 klassifiziert seine interne Integritätsoperation als Schreiboperation. Nur
 die noch nicht veröffentlichte Staging-Datei wird dafür schreibbar geöffnet;

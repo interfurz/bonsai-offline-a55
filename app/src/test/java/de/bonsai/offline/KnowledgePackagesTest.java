@@ -71,6 +71,13 @@ public class KnowledgePackagesTest {
         KnowledgePackages.setEnabled(files,"constants-test",false);assertTrue(KnowledgePackages.active(files,"tables").isEmpty());
         KnowledgePackages.setEnabled(files,"constants-test",true);assertEquals("v2",KnowledgePackages.active(files,"tables").get(0).manifest.getString("version"));
     }
+    @Test public void validHashesButIncompatibleColumnsCannotReplaceActiveGeneration() throws Exception {
+        install("v1");File old=KnowledgePackages.active(files,"tables").get(0).directory;
+        try(SQLiteDatabase db=SQLiteDatabase.openDatabase(database.getPath(),null,SQLiteDatabase.OPEN_READWRITE)) {db.execSQL("ALTER TABLE unit RENAME COLUMN scale TO incompatible_scale");}
+        payload=Files.readAllBytes(database.toPath());
+        try {install("v2");fail("Incompatible schema accepted despite valid package hashes");}catch(IOException expected){assertTrue(expected.getMessage().contains("Schema"));}
+        assertEquals(old,KnowledgePackages.active(files,"tables").get(0).directory);
+    }
     @Test public void corruptOrUnlistedFilesAndCancellationKeepActiveGeneration() throws Exception {
         install("v1");File old=KnowledgePackages.active(files,"tables").get(0).directory;
         for(byte[] bytes:Arrays.asList(archive(manifest("v2"),null,true),archive(manifest("v2"),"../escape.sqlite",false),archive(manifest("v2"),"manifest.json.duplicate",false))) {

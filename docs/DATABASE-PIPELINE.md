@@ -117,6 +117,17 @@ Für diesen Weg sind weder eine zweite `.f32`-Vollkopie noch zusammengesetzte
   `wikidata-import SOURCE OUTPUT --config PROFILE --receipt RECEIPT --date YYYY-MM-DD`
   hält eine Schreibsperre, prüft Vollhash und Snapshotbeleg und verwendet die
   vorhandene Pipeline mit 7.000.000.000-Byte-Limit. Fortsetzung: `--resume`.
+  Optional `--bzip2-threads 4` nutzt `indexed-bzip2==1.7.0` mit begrenzter
+  Parallelität. Der zusätzliche `*.bz2-index.json` ist an die unveränderte
+  Quelle gebunden und enthält eine Prüfsumme der Blockpositionen. Nur ein
+  vollständiger Blockindex wird geladen: Die 1.7-API interpretiert einen
+  Teilindex sonst als Dateiende. Vor Abschluss des ersten Durchlaufs wird
+  ein Resume deshalb weiterhin ab Anfang dekomprimiert. Nach vollständigem
+  ersten Durchlauf beschleunigt der Index den zweiten Pass und dessen Resume.
+  Ein echter 256-MiB-Ausschnitt des verifizierten Wikipedia-Dumps war bei beiden
+  Decodern bytegleich; gemessen 19,234 s Standard gegen 6,141 s mit vier Threads
+  bei gleichzeitig laufenden Arbeiten. Kein daraus abgeleiteter Vollbestand-Benchmark.
+  Bibliothek: https://github.com/mxmlnkn/librapidarchive.
 
 Begleitende CSS-/JavaScript-Seiten im Hauptnamensraum werden mit ID, Titel und
 Inhaltsmodell in `skipped_pages` protokolliert. Für einen alten, vollständig

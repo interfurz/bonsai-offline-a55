@@ -88,14 +88,16 @@ die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
 ## Tests und Builds
 
 - 47 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-Tests bestanden.
-- 14 bestehende Wikidata-Pipelinetests bestanden.
+- 16 Wikidata-Pipelinetests bestanden, einschließlich parallelem Bzip2-
+  Resume, bytegleichem Stream, identischen DB-Inhalten, Quellbindung und
+  Ablehnung beschädigter Blockindizes.
 - 15 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
   einschließlich direktem 7z-Stream, Energie-Alias und auditierter CSS-Reparatur.
 - 5 weitere Hosttests einschließlich Runtime-Backport bestanden.
 - Neuer GBNF-Vertrag im echten gepinnten nativen Parser auf Windows geprüft:
   Wörterbuch, Tabellen und Korpusauswahl akzeptiert; SQL/OSM/falsche Argumente
   und Tools in der Finalrunde abgewiesen.
-- Vollständiger CPU-Release-Build sowie Release-Lint und 164 Release-/Robolectric-
+- Vollständiger CPU-Release-Build sowie Release-Lint und 165 Release-/Robolectric-
   Tests ohne Fehler oder übersprungene Tests erfolgreich ausgeführt. Nach
   weiteren Änderungen erneut mit dem finalen Commit abgleichen.
 - Der echte Wikipedia-Pilot wurde über denselben Android-Importer unter
@@ -157,7 +159,7 @@ $env:BONSAI_TEST_EVIDENCE_DIR = 'ABSOLUTER_PFAD_ZU_BENCHMARKS'
 
 Ohne `BONSAI_TEST_PACKAGE` entfällt der echte RAG-Pilotintegrationstest;
 ohne `BONSAI_TEST_PACKAGE_DIR` der zusätzliche große Strukturpakettest.
-Die übrigen Importtests erzeugen eigene Fixtures. Die 164er-Abnahme hatte beide
+Die übrigen Importtests erzeugen eigene Fixtures. Die 165er-Abnahme hatte beide
 Paketvariablen gesetzt und übersprang keinen Test.
 Python-/Windows-Einstieg, Quellbelege und Installationsschritte:
 [DATABASE-PIPELINE.md](DATABASE-PIPELINE.md), [DATASET-SOURCES.md](DATASET-SOURCES.md),

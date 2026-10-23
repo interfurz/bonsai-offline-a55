@@ -36,7 +36,9 @@ jobs:
           cache: pip
           cache-dependency-path: 'rag/requirements*.txt'
       - name: Install text and test dependencies
-        run: python -m pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt py7zr==1.1.4
+        run: python -m pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt py7zr==1.1.4 indexed-bzip2==1.7.0
+      - name: Test Wikidata including optional parallel bzip2 resume
+        run: python -m unittest discover -s wikidata/tests -v
       - name: Test existing RAG and Wikipedia pipeline
         run: python -m unittest discover -s rag/tests -v
       - name: Test structured adapters and resumable downloads offline

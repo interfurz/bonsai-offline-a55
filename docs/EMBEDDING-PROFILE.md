@@ -60,6 +60,23 @@ Die `.f32`-Datei bezeichnet dann das Speicherformat der BF16-Ergebnisse,
 keine unabhängige FP32-Inferenzreferenz. Vor Produktionswahl ist der vollständige
 Pilotvergleich gegen die vorhandenen echten FP32-Vektoren erforderlich.
 
+Dieser vollständige Vergleich ist inzwischen durchgeführt: 17.285 BF16/CUDA-
+Vektoren, Batch 8, 922,390 s gegenüber 1.867,594 s des FP32/Batch-2-Laufs,
+jeweils einschließlich Modellladen und Schreiben. Abgetastete RSS-Summe
+1.852.174.336 Bytes; PyTorch-Peaks 1.344.935.424 Bytes belegt und
+2.160.066.560 Bytes reserviert. Unterschiedliche Batches und gleichzeitig
+laufende Prozesse gehören zum Messkontext; keine isolierte Kernelmessung.
+Alle Dokumentprompts lagen weiterhin bei höchstens 800 tatsächlichen Tokens.
+256D gegenüber der echten FP32-Referenz: minimale Kosinusähnlichkeit
+0,9995618944, Mittel 0,9999700312, RMSE 0,0004838709, maximaler absoluter
+Komponentenfehler 0,005137895. Mit den 40 nativen Q8-Queries bleiben exakter
+Recall@10 0,975 und MRR@10 0,8827381 gleich; Nachbarüberlappung@10 0,9875.
+BF16-IVF64/nprobe16 Hybrid erreicht im selben kleinen Test Recall@10 1,0
+und MRR@10 0,9666667. Beleg: `benchmarks/bfloat16-pilot-quality.json`.
+Damit werden weitere Korpora als getrennte BF16-Produktionskandidaten
+exportiert. Deren eigene Retrieval- und Paketabnahme bleibt erforderlich;
+der bestehende veröffentlichte 1k-Pilot wird nicht überschrieben.
+
 40 passende menschliche GermanQuAD-Fragen über sechs Themen: 768D FP32
 Recall@10 0,975 / MRR@10 0,94107; 256D FP32 0,975 / 0,88274;
 Hybrid mit 64-Clustern, INT8 und nprobe 16: 1,0 / 0,95417. Das belegt
