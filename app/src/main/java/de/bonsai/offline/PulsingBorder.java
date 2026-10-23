@@ -12,9 +12,8 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.SweepGradient;
 import android.os.PowerManager;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
+import android.view.Choreographer;
 import android.view.View;
 import android.widget.FrameLayout;
 import java.util.ArrayList;
@@ -23,6 +22,8 @@ import java.util.ArrayList;
  * Cached shaders follow the rounded perimeter. Drawing never changes child layout.
  */
 final class PulsingBorder extends FrameLayout {
+    private static final float[] BLOOM_WIDTHS={13f,8.2f,3.4f};
+    private static final float[] BLOOM_WEIGHTS={.3f,.9f,1.8f};
     enum Mode { BORDER, AMBIENT, RAIL }
     enum State {
         IDLE(.45f,.12f,.2f,.08f,.18f,3,.35f,
@@ -55,7 +56,7 @@ final class PulsingBorder extends FrameLayout {
     private final float density,radius,strength;
     private final Mode mode;
     private State state=State.IDLE,previous=State.IDLE;
-    private float phase,transition=1;
+    private float phase,transition=1,perimeterLength;
     private long lastFrame,nextPowerCheck;
     private boolean powerSave;
     private boolean active=true,scheduled;
@@ -87,7 +88,9 @@ final class PulsingBorder extends FrameLayout {
     boolean isFrameScheduled(){return scheduled;}
     void setState(State next) {
         if(state==next)return;
-        previous=state;state=next;transition=shouldRunFrames()&&motionEnabled()?0:1;invalidate();schedule();
+        previous=state;state=next;transition=shouldRunFrames()&&motionEnabled()?0:1;
+        if(!shouldRunFrames())stop();
+        invalidate();if(scheduled)Frames.reschedule();else schedule();
     }
     void setActive(boolean enabled) {
         active=enabled;nextPowerCheck=0;
@@ -100,6 +103,11 @@ final class PulsingBorder extends FrameLayout {
     }
     private boolean shouldRunFrames() {
         return active&&isAttachedToWindow()&&isShown()&&getWindowVisibility()==VISIBLE&&hasWindowFocus();
+    }
+    private int frameIntervalMillis() {
+        if(mode==Mode.AMBIENT)return 84;
+        if(transition<1 || state==State.DONE)return 34;
+        return state==State.GENERATING?42:50;
     }
     private void schedule() {
         if(!scheduled&&shouldRunFrames()&&motionEnabled()) {
@@ -114,27 +122,33 @@ final class PulsingBorder extends FrameLayout {
     }
     /** One frame callback for every visible light, instead of one timer per surface. */
     private static final class Frames {
-        private static final Handler main=new Handler(Looper.getMainLooper());
         private static final ArrayList<PulsingBorder> lights=new ArrayList<>();
         private static boolean pending;
-        private static final Runnable tick=new Runnable(){
-            @Override public void run(){
+        private static final Choreographer.FrameCallback tick=new Choreographer.FrameCallback(){
+            @Override public void doFrame(long frameTimeNanos){
                 pending=false;long now=SystemClock.uptimeMillis();
                 for(int i=lights.size()-1;i>=0;i--){
                     PulsingBorder light=lights.get(i);
                     if(!light.shouldRunFrames()||!light.motionEnabled()){
-                        lights.remove(i);light.scheduled=false;light.invalidate();
-                    }else light.advance(now);
+                        lights.remove(i);light.scheduled=false;light.lastFrame=0;light.invalidate();
+                    }else if(now-light.lastFrame>=light.frameIntervalMillis())light.advance(now);
                 }
                 post();
             }
         };
-        static void add(PulsingBorder light){lights.add(light);post();}
+        static void add(PulsingBorder light){lights.add(light);reschedule();}
         static void remove(PulsingBorder light){
-            lights.remove(light);
-            if(lights.isEmpty()){main.removeCallbacks(tick);pending=false;}
+            if(lights.remove(light))reschedule();
         }
-        private static void post(){if(!pending&&!lights.isEmpty()){pending=true;main.postDelayed(tick,33);}}
+        static void reschedule(){if(pending){Choreographer.getInstance().removeFrameCallback(tick);pending=false;}post();}
+        private static void post(){
+            if(pending||lights.isEmpty())return;
+            long now=SystemClock.uptimeMillis(),delay=Long.MAX_VALUE;
+            for(int i=0;i<lights.size();i++){
+                PulsingBorder light=lights.get(i);delay=Math.min(delay,Math.max(0,light.lastFrame+light.frameIntervalMillis()-now));
+            }
+            pending=true;Choreographer.getInstance().postFrameCallbackDelayed(tick,delay);
+        }
     }
     @Override protected void onAttachedToWindow(){super.onAttachedToWindow();schedule();}
     @Override protected void onDetachedFromWindow(){stop();super.onDetachedFromWindow();}
@@ -162,6 +176,7 @@ final class PulsingBorder extends FrameLayout {
             perimeter.moveTo(6*density,12*density);perimeter.lineTo(6*density,Math.max(12*density,h-12*density));
             measure.setPath(perimeter,false);
         }
+        perimeterLength=measure.getLength();
         for(State preset:State.values()) {
             int[] colors=new int[preset.colors.length+1];
             System.arraycopy(preset.colors,0,colors,0,preset.colors.length);colors[colors.length-1]=colors[0];
@@ -176,7 +191,7 @@ final class PulsingBorder extends FrameLayout {
             paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(density);paint.setColor(tokens.subtleBorder);
             canvas.drawPath(perimeter,paint);
         }
-        boolean animate=motionEnabled();float mix=animate?transition:1;
+        boolean animate=shouldRunFrames()&&motionEnabled();float mix=animate?transition:1;
         if(mode==Mode.AMBIENT){
             if(mix<1)drawAmbient(canvas,previous,1-mix);
             drawAmbient(canvas,state,mix);
@@ -208,9 +223,9 @@ final class PulsingBorder extends FrameLayout {
         float wave=(float)(.5+.5*Math.sin(phase*Math.PI*12));
         float energy=(.3f+preset.intensity)*(1-preset.pulse*.3f+preset.pulse*wave)*opacity*strength;
         paint.setStyle(Paint.Style.STROKE);paint.setShader(shader);
-        for(int layer=5;layer>=1;layer--) {
-            paint.setStrokeWidth(density*(1+layer*2.4f));
-            paint.setAlpha(Math.min(255,Math.round(energy*(5+12*preset.bloom)*(6-layer)/5)));
+        for(int layer=0;layer<BLOOM_WIDTHS.length;layer++) {
+            paint.setStrokeWidth(density*BLOOM_WIDTHS[layer]);
+            paint.setAlpha(Math.min(255,Math.round(energy*(5+12*preset.bloom)*BLOOM_WEIGHTS[layer])));
             canvas.drawPath(perimeter,paint);
         }
         paint.setStrokeWidth(1.25f*density);paint.setAlpha(Math.min(255,Math.round(energy*230)));
@@ -218,17 +233,20 @@ final class PulsingBorder extends FrameLayout {
         // Local soft spots form a moving, smoke-like halo, clipped away from text.
         canvas.save();canvas.clipOutPath(interior);paint.setStyle(Paint.Style.STROKE);
         for(int i=0;i<preset.spots;i++) {
-            float distance=((phase+i/(float)preset.spots)%1)*measure.getLength();
+            float distance=((phase+i/(float)preset.spots)%1)*perimeterLength;
             measure.getPosTan(distance,point,null);
             float size=density*(22+44*preset.spotSize)*(1+.12f*(float)Math.sin(phase*20+i));
             RadialGradient halo=halos[preset.ordinal()][i%preset.colors.length];
             spotMatrix.setScale(size,size);spotMatrix.postTranslate(point[0],point[1]);halo.setLocalMatrix(spotMatrix);
             paint.setShader(halo);
-            for(int layer=3;layer>=1;layer--) {
-                paint.setStrokeWidth(density*(1+layer*2));
-                paint.setAlpha(Math.min(255,Math.round(energy*(30+85*preset.smoke)*(4-layer)/3)));
+            // The radial shader is transparent outside this square; skip those fragments.
+            canvas.save();canvas.clipRect(point[0]-size,point[1]-size,point[0]+size,point[1]+size);
+            for(int layer=2;layer>=1;layer--) {
+                paint.setStrokeWidth(density*(layer==2?7:3));
+                paint.setAlpha(Math.min(255,Math.round(energy*(30+85*preset.smoke)*(layer==2?.5f:1.5f))));
                 canvas.drawPath(perimeter,paint);
             }
+            canvas.restore();
         }
         canvas.restore();
     }

@@ -64,7 +64,7 @@ public final class MainActivity extends Activity {
     private boolean lastLoaded, lastModelPresent;
     private long busySince;
     private String pendingPrompt="";
-    private final Runnable progressTick=()->{ if(!isFinishing()) render(); };
+    private final Runnable progressTick=()->{ if(!isFinishing()) updateStatus(); };
     private BonsaiApp app;
     private FrameLayout root, drawer;
     private LinearLayout chat;
@@ -83,6 +83,8 @@ public final class MainActivity extends Activity {
     private long renderedChat=-1;
     private boolean lastBusy, autoScroll=true;
     private final Runnable uiListener=this::render;
+    private final Runnable streamUiListener=this::renderStream;
+    private final Runnable scrollToBottom=()->scroll.fullScroll(View.FOCUS_DOWN);
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -130,7 +132,7 @@ public final class MainActivity extends Activity {
         createChatPage();screenHost.addView(chatPage,new FrameLayout.LayoutParams(-1,-1));
         setContentView(root);
         if(saved!=null){input.setText(saved.getString("draft",""));pendingPrompt=saved.getString("pendingPrompt","");}
-        app.listener=uiListener;navigate(saved==null?0:saved.getInt("screen",0));render();
+        app.listener=uiListener;app.streamListener=streamUiListener;navigate(saved==null?0:saved.getInt("screen",0));render();
         if(saved!=null && saved.containsKey("systemPromptDraft"))showSystemPrompt(saved.getBundle("systemPromptDraft"));
     }
     private void createChatPage() {
@@ -229,27 +231,31 @@ public final class MainActivity extends Activity {
     private void updatePopupStatus(){
         if(popupStatusCard==null)return;
         popupStatusCard.setVisibility(statusCard.getVisibility());
-        popupState.setText(state.getText());popupState.setTextColor(state.getCurrentTextColor());popupState.setAccessibilityLiveRegion(state.getAccessibilityLiveRegion());
-        popupAction.setText(statusAction.getText());popupAction.setEnabled(statusAction.isEnabled());
+        setTextIfChanged(popupState,state.getText());popupState.setTextColor(state.getCurrentTextColor());popupState.setAccessibilityLiveRegion(state.getAccessibilityLiveRegion());
+        setTextIfChanged(popupAction,statusAction.getText());popupAction.setEnabled(statusAction.isEnabled());
         popupProgress.setVisibility(statusProgress.getVisibility());popupProgress.setIndeterminate(statusProgress.isIndeterminate());popupProgress.setProgress(statusProgress.getProgress());
     }
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("draft",input.getText().toString());out.putInt("screen",activeScreen);out.putString("pendingPrompt",pendingPrompt);if(systemPromptEditor!=null && systemPromptEditor.isShowing())out.putBundle("systemPromptDraft",systemPromptEditor.draft());}
     @Override protected void onDestroy(){
         if(systemPromptEditor!=null)systemPromptEditor.dismiss();
         app.main.removeCallbacks(progressTick);app.main.removeCallbacks(settleGlow);
+        app.main.removeCallbacks(scrollToBottom);
         if(sectionDialog!=null){sectionDialog.setOnDismissListener(null);sectionDialog.dismiss();sectionDialog=null;}
         if(errorDialog!=null)errorDialog.dismiss();
         if(chatActionsDialog!=null)chatActionsDialog.dismiss();
         if(app.listener==uiListener)app.listener=null;
+        if(app.streamListener==streamUiListener)app.streamListener=null;
         for(LightArea area:LightArea.values())clearLights(area);
         super.onDestroy();
     }
-    @Override protected void onStart(){super.onStart();effectsRunning=true;updateEffectVisibility();app.listener=uiListener;render();}
+    @Override protected void onStart(){super.onStart();effectsRunning=true;updateEffectVisibility();app.listener=uiListener;app.streamListener=streamUiListener;render();}
     @Override protected void onStop(){
         effectsRunning=false;updateEffectVisibility();
         app.main.removeCallbacks(progressTick);app.main.removeCallbacks(settleGlow);
+        app.main.removeCallbacks(scrollToBottom);
         if(!app.busy)setGlowState(PulsingBorder.State.IDLE);
         if(app.listener==uiListener)app.listener=null;
+        if(app.streamListener==streamUiListener)app.streamListener=null;
         super.onStop();
     }
     @Override public void onBackPressed(){if(drawer!=null)closeDrawer();else if(sectionDialog!=null)sectionDialog.dismiss();else super.onBackPressed();}
@@ -285,13 +291,29 @@ public final class MainActivity extends Activity {
             // Existing streamed text never fades or moves for each token or status update.
             if(switched)UiMotion.enter(chat,0,dp(8));
             if(activeScreen==1&&(phaseChanged||modelChanged))refreshPopupContent();
-        }else if(liveAnswer!=null&&!app.messages.isEmpty()){
-            ChatStore.Message m=app.messages.get(app.messages.size()-1);setAnswerText(liveAnswer,m);
-            if(liveDetail!=null)setAnswerDetail(liveDetail,m.detail);
-        }
+        }else updateLiveAnswer();
         if(app.modelApproval!=null&&!app.busy)showError();
-        if(autoScroll&&!app.messages.isEmpty())scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));
+        scrollToLatest();
         if(app.modelCheckFinished&&!app.busy){app.modelCheckFinished=false;showModelCheck();}
+    }
+    // Native stream chunks change only the active answer and progress indicators.
+    private void renderStream() {
+        updateStatus();
+        if(updateLiveAnswer())scrollToLatest();
+    }
+    private boolean updateLiveAnswer() {
+        if(liveAnswer==null||app.messages.isEmpty())return false;
+        ChatStore.Message message=app.messages.get(app.messages.size()-1);
+        boolean changed=setAnswerText(liveAnswer,message);
+        if(liveDetail!=null)setAnswerDetail(liveDetail,message.detail);
+        return changed;
+    }
+    private void scrollToLatest() {
+        app.main.removeCallbacks(scrollToBottom);
+        if(autoScroll&&!app.messages.isEmpty())app.main.post(scrollToBottom);
+    }
+    private static void setTextIfChanged(TextView view,CharSequence value) {
+        if(!android.text.TextUtils.equals(view.getText(),value))view.setText(value);
     }
     private void updateStatus(){
         app.main.removeCallbacks(progressTick);
@@ -299,8 +321,8 @@ public final class MainActivity extends Activity {
             if(busySince==0)busySince=android.os.SystemClock.elapsedRealtime();
             long elapsed=android.os.SystemClock.elapsedRealtime()-busySince;
             state.setAccessibilityLiveRegion(lastBusy?View.ACCESSIBILITY_LIVE_REGION_NONE:View.ACCESSIBILITY_LIVE_REGION_POLITE);
-            state.setText(app.status+(elapsed>=10000?" · "+elapsed/1000+" s":""));state.setTextColor(TEXT);
-            statusAction.setText(app.cancelled?"Wird beendet":"Abbrechen");statusAction.setEnabled(!app.cancelled);statusAction.setOnClickListener(v->app.cancel());
+            setTextIfChanged(state,app.status+(elapsed>=10000?" · "+elapsed/1000+" s":""));state.setTextColor(TEXT);
+            setTextIfChanged(statusAction,app.cancelled?"Wird beendet":"Abbrechen");statusAction.setEnabled(!app.cancelled);statusAction.setOnClickListener(v->app.cancel());
             statusProgress.setVisibility(elapsed>=DesignTokens.LOADING_DELAY?View.VISIBLE:View.GONE);
             statusProgress.setIndeterminate(!app.optimizing && app.prefillFraction<0);
             if(app.optimizing)statusProgress.setProgress((int)(app.optimizingFraction*1000));
@@ -435,11 +457,16 @@ public final class MainActivity extends Activity {
         }else chat.addView(box,bounds);
     }
 
-    private void setAnswerText(TextView body,ChatStore.Message message) {
+    private boolean setAnswerText(TextView body,ChatStore.Message message) {
         boolean pending=app.busy && message.role.equals("assistant") && message.text.isEmpty();
-        body.setSingleLine(pending);body.setEllipsize(pending?android.text.TextUtils.TruncateAt.START:null);
-        body.setTextIsSelectable(!pending);body.setTextColor(pending?MUTED:TEXT);
-        body.setText(pending?(app.generationLine.isEmpty()?"Antwort wird vorbereitet …":app.generationLine):message.text);
+        if(!Boolean.valueOf(pending).equals(body.getTag())) {
+            body.setTag(pending);
+            body.setSingleLine(pending);body.setEllipsize(pending?android.text.TextUtils.TruncateAt.START:null);
+            body.setTextIsSelectable(!pending);body.setTextColor(pending?MUTED:TEXT);
+        }
+        String text=pending?(app.generationLine.isEmpty()?"Antwort wird vorbereitet …":app.generationLine):message.text;
+        if(android.text.TextUtils.equals(body.getText(),text))return false;
+        body.setText(text);return true;
     }
 
     private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
@@ -454,6 +481,8 @@ public final class MainActivity extends Activity {
         button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(listener);return button;
     }
     private void setAnswerDetail(TextView view,String detail) {
+        if(detail.equals(view.getTag()))return;
+        view.setTag(detail);
         view.setVisibility(detail.trim().isEmpty()?View.GONE:View.VISIBLE);
         view.setContentDescription(detail);view.setTooltipText(detail);
         android.text.SpannableStringBuilder content=new android.text.SpannableStringBuilder();
