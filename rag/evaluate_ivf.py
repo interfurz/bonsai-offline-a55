@@ -10,7 +10,7 @@ from .ivf import IvfIndex, float_source, normalized
 
 
 def make_questions(articles):
-    rows = [json.loads(line) for line in Path(articles).read_text().splitlines()]
+    rows = [json.loads(line) for line in Path(articles).read_text(encoding='utf-8').splitlines()]
     return [dict(query=template.format(title=row['title']), article_ids=[str(row['id'])])
             for row in rows for template in ('Was weißt du über {title}?',
                                             'Erkläre {title} und seine wichtigsten Eigenschaften.')]
@@ -80,7 +80,7 @@ def write_report(path, report):
     metadata = {key: value for key, value in report.items() if key != 'per_query'}
     prefix = json.dumps(metadata, ensure_ascii=False, indent=2)[:-2]
     rows = ',\n'.join('    ' + json.dumps(row, ensure_ascii=False) for row in report['per_query'])
-    Path(path).write_text(prefix + ',\n  "per_query": [\n' + rows + '\n  ]\n}\n')
+    Path(path).write_text(prefix + ',\n  "per_query": [\n' + rows + '\n  ]\n}\n',encoding='utf-8')
 
 
 def main():
@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--output')
     args = parser.parse_args()
     report = evaluate(args.database, args.reference, args.index,
-                      json.loads(Path(args.questions).read_text()), args.nprobe)
+                      json.loads(Path(args.questions).read_text(encoding='utf-8')), args.nprobe)
     if args.output:
         write_report(args.output, report)
     print(markdown(report))

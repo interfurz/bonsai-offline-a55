@@ -62,6 +62,18 @@ def create_index(path, count, centroids, offsets, scale, seed=42):
 
 
 class IvfIndex:
+    def close(self):
+        for name in ('ids', 'vectors', 'offsets', 'centroids'):
+            value = getattr(self, name, None)
+            if hasattr(value, '_mmap') and not value._mmap.closed:
+                value._mmap.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def __init__(self, path):
         self.path = Path(path)
         with self.path.open('rb') as stream:
@@ -135,6 +147,9 @@ class IvfIndex:
 
 
 def float_source(path):
+    if Path(path).is_dir():
+        from .shard_source import ShardFloatSource
+        return ShardFloatSource(path)
     from .embeddings import FLOAT_MAGIC
     with open(path, 'rb') as stream:
         header = stream.read(16)
@@ -174,32 +189,55 @@ def train_centroids(sample, clusters, backend='auto', device='cpu', seed=42, ite
 
 def build_index(reference, output, clusters=DEFAULT_CLUSTERS, train_size=262144,
                 backend='auto', device='cpu', batch=8192, seed=42):
+    from .corpus import _writer_lock
+    Path(output).parent.mkdir(parents=True,exist_ok=True)
+    reference_lock=Path(reference)/'export' if Path(reference).is_dir() else reference
+    with _writer_lock(reference_lock),_writer_lock(output):
+        return _build_index(reference,output,clusters,train_size,backend,device,batch,seed)
+
+
+def _build_index(reference, output, clusters, train_size, backend, device, batch, seed):
     if min(clusters, train_size, batch) < 1:
         raise ValueError("clusters, train_size and batch must be positive")
     if Path(output).exists():
         raise FileExistsError(output)
     Path(output).parent.mkdir(parents=True, exist_ok=True)
-    source = float_source(reference)
+    from database_pipeline.common import digest,atomic_json
+    source=float_source(reference)
+    reference_sha256=source.reference_sha256 if hasattr(source,'reference_sha256') else digest(reference)
+    embedding_identity=getattr(source,'identity',None)
+    assembly=Path(reference).parent/'assembly.json'
+    if not Path(reference).is_dir() and assembly.exists():
+        receipt=json.loads(assembly.read_text(encoding='utf-8'))
+        expected=receipt['files'].get(Path(reference).name)
+        if not expected or expected['sha256']!=reference_sha256:
+            raise ValueError('Reference differs from verified embedding assembly')
+        embedding_identity=receipt['identity']
     count = len(source)
     actual_clusters = min(clusters, max(1, count))
     if count and train_size < actual_clusters:
         raise ValueError("train_size must be >= actual cluster count")
+    from database_pipeline.common import require_space
+    require_space(Path(output).parent, count * (4 + 8 + DIM) + actual_clusters * (DIM * 4 + 16))
     with tempfile.TemporaryDirectory(prefix='bonsai-ivf-', dir=Path(output).parent) as temp, ExitStack() as cleanup:
-        data = np.memmap(Path(temp) / 'normalized.f32', dtype='<f4', mode='w+', shape=(max(1, count), DIM))
-        cleanup.callback(data._mmap.close)
-        maximum = 0.0
-        for start in range(0, count, batch):
-            block = normalized(source['vector'][start:start + batch, :DIM])
-            data[start:start + len(block)] = block
-            maximum = max(maximum, float(np.abs(block).max()))
-        sample_ids = np.random.default_rng(seed).choice(count, min(count, train_size), replace=False, shuffle=False) if count else []
+        if hasattr(source,'close'):cleanup.callback(source.close)
+        if hasattr(source, '_mmap'):
+            cleanup.callback(source._mmap.close)
+        # Floyd sampling uses O(training_rows), never an implicit N-row shuffle.
+        rng, chosen = np.random.default_rng(seed), set()
+        for end in range(count - min(count, train_size), count):
+            candidate = int(rng.integers(0, end + 1))
+            chosen.add(end if candidate in chosen else candidate)
+        sample_ids = np.asarray(sorted(chosen), dtype=np.int64)
         if count:
-            centers, used_backend = train_centroids(np.asarray(data[sample_ids]), actual_clusters, backend, device, seed)
+            centers, used_backend = train_centroids(normalized(source['vector'][sample_ids, :DIM]), actual_clusters, backend, device, seed)
         else:
             centers, used_backend = np.zeros((1, DIM), '<f4'), 'empty'
         # One global float32 scale, stored once. No per-vector scales.
-        scale = float(np.float32(max(1.0, maximum) / 127))
-        labels = np.empty(count, dtype=np.uint32)
+        scale = float(np.float32(1.0 / 127))
+        labels = np.memmap(Path(temp) / 'labels.u32', dtype='<u4', mode='w+', shape=(max(1, count),))
+        cleanup.callback(labels._mmap.close)
+        counts = np.zeros(actual_clusters, dtype=np.uint64)
         norms = np.einsum('ij,ij->i', centers, centers)
         # Bounded assignment batches; Faiss also accelerates this step when available.
         assignment = None
@@ -211,32 +249,52 @@ def build_index(reference, output, clusters=DEFAULT_CLUSTERS, train_size=262144,
                 assignment = faiss.index_cpu_to_gpu(resources, 0, assignment)
             assignment.add(centers)
         for start in range(0, count, batch):
-            block = np.asarray(data[start:start + batch])
-            labels[start:start + len(block)] = (assignment.search(block, 1)[1][:, 0] if assignment is not None
-                                               else np.argmin(norms[None, :] - 2 * (block @ centers.T), axis=1))
-        order = np.argsort(labels, kind='stable')
-        offsets = np.concatenate((np.zeros(1, dtype=np.uint64), np.cumsum(np.bincount(labels.astype(np.int64), minlength=actual_clusters), dtype=np.uint64)))
+            block = normalized(source['vector'][start:start + batch, :DIM])
+            assigned = (assignment.search(block, 1)[1][:, 0] if assignment is not None
+                        else np.argmin(norms[None, :] - 2 * (block @ centers.T), axis=1))
+            labels[start:start + len(block)] = assigned
+            counts += np.bincount(assigned, minlength=actual_clusters).astype(np.uint64)
+        offsets = np.concatenate((np.zeros(1, dtype=np.uint64), np.cumsum(counts, dtype=np.uint64)))
         staged = Path(temp) / 'complete.ivf'
-        create_index(staged, count, centers, offsets, scale, seed)
+        create_index(staged, count, centers, offsets, scale, seed).close()
         positions = layout(count, actual_clusters)
         if count:
             ids = np.memmap(staged, dtype='<i8', mode='r+', offset=positions[2], shape=(count,))
             vectors = np.memmap(staged, dtype='i1', mode='r+', offset=positions[3], shape=(count, DIM))
             cleanup.callback(ids._mmap.close)
             cleanup.callback(vectors._mmap.close)
+            next_position = offsets[:-1].copy()
             for start in range(0, count, batch):
-                rows = order[start:start + batch]
-                ids[start:start + len(rows)] = source['id'][rows]
-                if np.any(ids[start:start + len(rows)] <= 0):
+                end = min(count, start + batch)
+                block_ids = source['id'][start:end]
+                if np.any(block_ids <= 0):
                     raise ValueError("Chunk IDs must be positive")
-                vectors[start:start + len(rows)] = quantized(data[rows], scale)
+                block_vectors = quantized(normalized(source['vector'][start:end, :DIM]), scale)
+                block_labels = np.asarray(labels[start:end])
+                order = np.argsort(block_labels, kind='stable')  # bounded to one batch
+                sorted_labels = block_labels[order]
+                boundaries = np.flatnonzero(np.r_[True, sorted_labels[1:] != sorted_labels[:-1], True])
+                for lo, hi in zip(boundaries[:-1], boundaries[1:]):
+                    cluster = int(sorted_labels[lo])
+                    destination = int(next_position[cluster])
+                    rows = order[lo:hi]
+                    ids[destination:destination + len(rows)] = block_ids[rows]
+                    vectors[destination:destination + len(rows)] = block_vectors[rows]
+                    next_position[cluster] += len(rows)
+            if np.any(next_position != offsets[1:]):
+                raise ValueError("IVF cluster fill mismatch")
             ids.flush(); vectors.flush()
         # Publish the complete file without overwriting an existing destination.
         # Same-volume hard link is atomic; temporary files/mappings close on exit.
         os.link(staged, output)
-        return dict(count=count, clusters=actual_clusters, requested_clusters=clusters,
+        result=dict(count=count, clusters=actual_clusters, requested_clusters=clusters,
                     scale=scale, backend=used_backend, bytes=Path(output).stat().st_size,
                     training_rows=len(sample_ids), seed=seed)
+        result['reference_sha256']=reference_sha256
+        result['index_sha256']=digest(output)
+        result['embedding_identity']=embedding_identity
+        atomic_json(str(output)+'.json',result)
+        return result
 
 
 def main():

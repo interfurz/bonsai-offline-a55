@@ -47,6 +47,12 @@ final class WikidataKnowledge {
     WikidataKnowledge(File database) {this.database=database;}
     static WikidataKnowledge forStore(ChatStore store) throws IOException {
         File internal=new File(store.getReadableDatabase().getPath()).getCanonicalFile().getParentFile().getParentFile();
+        try {
+            java.util.List<KnowledgePackages.Installed> packages=KnowledgePackages.active(new File(internal,"files"),"wikidata");
+            if(packages.size()>1)throw new IOException("Mehrere Wikidata-Pakete aktiv; bitte einen Teilbestand wählen.");
+            if(packages.size()==1)return new WikidataKnowledge(new File(packages.get(0).directory,"knowledge.sqlite"));
+            for(KnowledgePackages.Installed item:KnowledgePackages.installed(new File(internal,"files")))if(item.type().equals("wikidata"))throw new IOException("Wikidata-Paket ist deaktiviert.");
+        } catch(IOException e){throw e;}catch(Exception e){throw new IOException("Wikidata-Paketstatus ungültig.",e);}
         File database=new File(internal,"files/wikidata/knowledge.sqlite").getCanonicalFile();
         if(!database.getPath().startsWith(internal.getPath()+File.separator))throw new IOException("Wikidata-Pfad außerhalb des internen Speichers.");
         return new WikidataKnowledge(database);

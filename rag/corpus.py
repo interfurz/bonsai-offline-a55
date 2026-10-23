@@ -3,6 +3,7 @@ import hashlib
 import json
 import multiprocessing
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -11,13 +12,14 @@ from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager, closing
 from pathlib import Path
+from functools import lru_cache
 
 from mwparserfromhell.parser import ParserError
 
-from .chunking import chunk_article, markdown_article, sections, tokens
+from .chunking import Section, chunk_article, markdown_article, sections, tokens
 from .wiki import records, title_key
 
-PIPELINE_VERSION = "wikipedia-v2"
+PIPELINE_VERSION = "wikipedia-v5-tokenizer-budget"
 SCHEMA = """
 PRAGMA user_version=1;
 CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -37,6 +39,12 @@ CREATE TABLE chunk_metadata(chunk_id INTEGER PRIMARY KEY REFERENCES chunks(id),
  section_paths TEXT NOT NULL, estimated_tokens INTEGER NOT NULL);
 CREATE TABLE ingest_errors(position INTEGER PRIMARY KEY, article_id TEXT, title TEXT,
  error TEXT NOT NULL);
+CREATE TABLE conversion_audit(article_id TEXT PRIMARY KEY, template_counts TEXT NOT NULL,
+ table_count INTEGER NOT NULL, math_count INTEGER NOT NULL);
+CREATE TABLE book_structure(article_id TEXT PRIMARY KEY, book TEXT NOT NULL, path TEXT NOT NULL);
+CREATE TABLE chunk_tokenization(chunk_id INTEGER PRIMARY KEY, actual_tokens INTEGER NOT NULL);
+CREATE TABLE post_metadata(article_id TEXT PRIMARY KEY,data_json TEXT NOT NULL);
+CREATE TABLE skipped_pages(position INTEGER PRIMARY KEY,article_id TEXT,title TEXT,reason TEXT NOT NULL);
 """
 
 
@@ -101,7 +109,13 @@ def _writer_lock(database):
                 fcntl.flock(stream, fcntl.LOCK_UN)
 
 
-def _prepare(item, minimum, maximum, max_page_bytes):
+@lru_cache(maxsize=1)
+def _tokenizer(path):
+    from tokenizers import Tokenizer
+    return Tokenizer.from_file(path)
+
+
+def _prepare(item, minimum, maximum, max_page_bytes, tokenizer_path=None):
     position, article = item
     if article["kind"] in {"skip", "error"}:
         return position, article
@@ -118,14 +132,25 @@ def _prepare(item, minimum, maximum, max_page_bytes):
             raise ValueError("empty redirect target")
         if article.get("model", "wikitext") != "wikitext":
             raise ValueError("unsupported content model")
-        parsed = sections(article["text"]) if article["kind"] == "article" else []
+        if article.get("format") == "markdown":
+            parsed = [Section(tuple(s["path"]),s["level"],s["text"]) for s in article["sections"]]
+        else:
+            parsed = sections(article["text"]) if article["kind"] == "article" else []
+        count_tokens = (lambda text: len(_tokenizer(tokenizer_path).encode(f"title: {article['title'] or 'none'} | text: " + text).ids)) if tokenizer_path else None
         chunks = chunk_article(article["id"], article["title"], article["text"],
-                               article.get("revision_source", article["source"]), minimum, maximum, parsed)
+                               article.get("revision_source", article["source"]), minimum, maximum, parsed, count_tokens)
         result = dict(article)
         result.pop("text")
-        result["original"] = zlib.compress(article["text"].encode("utf-8"))
+        result["original"] = zlib.compress(article.get("original_text",article["text"]).encode("utf-8"))
         result["markdown"] = zlib.compress(markdown_article(article["title"], parsed).encode("utf-8"))
         result["chunks"] = [(chunk, zlib.compress(chunk.text.encode("utf-8"))) for chunk in chunks]
+        result["actual_tokens"] = [(chunk.id, count_tokens(chunk.text)) for chunk in chunks] if count_tokens else []
+        # Unknown templates remain recoverable in the original; make every used
+        # template family inspectable instead of silently claiming full expansion.
+        result["template_counts"] = json.dumps(dict(__import__("collections").Counter(
+            name.strip().casefold() for name in re.findall(r"\{\{\s*([^{}|\n]+)", article["text"]))), ensure_ascii=False)
+        result["table_count"] = len(re.findall(r"\{\||<table\b", article["text"], re.I))
+        result["math_count"] = len(re.findall(r"<math\b", article["text"], re.I))
         return position, result
     except (ValueError, TypeError, RecursionError, ParserError) as exc:
         # Parser errors are per-page; DB, disk and process failures remain fatal.
@@ -135,10 +160,10 @@ def _prepare(item, minimum, maximum, max_page_bytes):
                               error=type(exc).__name__ + ": " + str(exc)[:400])
 
 
-def _prepared(stream, workers, inflight_bytes, minimum, maximum, max_page_bytes):
+def _prepared(stream, workers, inflight_bytes, minimum, maximum, max_page_bytes, tokenizer_path=None):
     if workers == 1:
         for item in stream:
-            yield _prepare(item, minimum, maximum, max_page_bytes)
+            yield _prepare(item, minimum, maximum, max_page_bytes, tokenizer_path)
         return
     # spawn also on Unix: exercise Windows-compatible pickling and initialization.
     with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("spawn")) as pool:
@@ -152,13 +177,13 @@ def _prepared(stream, workers, inflight_bytes, minimum, maximum, max_page_bytes)
                     future, weight = pending.popleft()
                     pending_bytes -= weight
                     yield future.result()
-                yield _prepare(item, minimum, maximum, max_page_bytes)
+                yield _prepare(item, minimum, maximum, max_page_bytes, tokenizer_path)
                 continue
             while pending and (len(pending) >= workers * 2 or pending_bytes + size > inflight_bytes):
                 future, weight = pending.popleft()
                 pending_bytes -= weight
                 yield future.result()
-            pending.append((pool.submit(_prepare, item, minimum, maximum, max_page_bytes), size))
+            pending.append((pool.submit(_prepare, item, minimum, maximum, max_page_bytes, tokenizer_path), size))
             pending_bytes += size
         while pending:
             future, _ = pending.popleft()
@@ -176,6 +201,13 @@ def _write_article(db, article, android_fts4):
         article.get("timestamp", ""), article.get("revision_source", article["source"]),
         article.get("history_source", ""), article.get("license", ""), article.get("sha1", ""),
         article.get("redirect_target", ""), article["original"], article["markdown"]))
+    db.execute("INSERT INTO conversion_audit VALUES(?,?,?,?)", (article["id"], article["template_counts"], article["table_count"], article["math_count"]))
+    db.executemany("INSERT INTO chunk_tokenization VALUES(?,?)", article["actual_tokens"])
+    if article.get("post_metadata"):
+        db.execute("INSERT INTO post_metadata VALUES(?,?)",(article["id"],json.dumps(article["post_metadata"],ensure_ascii=False)))
+    if article.get("wiki") == "dewikibooks":
+        path = article["title"].split("/")
+        db.execute("INSERT INTO book_structure VALUES(?,?,?)", (article["id"], path[0].strip(), json.dumps(path, ensure_ascii=False)))
     if article["kind"] == "redirect":
         target, _, fragment = article["redirect_target"].partition("#")
         db.execute("INSERT INTO redirects VALUES(?,?,?)", (article["id"], title_key(target or article["title"]), fragment))
@@ -192,7 +224,8 @@ def _write_article(db, article, android_fts4):
 
 def build(source, database, limit=None, android_fts4=True, *, resume=False, workers=1,
           commit_every=500, minimum=80, maximum=800, max_inflight_mib=64,
-          max_page_mib=8, error_log=None, progress=True, dump_sha256=None):
+           max_page_mib=8, error_log=None, progress=True, dump_sha256=None, wiki="dewiki", tokenizer_path=None,
+           disk_reserve_bytes=0):
     """Import only local data. Limit is the total attempted non-redirect articles.
 
     Checkpoint, article rows, errors and both FTS indices commit atomically. On
@@ -201,6 +234,8 @@ def build(source, database, limit=None, android_fts4=True, *, resume=False, work
     """
     if limit is not None and limit < 1:
         raise ValueError("limit must be positive")
+    if wiki not in {"dewiki", "dewikibooks", "stackexchange"}:
+        raise ValueError("Text RAG supports only the agreed text corpora")
     if workers < 1 or commit_every < 1 or min(max_inflight_mib, max_page_mib) <= 0:
         raise ValueError("workers, commit interval and memory limits must be positive")
     if not 0 < minimum <= maximum:
@@ -212,8 +247,11 @@ def build(source, database, limit=None, android_fts4=True, *, resume=False, work
         raise ValueError("source and database must differ")
     database.parent.mkdir(parents=True, exist_ok=True)
     options = dict(pipeline=PIPELINE_VERSION, android_fts4=android_fts4, minimum=minimum,
-                   maximum=maximum, max_page_mib=max_page_mib, dump_sha256=dump_sha256)
+                   maximum=maximum, max_page_mib=max_page_mib, dump_sha256=dump_sha256, wiki=wiki)
     identity = _fingerprint(source)
+    if tokenizer_path:
+        tokenizer_path = str(Path(tokenizer_path).resolve())
+        options["tokenizer_sha256"] = hashlib.sha256(Path(tokenizer_path).read_bytes()).hexdigest()
     log_path = Path(error_log) if error_log else Path(str(database) + ".errors.jsonl")
     reserved = [Path(source), database] + [Path(str(database) + suffix) for suffix in (".lock", "-wal", "-shm", "-journal")]
     if log_path.resolve() in {p.resolve() for p in reserved}:
@@ -251,6 +289,7 @@ def build(source, database, limit=None, android_fts4=True, *, resume=False, work
                 _put_metadata(db, "ingest_status", "in_progress")
                 db.commit()
             already_complete = resume and metadata.get("ingest_status") == "complete"
+            db.execute("CREATE TABLE IF NOT EXISTS skipped_pages(position INTEGER PRIMARY KEY,article_id TEXT,title TEXT,reason TEXT NOT NULL)")
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("PRAGMA synchronous=FULL")
             session_start_attempted = state["attempted"]
@@ -277,12 +316,15 @@ def build(source, database, limit=None, android_fts4=True, *, resume=False, work
                         rate = (state["attempted"] - session_start_attempted) / max(now - started, .001)
                         print(f"[{status}] page={state['position']} articles={state['articles']} redirects={state['redirects']} chunks={state['chunks']} errors={state['errors']} {rate:.1f} articles/s", file=sys.stderr, flush=True)
                     last_report = time.monotonic()
+                    if disk_reserve_bytes:
+                        from database_pipeline.common import require_space
+                        require_space(database.parent,0,reserve=disk_reserve_bytes)
 
                 def selected():
                     if already_complete or (limit and state["attempted"] >= limit):
                         return
                     attempted = state["attempted"]
-                    for item in records(source, state["position"], progress=progress):
+                    for item in records(source, state["position"], progress=progress, wiki=wiki):
                         yield item
                         if item[1]["kind"] in {"article", "error"}:
                             attempted += 1
@@ -290,13 +332,15 @@ def build(source, database, limit=None, android_fts4=True, *, resume=False, work
                                 break
 
                 stream = _prepared(selected(), workers, int(max_inflight_mib * 1024**2),
-                                   minimum, maximum, int(max_page_mib * 1024**2))
+                                   minimum, maximum, int(max_page_mib * 1024**2), tokenizer_path)
                 try:
                     for position, article in stream:
                         kind = article["kind"]
                         state["position"] = position
                         if kind == "skip":
                             state["skipped"] += 1
+                            if article.get('skip_reason'):
+                                db.execute('INSERT INTO skipped_pages VALUES(?,?,?,?)',(position,article.get('id'),article.get('title'),article['skip_reason']))
                         elif kind == "error":
                             # JSON parse failures count as an attempted article too.
                             state["attempted"] += article.get("attempted", True)

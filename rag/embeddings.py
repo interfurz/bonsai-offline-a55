@@ -4,6 +4,8 @@ import re
 import sqlite3
 import struct
 import zlib
+import sys
+from contextlib import closing
 
 DIM = 256
 MAGIC = b"BRAGV001"
@@ -40,29 +42,50 @@ class HashEncoder:
 
 
 class ModelEncoder:
-    def __init__(self, model, device=None):
+    def __init__(self, model, device=None, revision=None, model_path=None, compute_dtype='float32'):
+        self.model_identity=None
+        if model==DEFAULT_MODEL and model_path:
+            if revision is None:raise ValueError('Local production model requires pinned revision')
+            from database_pipeline.model import verify_local
+            self.model_identity=verify_local(model_path,revision)
         from sentence_transformers import SentenceTransformer
         self.name = model
         options = {}
         if model == DEFAULT_MODEL:
             import torch
+            if compute_dtype not in ('float32','bfloat16'):raise ValueError('Only FP32 or explicitly validated BF16 inference is supported')
+            if compute_dtype=='bfloat16' and (not device or not str(device).startswith('cuda') or not torch.cuda.is_bf16_supported()):raise ValueError('BF16 export requires a compatible CUDA device')
+            if device and str(device).startswith("cuda"):
+                # WDDM otherwise lets the caching allocator spill several GiB
+                # into shared system memory despite a small live tensor peak.
+                selected = torch.device(device)
+                torch.cuda.set_per_process_memory_fraction(0.72, device=selected.index if selected.index is not None else 0)
             # Query encoder is text-only; FP16 overflows this model's activations.
             options = dict(config_kwargs={"vision_config": None, "audio_config": None},
-                           model_kwargs={"torch_dtype": torch.float32})
-        self.model = SentenceTransformer(model, device=device, trust_remote_code=False, **options)
+                           model_kwargs={"torch_dtype": torch.bfloat16 if compute_dtype=='bfloat16' else torch.float32})
+        if revision is not None:
+            options["revision"] = revision
+        self.model = SentenceTransformer(str(model_path or model), device=device, trust_remote_code=False, **options)
+
+    def token_lengths(self, texts):
+        return [len(ids) for ids in self.model.tokenizer(texts, truncation=False)["input_ids"]]
 
     def encode(self, texts, query=False):
         if self.name == DEFAULT_MODEL:
             # Documents already carry their real title; do not add "title: none" again.
             texts = [("task: search result | query: " + text) if query else text for text in texts]
-            return self.model.encode(texts, prompt="", convert_to_numpy=True,
-                                     show_progress_bar=False).tolist()
+            output = self.model.encode(texts, prompt="", convert_to_numpy=True,
+                                       show_progress_bar=False).tolist()
+            torch = sys.modules.get("torch")
+            if torch is not None and str(getattr(self.model,"device","cpu")).startswith("cuda") and torch.cuda.memory_reserved() > torch.cuda.memory_allocated() + 1024**3:
+                torch.cuda.empty_cache()
+            return output
         method = self.model.encode_query if query else self.model.encode_document
         return method(texts, convert_to_numpy=True, show_progress_bar=False).tolist()
 
 
-def encoder(name, device=None):
-    return HashEncoder() if name == "hash-v1" else ModelEncoder(name, device)
+def encoder(name, device=None, revision=None, model_path=None, compute_dtype='float32'):
+    return HashEncoder() if name == "hash-v1" else ModelEncoder(name, device, revision, model_path,compute_dtype)
 
 
 def quantize(values):
@@ -77,7 +100,7 @@ def embed(database, output, model=DEFAULT_MODEL, reference=None, batch=32, devic
     if batch < 1:
         raise ValueError("batch must be positive")
     backend = encoder(model, device)
-    with sqlite3.connect(database) as db, open(output, "xb") as target:
+    with closing(sqlite3.connect(database)) as db, db, open(output, "xb") as target:
         count = db.execute("SELECT count(*) FROM chunks").fetchone()[0]
         target.write(struct.pack("<8sII", MAGIC, DIM, count))
         reference_file = open(reference, "xb") if reference else None

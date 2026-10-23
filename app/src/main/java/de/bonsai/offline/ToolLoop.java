@@ -34,6 +34,8 @@ final class ToolLoop {
     static Result run(List<ChatStore.Message> history,ChatStore store,Generator generator,BooleanSupplier cancelled,boolean grammarEnabled,String systemPrompt) throws Exception {
         SearchSources sources=new SearchSources();
         WikidataSources facts=new WikidataSources();
+        StructuredSources structured=new StructuredSources();
+        boolean untrustedKnowledge=false;
         List<ChatStore.Message> turns=new ArrayList<>();
         turns.add(new ChatStore.Message(0,"system",systemPrompt,""));
         turns.addAll(history);
@@ -53,23 +55,25 @@ final class ToolLoop {
                 if(incomplete) throw new IllegalStateException("GBNF-Endantwort wurde unterbrochen oder hat das Antwortlimit erreicht.");
                 String answer=result.text.substring(7,result.text.length()-8);
                 if(answer.trim().isEmpty() || answer.contains("</final>")) throw new IllegalStateException("Ungültige GBNF-Endantwort.");
-                return facts.finish(sources.finish(new Result(answer,result.stats)));
+                return structured.finish(facts.finish(sources.finish(new Result(answer,result.stats))));
             }
             Matcher match=CALL.matcher(result.text);
             if(!match.matches()) {
                 if(grammarEnabled) throw new IllegalStateException("Ungültiges GBNF-Antwortformat.");
                 if(MARKER.matcher(result.text).find()) throw new IllegalStateException("Ungültiges Tool-Format. Bitte erneut versuchen.");
                 if(result.text.trim().isEmpty()) throw new IllegalStateException("Keine Endantwort erhalten.");
-                return facts.finish(sources.finish(result));
+                return structured.finish(facts.finish(sources.finish(result)));
             }
             if(incomplete) throw new IllegalStateException("Tool-Aufruf wurde unterbrochen oder hat das Antwortlimit erreicht.");
             if(round==MAX_ROUNDS-1) throw new IllegalStateException("Tool-Limit erreicht. Keine Endantwort erhalten.");
-            JSONObject reply=execute(match.group(1),store,cancelled);
+            JSONObject reply=execute(match.group(1),store,cancelled,!untrustedKnowledge);
+            if(java.util.Arrays.asList("suche","wikidata","woerterbuch","tabellen").contains(reply.optString("name")))untrustedKnowledge=true;
             sources.collect(reply);
             facts.collect(reply);
+            structured.collect(reply);
             turns.add(new ChatStore.Message(0,"assistant",result.text,""));
             String instruction=round==MAX_ROUNDS-2?"\nTool-Limit erreicht. Antworte jetzt abschließend ohne weiteren Tool-Aufruf.":"";
-            turns.add(new ChatStore.Message(0,"user","<tool_result>"+reply.toString()+"</tool_result>"+instruction,""));
+            turns.add(new ChatStore.Message(0,"user","<tool_result>"+reply.toString().replace("<","\\u003c").replace(">","\\u003e")+"</tool_result>"+instruction,""));
         }
         throw new IllegalStateException("Keine Endantwort erhalten.");
     }
@@ -110,7 +114,7 @@ final class ToolLoop {
             return call;
         }
     }
-    private static JSONObject execute(String json,ChatStore store,BooleanSupplier cancelled) throws Exception {
+    private static JSONObject execute(String json,ChatStore store,BooleanSupplier cancelled,boolean allowWrites) throws Exception {
         JSONObject reply=new JSONObject();
         try {
             JSONObject call=readCall(json);
@@ -120,6 +124,9 @@ final class ToolLoop {
             JSONObject args=call.getJSONObject("args");
             checkCancelled(cancelled);
             switch(name) {
+                case "woerterbuch": case "tabellen":
+                    reply.put("result",StructuredKnowledge.query(store,name,args,cancelled));
+                    break;
                 case "wikidata":
                     reply.put("result",WikidataKnowledge.forStore(store).query(args,cancelled));
                     break;
@@ -128,15 +135,16 @@ final class ToolLoop {
                     reply.put("result",Calculator.evaluate(string(args,"expr",1024)));
                     break;
                 case "merken":
+                    if(!allowWrites)throw new IllegalArgumentException("Nach Wissensabrufen sind Speicheränderungen gesperrt. Bitte in einer neuen Nachricht ausdrücklich speichern.");
                     if(args.length()!=2) throw new IllegalArgumentException("merken erwartet key und value.");
                     String key=string(args,"key",128), value=string(args,"value",4000);
                     store.remember(key,value);
                     reply.put("result","Gespeichert").put("key",key);
                     break;
                 case "suche":
-                    if(args.length()!=1) throw new IllegalArgumentException("suche erwartet query.");
+                    if(args.length()!=(args.has("corpus")?2:1)) throw new IllegalArgumentException("suche erwartet query und optional corpus.");
                     String query=string(args,"query",KnowledgeSearch.MAX_QUERY);
-                    reply.put("result",KnowledgeSearch.forStore(store).search(query,cancelled));
+                    reply.put("result",KnowledgeSearch.searchInstalled(store,query,args.has("corpus")?string(args,"corpus",20):"all",cancelled));
                     break;
                 case "abrufen":
                     if(args.length()!=1) throw new IllegalArgumentException("abrufen erwartet key.");

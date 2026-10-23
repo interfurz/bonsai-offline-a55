@@ -1,0 +1,164 @@
+# Datenbank-Abnahme — laufender Stand 23.10.2026
+
+Die Gesamtmission ist **nicht abgeschlossen**. Insbesondere sind der
+Wikipedia-Vollbestand und produktive Vektoren der weiteren Textkorpora noch
+nicht nachgewiesen. Diese Datei trennt fertige Komponenten, echte Messungen,
+laufende Verarbeitung und konkrete offene Abnahmen.
+
+## Preflight auf diesem Windows-Laptop
+
+Windows 11 Build 26200, Python 3.11.9, SQLite 3.45.1, RTX 4060 Laptop mit
+8.188 MiB. NVIDIA-Treiber 617.42, PyTorch 2.14.1+cu130, CUDA-Matrixrechnung
+tatsächlich ausgeführt. Faiss CPU 1.15.1 funktioniert nativ unter Windows;
+kein WSL installiert oder verwendet. Physisch gemessener RAM:
+42.728.759.296 Bytes. Zu Beginn waren nur 109.387.091.968 Bytes auf C: frei;
+nach dem vom Nutzer vorgenommenen Aufräumen 354.639.249.408 Bytes.
+Die aktuellen freien Bytes werden mit `preflight`/`status` erneut ermittelt.
+
+## Fertige echte Datenläufe
+
+| Lauf | Tatsächlich gemessen |
+|---|---|
+| Wikipedia 1k, bisheriger Konverter | 1.000 Artikel, 153 Redirects, 15.742 Chunks, 156.745.728 Bytes DB, 0 Importfehler |
+| Wikipedia 1k, Tabellen/ZahlExp/Exponenten + echter Tokenizer | 1.000 Artikel, 153 Redirects, 17.285 Chunks, alle Dokumentprompts ≤800 Tokens, 0 Importfehler; SQLite und FTS-ID-Mengen geprüft |
+| Wikipedia 10k | 10.000 Artikel, 1.436 Redirects, 163.058 Chunks, 1.472.348.160 Bytes DB, 0 Importfehler; Integrität und FTS-/Chunk-ID-Gleichheit bestanden |
+| Wikipedia 100k | 100.000 Artikel, 32.771 Redirects, 886.793 Chunks, 7.117.844.480 Bytes DB, 0 Fehler; SQLite-/FTS-/Chunk-Integrität bestanden. Fortsetzung ab 10k: 4.515,515 s, RSS-Summe maximal 913.342.464 Bytes |
+| Wikibooks vollständig | 40.380 Inhaltsseiten, 1.737 Redirects, 339.997 Chunks. 2.482.978.816 Bytes; zwei CSS-Begleitseiten in neuer Generation mit Quellabgleich auditierbar umklassifiziert; anschließend 0 Inhaltsfehler, Integrität/FTS-ID-Mengen bestanden |
+| Echte Import-Unterbrechung | 10k-Lauf als Prozessbaum beendet; SQLite-Checkpoint wiederaufgenommen, 10k danach vollständig validiert |
+| EmbeddingGemma 2 FP32/CUDA | Alle 17.285 Pilot-Chunks exportiert; 1.867,594 s einschließlich Modellladen, abgetastete RSS-Summe 2.802.061.312 Bytes; dauerhafte Shards mit SHA256 |
+| EmbeddingGemma 2, 10k/CUDA | 163.058 Vektoren in bestätigten Shards, 17.141,953 s einschließlich Laden und Schreiben, abgetastete RSS-Summe 2.802.991.104 Bytes; IVF 256/512/1.024 gebaut, erweiterter Recalltest läuft |
+| Faiss mit realen Pilotvektoren | 64/128/256 Cluster trainiert; BRAGIVF1-Dateien 4.629.760 / 4.699.392 / 4.830.464 Bytes; keine Größen-/Latenzbehauptung für Millionen realer Vektoren |
+| Wiktionary-Pilot | 1.000 Seiten, 1.437 Sprache-/Wortart-Einträge, 7.327 Formen; `Hallos` → deutsches Lemma `Hallo`; vollständiger Dumpimport läuft separat |
+| Wiktionary-Vollimport, erste Generation | 1.265.548 Inhaltsseiten, 1.320.680 Sprache-/Wortart-Einträge, 1.549.379 Formen, 11.993.874 Details, 4.556.926.976 Bytes; Integrität und Referenzen bestanden. 35.024 Seiten ohne Standard-Wortartabschnitt: Varianten-/Weiterleitungsupgrade vor Paketfreigabe |
+| Wiktionary freigegebene Generation | 1.266.743 Inhalts-/Weiterleitungsseiten, 1.322.640 strukturierte Einträge, 1.549.395 Formen, 37.840 Aliase, 34.259 gekennzeichnete Rohtextzugänge; keine gespeicherte Seite ohne vorgesehenen Suchzugang. DB 4.594.368.512 Bytes, 0 Importfehler |
+| Electronics-Auswahl | 12.678 Fragen, 22.231 zugeordnete Antworten; nach Mindesttextprüfung 22.213 Antwortdokumente, 200.290.838 Bytes JSONL; noch kein fertiges Vektorpaket |
+| Electronics-Textimport | 22.213 Dokumente, 43.958 Chunks, 389.746.688 Bytes Host-DB, 0 Fehler, SQLite-/FTS-/ID-Prüfung bestanden |
+| Physics-Textimport | 17.808 ausgewählte Fragen, 27.377 Antworten; 27.372 Antwortdokumente, 58.112 Chunks, 0 Importfehler |
+| Super-User-Auswahl | 30.000 Fragen und 51.884 Antworten; 51.635 Antwortdokumente nach Mindesttextprüfung, 347.545.147 Bytes JSONL |
+| Super User / Mathematics | Super User: 51.635 Dokumente / 93.961 Chunks / 662.614.016 Bytes DB. Mathematics: 57.514 Dokumente / 124.849 Chunks / 956.366.848 Bytes DB. Beide ohne Importfehler, SQLite-/FTS-/ID-Prüfungen bestanden |
+| OFF, deutscher Markt | 3.269.682 Quellprodukte gescannt, 257.707 Produkte importiert, 492.003.328 Bytes DB; 1.262,922 s, abgetastete RSS-Summe 61.325.312 Bytes |
+| OFF-Normalisierung | In neuer Generation 104.849 Energiewerte aus der dokumentierten kJ-Spalte `energy_100g` ergänzt; Originalgeneration behalten, fehlende/negative Werte nicht zu Null gemacht |
+| Konstanten/Einheiten | Vollständige CODATA-2022-Tabelle mit 355 Größen und Unsicherheiten; zusätzlich π/e mit expliziter 50-stelliger Dezimalapproximation, 712 typisierte Einheiten einschließlich SI-Präfixen; `ms` und `Ms` werden unterschieden |
+
+Die erste Wikipedia-Auswahl besteht aus frühen Dumpartikeln und ist kein
+repräsentatives Zufallssample. Auch die Vollskalierung muss ihre eigenen
+Artikel-/Chunkzahlen und Ressourcen liefern. Es wird nicht aus 1k auf eine
+angebliche Gesamtzahl hochgerechnet.
+
+## Fertige installierbare Container
+
+| Paket | Bytes | SHA256 |
+|---|---:|---|
+| `bonsai-dewiki-20261001-pilot-1k-v2.bonsai` | 127742451 | `be2a84133e30e579b812b43c5014e68657e3f4e227c986c47580bde78a35de7b` |
+| `bonsai-constants-codata2022-v3.bonsai` | 321813 | `b2f9c2f18dfc8eb97981bc31fd42f18a22252c0c5bdbd73908b93bf0702aac5f` |
+| `bonsai-food-germany-20240624-v1.bonsai` | 492004566 | `9fef75edc40e56dbb29a817d41ef31d10259a5c53d9e22f1256818f53724fe6d` |
+| `bonsai-dewiktionary-20261001-v1.bonsai` | 4594372574 | `42a2c578381d1f6d6444d50f504c72b33dc5f312d4dedc2390ebcfe42e816b73` |
+
+Der Wikipedia-Container ist ausdrücklich ein 1k-Pilot. Der Nährwertcontainer
+enthält einen vollständigen selektierten Marktbestand des offiziellen **2024**-
+Exports; er ist kein aktueller 2026-Nährwertnachweis und keine Tabelle generischer
+Lebensmittel. Fertige Dateinamen werden nicht überschrieben, frühere lokale
+Generationen bleiben erhalten.
+
+## Retrieval und numerische Prüfung
+
+40 menschliche GermanQuAD-Testfragen passen zu sechs Titeln im 1k-Pilotbestand.
+Das ist ein kleiner, thematisch geclusterter Test. Historische Antwortwerte
+werden nicht ungeprüft als 2026-Fakten bewertet.
+
+| Verfahren | Artikel-Recall@5 | Artikel-Recall@10 | MRR@10 |
+|---|---:|---:|---:|
+| FTS5 | .950 | .950 | .86250 |
+| HF FP32 768D | .950 | .975 | .94107 |
+| HF FP32 256D | .950 | .975 | .88274 |
+| INT8-Vollscan, globaler IVF-Scale | .950 | .975 | .88438 |
+| Hybrid, IVF 64 Cluster/nprobe 16 | .975 | 1.000 | .95417 |
+
+ANN-Recall@10 für 64/nprobe16: .9725 relativ zum INT8-Vollscan, .9200
+relativ zur exakten 256D-FP32-Rangliste. Das sind unterschiedliche Bezugsgrößen.
+Gemessene warme Host-Suche im Index: durchschnittlich 2,548 ms ohne Query-
+Encoding; kein Android-, Cache-kalt- oder A55-Wert. Das nprobe-/Cluster-Raster
+und Einzelabfragen stehen im lokalen JSON-Beleg. 64 Cluster sind eine
+Pilotentscheidung; Vollindizes benötigen neue Messungen.
+
+Die CPU-/CUDA-/GGUF-Pins und Paritätsgrenzen stehen in
+[EMBEDDING-PROFILE.md](EMBEDDING-PROFILE.md). BF16-Proben sind separat erfasst;
+die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
+
+## Tests und Builds
+
+- 47 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-Tests bestanden.
+- 14 bestehende Wikidata-Pipelinetests bestanden.
+- 15 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
+  einschließlich direktem 7z-Stream, Energie-Alias und auditierter CSS-Reparatur.
+- 5 weitere Hosttests einschließlich Runtime-Backport bestanden.
+- Neuer GBNF-Vertrag im echten gepinnten nativen Parser auf Windows geprüft:
+  Wörterbuch, Tabellen und Korpusauswahl akzeptiert; SQL/OSM/falsche Argumente
+  und Tools in der Finalrunde abgewiesen.
+- Vollständiger CPU-Release-Build sowie Release-Lint und 164 Release-/Robolectric-
+  Tests ohne Fehler oder übersprungene Tests erfolgreich ausgeführt. Nach
+  weiteren Änderungen erneut mit dem finalen Commit abgleichen.
+- Der echte Wikipedia-Pilot wurde über denselben Android-Importer unter
+  Robolectric importiert und über den read-only Suchpfad abgefragt. Zusätzlich:
+  Hashfehler, Pfadversuche, falscher DB-Typ, Platzmangel, Abbruch, Updateerhalt,
+  Deaktivierung, zusammengesetzte Identitäten und Schreibsperre nach Wissensabruf.
+- Vollständiges 4,59-GB-Wörterbuch, OFF-Marktbestand und SI-Paket über denselben
+  Android-Importer unter Robolectric installiert und mit echten Inhalten
+  abgefragt: Konvergenz, Nordatlantic, Bank, Haferflocken und 3 Lichtjahre.
+  Belege und Hostimportzeiten in `android-real-structured-packages.json`.
+- Mehrkorpus-RRF vereinigt semantische Kandidaten über vergleichbare normalisierte
+  Scores aller kompatiblen Pakete. Ein Regressionstest mit fünf Communities
+  verhindert, dass alphabetisch spätere Pakete dauerhaft aus Top-3 verschwinden.
+
+Der erste unisolierte Windows-Robolectric-Gesamtlauf stürzte im nativen SQLite-
+Finalizer ab. Klassen laufen auf Windows jetzt in getrennten Testprozessen;
+Assertions und natives SQLite bleiben aktiviert. Weitere Windows-Befunde:
+Unix-absolut aussehende Pfade explizit ablehnen, gemappte Testdateien nicht
+in-place verändern, Runtime-Patch-EOLs vor abschließender Byteprüfung behandeln.
+
+## Noch offen / laufend
+
+1. Nach bestandenem 100k-Gate und vollständiger offizieller Dumpprüfung läuft
+   der Wikipedia-Vollimport mit Checkpoints und 80-GiB-SSD-Reserve. Seine
+   endgültige Artikel-/Chunkzahl, vollständige Vektorisierung und Index fehlen.
+   Die zuvor beobachteten HTTP-429 wurden durch begrenzten Wiederanlauf
+   überwunden; sie sind kein noch bestehender Downloadblocker.
+2. Der FP32-GPU-Export des 10k-Bestands läuft in bestätigten Shards.
+   Produktionspräzision und Cluster-/nprobe-Wahl für große Bestände offen.
+3. Wikibooks ist vollständig importiert und geprüft; Embeddings/IVF/Paket fehlen.
+4. Vollständiges Wiktionary-Paket ist geprüft; physische Android-16-Abnahme offen.
+5. Electronics, Physics, Super User und Mathematics sind als Textkorpora geprüft;
+   Stack-Overflow-Auswahl läuft. Alle fünf Archive und das zusätzliche
+   Stack-Overflow-Users-Archiv sind vollständig geprüft. Embedding-/IVF-Pakete und das gemeinsame
+   gemessene 6-GB-Budget fehlen noch.
+6. Wikidata: datierter offizieller 103-GB-Rohdump wird heruntergeladen;
+   noch keine Vollprüfsumme des empfangenen Dumps. Breite Auswahl unter 7 GB,
+   Ontologie-/Referenzabdeckung und echte strukturierte Sollabfragen fehlen.
+8. Repräsentative Retrievaltests, Nichttreffer, Aktualitätsprüfung des OFF-
+   Bestands und paketübergreifende Antwortabnahme bleiben erforderlich.
+9. Kein A55 in `adb devices -l`. SAF-Import auf physischem Gerät, Flugmodus,
+   Bonsai-Toolwahl, gleichzeitiger RAM, Query-Ladezeit, Latenzen und Thermik offen.
+10. APK-Version 0.5.2-db-preview / Code 16 ist als CPU-Release gebaut. Die
+    Signierung mit der vorhandenen Updateidentität und A55-Installation sind
+    getrennt nachzuweisen. Keine erfundenen Gerätebenchmarks.
+
+## Reproduktion
+
+```powershell
+& $py -m unittest discover -s rag/tests -v
+& $py -m unittest discover -s wikidata/tests -v
+& $py -m unittest discover -s database_pipeline/tests -v
+& $py -m unittest discover -s tests -v
+$env:BONSAI_TEST_PACKAGE = 'ABSOLUTER_PFAD_ZUM_REALEN_1K_V2_PAKET'
+$env:BONSAI_TEST_PACKAGE_DIR = 'ABSOLUTER_PFAD_ZUM_PAKETVERZEICHNIS'
+$env:BONSAI_TEST_EVIDENCE_DIR = 'ABSOLUTER_PFAD_ZU_BENCHMARKS'
+.\gradlew.bat --no-daemon --max-workers=2 :app:testReleaseUnitTest :app:lintRelease :app:assembleRelease
+```
+
+Ohne `BONSAI_TEST_PACKAGE` entfällt der echte RAG-Pilotintegrationstest;
+ohne `BONSAI_TEST_PACKAGE_DIR` der zusätzliche große Strukturpakettest.
+Die übrigen Importtests erzeugen eigene Fixtures. Die 164er-Abnahme hatte beide
+Paketvariablen gesetzt und übersprang keinen Test.
+Python-/Windows-Einstieg, Quellbelege und Installationsschritte:
+[DATABASE-PIPELINE.md](DATABASE-PIPELINE.md), [DATASET-SOURCES.md](DATASET-SOURCES.md),
+[OFFLINE-PACKAGES.md](OFFLINE-PACKAGES.md).

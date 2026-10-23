@@ -23,6 +23,8 @@ def main():
     ingest.add_argument("--error-log")
     ingest.add_argument("--dump-sha256", help="User-verified dump hash for provenance (not verified by ingest)")
     ingest.add_argument("--quiet", action="store_true")
+    ingest.add_argument("--wiki", choices=["dewiki", "dewikibooks", "stackexchange"], default="dewiki")
+    ingest.add_argument("--tokenizer", help="Pinned tokenizer.json; enforce actual document token budgets")
     embedding = commands.add_parser("embed")
     embedding.add_argument("database")
     embedding.add_argument("vectors")
@@ -44,7 +46,7 @@ def main():
                        resume=args.resume, workers=args.workers, commit_every=args.commit_every,
                        minimum=args.min_tokens, maximum=args.max_tokens,
                        max_inflight_mib=args.max_inflight_mib, max_page_mib=args.max_page_mib,
-                       error_log=args.error_log, progress=not args.quiet, dump_sha256=args.dump_sha256)
+                       error_log=args.error_log, progress=not args.quiet, dump_sha256=args.dump_sha256, wiki=args.wiki, tokenizer_path=args.tokenizer)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif args.command == "embed":
         embed(args.database, args.vectors, args.model, args.reference, args.batch, args.device)

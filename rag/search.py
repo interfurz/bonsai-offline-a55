@@ -2,6 +2,7 @@
 import re
 import sqlite3
 import zlib
+from contextlib import closing
 from .embeddings import encoder, vector_ranks
 
 MAX_HITS = 3
@@ -31,7 +32,7 @@ def search(database, query, vectors=None, top_k=MAX_HITS, backend=None, ivf=None
     from pathlib import Path
     if not Path(database).is_file():
         raise FileNotFoundError("Wissensdatenbank fehlt")
-    with sqlite3.connect(Path(database).resolve().as_uri() + "?mode=ro", uri=True) as db:
+    with closing(sqlite3.connect(Path(database).resolve().as_uri() + "?mode=ro", uri=True)) as db:
         match = fts_query(query)
         lexical = [row[0] for row in db.execute("SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts),rowid LIMIT 20", (match,))] if match else []
         semantic = []

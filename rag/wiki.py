@@ -51,13 +51,14 @@ def _value(fields, name, default=""):
     return node.text or default if node is not None else default
 
 
-def records(path, after=0, progress=False):
+def records(path, after=0, progress=False, wiki="dewiki"):
     """Yield (absolute page/line position, record) including skips and redirects.
 
     Resume of plain/bzip XML replays the stream to the last committed page;
     it intentionally does not pretend arbitrary bzip offsets are seekable.
     """
     path = Path(path)
+    domain = {"dewiki": "de.wikipedia.org", "dewikibooks": "de.wikibooks.org", "dewiktionary": "de.wiktionary.org", "stackexchange": None}[wiki]
     last_report = time.monotonic()
     opener = bz2.open if path.suffix.lower() == ".bz2" else open
     with opener(path, "rb") as stream:
@@ -70,10 +71,13 @@ def records(path, after=0, progress=False):
                     if not isinstance(row, dict):
                         raise ValueError("JSONL record must be an object")
                     row["kind"] = "redirect" if row.get("redirect_target") else "article"
+                    row["wiki"] = wiki
                     yield position, row
                 except (ValueError, UnicodeError) as exc:
                     yield position, {"kind": "error", "error": type(exc).__name__ + ": invalid JSONL record"}
             return
+        if domain is None:
+            raise ValueError("Stack Exchange must use the prepared JSONL adapter")
         parser = ET.iterparse(stream, events=("start", "end"))
         _, root = next(parser)
         position = 0
@@ -94,7 +98,7 @@ def records(path, after=0, progress=False):
                     revision = fields.get("revision")
                     rev = {_local(c): c for c in revision} if revision is not None else {}
                     article_id = _value(fields, "id")
-                    source = "https://de.wikipedia.org/?curid=" + quote(article_id)
+                    source = "https://" + domain + "/?curid=" + quote(article_id)
                     revision_id = _value(rev, "id")
                     redirect = fields.get("redirect")
                     # Legacy and modern main-slot dumps; history dumps are unsupported.
@@ -102,13 +106,18 @@ def records(path, after=0, progress=False):
                         for slot in rev["slots"]:
                             if slot.attrib.get("role", "main") == "main":
                                 rev.update({_local(c): c for c in slot})
+                    model=_value(rev,"model","wikitext")
+                    if model in {"css","sanitized-css","javascript"}:
+                        yield position,dict(kind="skip",id=article_id,title=_value(fields,"title"),skip_reason="noncontent_model:"+model)
+                        root.remove(page);page.clear()
+                        continue
                     yield position, dict(kind="redirect" if redirect is not None else "article",
-                        id=article_id, title=_value(fields, "title"), text=_value(rev, "text"),
+                        id=article_id, title=_value(fields, "title"), text=_value(rev, "text"), wiki=wiki,
                         source=source, revision_id=revision_id, timestamp=_value(rev, "timestamp"),
-                        sha1=_value(rev, "sha1"), model=_value(rev, "model", "wikitext"),
+                        sha1=_value(rev, "sha1"), model=model,
                         redirect_target=redirect.attrib.get("title", "") if redirect is not None else "",
-                        revision_source="https://de.wikipedia.org/w/index.php?oldid=" + quote(revision_id) if revision_id else source,
-                        history_source="https://de.wikipedia.org/w/index.php?curid=" + quote(article_id) + "&action=history",
+                        revision_source="https://" + domain + "/w/index.php?oldid=" + quote(revision_id) if revision_id else source,
+                        history_source="https://" + domain + "/w/index.php?curid=" + quote(article_id) + "&action=history",
                         license=LICENSE)
             # Release each completed page, including skipped/replayed pages.
             root.remove(page)

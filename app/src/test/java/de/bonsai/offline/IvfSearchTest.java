@@ -81,12 +81,14 @@ public class IvfSearchTest {
         byte[] original=Files.readAllBytes(index.toPath());
         for(int field:new int[]{8,16,32,40,128}) {
             byte[] corrupt=original.clone();ByteBuffer bytes=ByteBuffer.wrap(corrupt).order(ByteOrder.LITTLE_ENDIAN);
-            bytes.putInt(field,field==32?0:99);Files.write(index.toPath(),corrupt);
-            try{new KnowledgeSearch.IvfIndex(index);fail("field "+field);}
+            File candidate=new File(directory,"corrupt-"+field+".ivf");
+            bytes.putInt(field,field==32?0:99);Files.write(candidate.toPath(),corrupt);
+            try{new KnowledgeSearch.IvfIndex(candidate);fail("field "+field);}
             catch(java.io.IOException expected){assertTrue(expected.getMessage().contains("Ungültiger IVF-Index"));}
         }
-        Files.write(index.toPath(),java.util.Arrays.copyOf(original,original.length-1));
-        try{new KnowledgeSearch.IvfIndex(index);fail();}
+        File truncated=new File(directory,"truncated.ivf");
+        Files.write(truncated.toPath(),java.util.Arrays.copyOf(original,original.length-1));
+        try{new KnowledgeSearch.IvfIndex(truncated);fail();}
         catch(java.io.IOException expected){assertTrue(expected.getMessage().contains("IVF-Index"));}
     }
     @Test public void cancellationAndInvalidSearchParametersPropagateClearly() throws Exception {

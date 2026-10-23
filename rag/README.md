@@ -1,5 +1,13 @@
 # Offline-Wissenssuche (Schema v1)
 
+Produktiver Windows-Einstieg, echte Quellen und SAF-Installation stehen in
+[DATABASE-PIPELINE.md](../docs/DATABASE-PIPELINE.md),
+[OFFLINE-PACKAGES.md](../docs/OFFLINE-PACKAGES.md) und
+[DATABASE-VALIDATION.md](../docs/DATABASE-VALIDATION.md).
+`database_pipeline embed` verwendet unveränderliche, prüfsummengesicherte Shards
+mit automatischer Wiederaufnahme; die unten gezeigten alten `rag embed`-Befehle
+bleiben für kleine Format-/Regressionstests erhalten.
+
 Der skalierbare, wiederaufnehmbare Wikipedia-Import ist in [WIKIPEDIA.md](WIKIPEDIA.md)
 beschrieben: Windows-Installation, Markdown/Chunking, Herkunftsdaten, Prozesspool,
 Checkpoints sowie kleine Beispieldatenbank und gemessene Host-Benchmarks.
@@ -36,15 +44,17 @@ mit denselben `ingest`/`embed`-Befehlen erzeugt (Ziel
 `app/src/test/resources/rag/`, ohne `--reference`). Vor dem Regenerieren die alten
 Ausgaben entfernen. Die Pipeline überschreibt vorhandene Ausgaben absichtlich
 nicht. Bei einem abgebrochenen Import mit `ingest --resume` fortsetzen. Embedding-Ausgaben
-unterstützen weiterhin keine Wiederaufnahme. Erst vollständig erzeugte Dateien
-zusammen auf das Gerät kopieren.
+des alten `rag embed`-Befehls unterstützen keine Wiederaufnahme. Für reale
+Exporte `database_pipeline embed`, danach `assemble`, `index`, `package` verwenden.
+Installiert werden vollständig validierte `.bonsai`-Pakete über SAF.
 
 ## Kleiner Modelltest auf dem Laptop / RTX 4060
 
 Den aktuellen deutschen **pages-articles-multistream.xml.bz2**-Dump manuell von
 <https://dumps.wikimedia.org/dewiki/> laden, Prüfsumme kontrollieren und Namen,
-Datum sowie Prüfsumme für die spätere Bewertung aufbewahren. Kein automatischer
-Dump-Download. XML und bz2 werden sequentiell verarbeitet; `--limit 50` beendet
+Datum sowie Prüfsumme für die spätere Bewertung aufbewahren. Der neue
+`database_pipeline download` übernimmt Resume und offizielle Prüfsummen.
+XML und bz2 werden sequentiell verarbeitet; `--limit 50` beendet
 den Parser nach 50 Hauptnamensraum-Artikeln, ohne den vollen Dump einzulesen.
 Andere Namensräume werden übersprungen; Weiterleitungen bleiben als Artikel-/Alias-
 Metadaten erhalten und erzeugen keine duplizierten Inhaltschunks.

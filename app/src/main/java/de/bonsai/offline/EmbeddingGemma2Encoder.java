@@ -10,6 +10,7 @@ import java.util.function.BooleanSupplier;
 final class EmbeddingGemma2Encoder implements KnowledgeSearch.QueryEncoder {
     static final String MODEL="google/embeddinggemma-2";
     static final String PROFILE="embeddinggemma2-search-v1";
+    static final String HF_REVISION="914f7f89142e33e77833254d9c9b90c3cef7303b";
     static final String QUERY_PREFIX="task: search result | query: ";
     private final File weights;
     private final int threads;

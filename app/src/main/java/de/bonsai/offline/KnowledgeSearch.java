@@ -70,12 +70,73 @@ final class KnowledgeSearch {
         } catch(IllegalArgumentException e){throw new IOException("Ungültige RAG-Suchkonfiguration: "+e.getMessage(),e);}
     }
     private static File resolve(File internal,File directory,String path) throws IOException {
+        if(!new File(path).isAbsolute() && (path.startsWith("/") || path.startsWith("\\")))
+            throw new IOException("RAG-Pfad muss im App-internen Speicher liegen.");
         File file=(new File(path).isAbsolute()?new File(path):new File(directory,path)).getCanonicalFile();
         if(!file.getPath().startsWith(internal.getCanonicalPath()+File.separator))
             throw new IOException("RAG-Pfad muss im App-internen Speicher liegen.");
         return file;
     }
+    static JSONObject searchInstalled(ChatStore store,String query,BooleanSupplier cancelled) throws Exception {
+        return searchInstalled(store,query,"all",cancelled);
+    }
+    static JSONObject searchInstalled(ChatStore store,String query,String corpus,BooleanSupplier cancelled) throws Exception {
+        if(!java.util.Arrays.asList("all","wikipedia","wikibooks","stackexchange").contains(corpus))throw new IllegalArgumentException("Unbekannter Textkorpus.");
+        File files=KnowledgePackages.files(store);
+        List<KnowledgePackages.Installed> packages=KnowledgePackages.active(files,"rag");
+        boolean installedRag=false;
+        for(KnowledgePackages.Installed item:KnowledgePackages.installed(files))if(item.type().equals("rag"))installedRag=true;
+        if(packages.isEmpty() && !installedRag && (corpus.equals("all") || corpus.equals("wikipedia")))return forStore(store).search(query,cancelled);
+        List<JSONObject> candidates=new ArrayList<>();JSONArray warnings=new JSONArray();
+        EmbeddingGemma2Encoder baseEncoder=new EmbeddingGemma2Encoder(KnowledgePackages.encoder(files),4);
+        QueryEncoder sharedEncoder=new QueryEncoder() {
+            private float[] vector;
+            public String model(){return EmbeddingGemma2Encoder.MODEL;}
+            public float[] encode(String text) throws Exception{return encode(text,cancelled);}
+            public float[] encode(String text,BooleanSupplier stop) throws Exception {if(vector==null)vector=baseEncoder.encode(text,stop);return vector;}
+        };
+        // All installed RAG packages have the same validated normalized embedding
+        // profile. Merge semantic candidates globally before RRF; local first
+        // ranks must not give alphabetically early packages permanent priority.
+        for(KnowledgePackages.Installed item:packages) {
+            if(!corpus.equals("all") && !corpus.equals(item.manifest.getJSONObject("source").getString("corpus")))continue;
+            check(cancelled);
+            KnowledgeSearch search=new KnowledgeSearch(new File(item.directory,"knowledge.sqlite"),null,new File(item.directory,"knowledge.ivf"),
+                sharedEncoder,16,60);
+            JSONObject result=search.search(query,cancelled,CANDIDATES*2,true);JSONArray hits=result.getJSONArray("hits");
+            if(result.has("warning"))warnings.put(item.id()+": "+result.getString("warning"));
+            for(int i=0;i<hits.length();i++)candidates.add(hits.getJSONObject(i).put("package_id",item.id()));
+        }
+        JSONArray hits=fusePackages(candidates);
+        JSONObject result=new JSONObject().put("hits",hits);
+        if(warnings.length()>0)result.put("warning",warnings.toString());
+        if(packages.isEmpty())result.put("warning","Keine Textpakete aktiviert.");
+        return result;
+    }
+    private static String identity(JSONObject hit){return hit.optString("package_id")+":"+hit.optLong("chunk_id");}
+    static JSONArray fusePackages(List<JSONObject> candidates) throws Exception {
+        List<JSONObject> lexical=new ArrayList<>(),semantic=new ArrayList<>();
+        for(JSONObject hit:candidates){if(hit.optInt("_lexical_rank")>0)lexical.add(hit);if(hit.has("_semantic_score"))semantic.add(hit);}
+        Comparator<JSONObject> stable=Comparator.comparing(KnowledgeSearch::identity);
+        Comparator<JSONObject> cosine=Comparator.<JSONObject>comparingDouble(hit->-hit.optDouble("_semantic_score",-Double.MAX_VALUE)).thenComparing(stable);
+        semantic.sort(cosine);
+        // BM25 values use collection-specific IDF. Interleave local lexical
+        // ranks, resolving equal ranks by the comparable normalized cosine.
+        lexical.sort(Comparator.<JSONObject>comparingInt(hit->hit.optInt("_lexical_rank")).thenComparing(cosine));
+        Map<String,Double> scores=new HashMap<>();
+        for(List<JSONObject> ranking:java.util.Arrays.asList(lexical,semantic))for(int i=0;i<ranking.size();i++)scores.merge(identity(ranking.get(i)),1.0/(61+i),Double::sum);
+        List<JSONObject> ordered=new ArrayList<>(candidates);
+        ordered.sort(Comparator.<JSONObject>comparingDouble(hit->-scores.getOrDefault(identity(hit),0.)).thenComparing(cosine));
+        JSONArray result=new JSONArray();
+        for(int i=0;i<Math.min(MAX_HITS,ordered.size());i++) {
+            JSONObject hit=new JSONObject(ordered.get(i).toString());hit.remove("_lexical_rank");hit.remove("_semantic_score");result.put(hit);
+        }
+        return result;
+    }
     JSONObject search(String query,BooleanSupplier cancelled) throws Exception {
+        return search(query,cancelled,MAX_HITS,false);
+    }
+    private JSONObject search(String query,BooleanSupplier cancelled,int maximumHits,boolean rankMetadata) throws Exception {
         if(query==null || query.trim().isEmpty() || query.length()>MAX_QUERY)
             throw new IllegalArgumentException("suche erwartet query mit 1 bis 256 Zeichen.");
         if(!database.isFile())throw new IOException("Wissensdatenbank fehlt. Bitte knowledge.sqlite im App-internen RAG-Ordner bereitstellen.");
@@ -84,6 +145,7 @@ final class KnowledgeSearch {
             if(db.getVersion()!=1)throw new IOException("Unbekannte RAG-Datenbankversion.");
             List<Long> lexical=lexical(db,query);
             List<Long> semantic=new ArrayList<>();
+            Map<Long,Double> semanticScores=new HashMap<>();
             String warning="";
             if(ivf!=null || (vectors!=null && vectors.isFile())) {
                 String model="";
@@ -108,7 +170,13 @@ final class KnowledgeSearch {
                         warning="Nur Textsuche: Query-Encoder fehlgeschlagen: "+clip(String.valueOf(e.getMessage()),160);
                     }
                     check(cancelled);
-                    if(vector!=null)semantic=ivf==null?vectorRanks(vector,cancelled):mappedIndex(ivf).search(vector,nprobe,CANDIDATES,cancelled,true,false).ranking();
+                    if(vector!=null) {
+                        if(ivf==null)semantic=vectorRanks(vector,cancelled);
+                        else {
+                            IvfIndex index=mappedIndex(ivf);IvfResult ranked=index.search(vector,nprobe,CANDIDATES,cancelled,true,false);semantic=ranked.ranking();
+                            for(int i=0;i<ranked.ids.length;i++)semanticScores.put(ranked.ids[i],ranked.dots[i]*(double)index.scale*index.scale);
+                        }
+                    }
                 }
                 else warning="Nur Textsuche: passender Query-Encoder für "+clip(model,100)+" fehlt.";
             }
@@ -118,13 +186,20 @@ final class KnowledgeSearch {
             List<Long> ids=new ArrayList<>(scores.keySet());
             ids.sort(Comparator.<Long>comparingDouble(id->-scores.get(id)).thenComparingLong(id->id));
             JSONArray hits=new JSONArray();
-            for(long id:ids.subList(0,Math.min(MAX_HITS,ids.size()))) {
+            for(long id:ids.subList(0,Math.min(maximumHits,ids.size()))) {
                 check(cancelled);
                 try(Cursor c=db.rawQuery("SELECT article_id,title,heading,source,text_zlib FROM chunks WHERE id=?",new String[]{Long.toString(id)})) {
                     if(!c.moveToFirst())throw new IOException("Vektordatei passt nicht zur Datenbank: Chunk fehlt.");
-                    hits.put(new JSONObject().put("chunk_id",id).put("article_id",clip(c.getString(0),64))
+                    JSONObject hit=new JSONObject().put("chunk_id",id).put("article_id",clip(c.getString(0),64))
                         .put("title",clip(c.getString(1),MAX_HEADING)).put("heading",clip(c.getString(2),MAX_HEADING))
-                        .put("source",clip(c.getString(3),MAX_SOURCE)).put("text",clip(inflate(c.getBlob(4)),MAX_TEXT)));
+                        .put("source",clip(c.getString(3),MAX_SOURCE)).put("text",clip(inflate(c.getBlob(4)),MAX_TEXT));
+                    if(rankMetadata){hit.put("_lexical_rank",lexical.indexOf(id)+1);if(semanticScores.containsKey(id))hit.put("_semantic_score",semanticScores.get(id));}
+                    try(Cursor exists=db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_metadata'",null)) {
+                        if(exists.moveToFirst())try(Cursor attribution=db.rawQuery("SELECT data_json FROM post_metadata WHERE article_id=? AND length(data_json)<=8192",new String[]{c.getString(0)})) {
+                            if(attribution.moveToFirst())hit.put("attribution",new JSONObject(attribution.getString(0)));
+                        }
+                    }
+                    hits.put(hit);
                 }
             }
             JSONObject result=new JSONObject().put("hits",hits);
@@ -369,16 +444,16 @@ final class KnowledgeSearch {
         void remove(){--size;if(size>0){ids[0]=ids[size];dots[0]=dots[size];sink();}}
         private void sink(){int at=0;while(at*2+1<size){int child=at*2+1;if(child+1<size && weaker(child+1,child))child++;if(!weaker(child,at))break;swap(at,child);at=child;}}
     }
-    private static File cachedIvfFile;
-    private static long cachedIvfLength,cachedIvfModified;
-    private static IvfIndex cachedIvf;
+    private static final Map<String,IvfIndex> mappedIndexes=new java.util.LinkedHashMap<>(16,.75f,true);
     private static synchronized IvfIndex mappedIndex(File file) throws IOException {
         File canonical=file.getCanonicalFile();
-        if(cachedIvf==null || !canonical.equals(cachedIvfFile) || file.length()!=cachedIvfLength || file.lastModified()!=cachedIvfModified) {
-            IvfIndex fresh=new IvfIndex(file);
-            cachedIvf=fresh;cachedIvfFile=canonical;cachedIvfLength=file.length();cachedIvfModified=file.lastModified();
+        String key=canonical.getPath()+":"+file.length()+":"+file.lastModified();
+        IvfIndex cached=mappedIndexes.get(key);
+        if(cached==null) {
+            cached=new IvfIndex(file);mappedIndexes.put(key,cached);
+            if(mappedIndexes.size()>16)mappedIndexes.remove(mappedIndexes.keySet().iterator().next());
         }
-        return cachedIvf;
+        return cached;
     }
 
     /** Must remain identical to rag.embeddings.HashEncoder; fixtures only. */

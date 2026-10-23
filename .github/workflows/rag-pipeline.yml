@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'rag/**'
+      - 'database_pipeline/**'
       - '.github/workflows/rag-pipeline.yml'
   push:
     branches: [main]
     paths:
       - 'rag/**'
+      - 'database_pipeline/**'
       - '.github/workflows/rag-pipeline.yml'
   workflow_dispatch:
 
@@ -34,9 +36,11 @@ jobs:
           cache: pip
           cache-dependency-path: 'rag/requirements*.txt'
       - name: Install text and test dependencies
-        run: python -m pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt
+        run: python -m pip install -r rag/requirements-ivf.txt -r rag/requirements-benchmark.txt py7zr==1.1.4
       - name: Test existing RAG and Wikipedia pipeline
         run: python -m unittest discover -s rag/tests -v
+      - name: Test structured adapters and resumable downloads offline
+        run: python -m unittest discover -s database_pipeline/tests -v
       - name: Import small XML with spawn workers
         run: python -m rag ingest rag/data/wikipedia/complex.xml rag/output/ci.sqlite --workers 2 --limit 1 --commit-every 1
       - name: Resume and finish small XML

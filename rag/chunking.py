@@ -16,7 +16,7 @@ OMIT_SECTIONS = {"einzelnachweise", "literatur", "weblinks", "siehe auch", "quel
 OMIT_NAMESPACES = {"datei", "bild", "file", "image", "media", "kategorie", "category",
                    "vorlage", "template", "hilfe", "wikipedia", "spezial", "commons"}
 OMIT_TAGS = {"ref", "references", "gallery", "imagemap", "timeline", "score", "mapframe",
-             "maplink", "table", "style", "script", "templatestyles"}
+             "maplink", "style", "script", "templatestyles"}
 
 
 @dataclass(frozen=True)
@@ -68,12 +68,38 @@ def _render(code):
             param = "2" if name == "lang" else "1"
             if (name in {"lang", "nowrap", "nobr", "sic"} or name.startswith("lang-")) and node.has(param):
                 out.append(_render(node.get(param).value))
+            elif name in {"formel", "math", "chem", "chemie"} and node.has("1"):
+                out.append("$" + str(node.get("1").value).strip() + "$")
+            elif name in {"bruch", "frac"} and node.has("1") and node.has("2"):
+                out.append("(" + _render(node.get("1").value).strip() + ")/(" + _render(node.get("2").value).strip() + ")")
+            elif name == "zahlexp" and node.has("1"):
+                value = _render(node.get("1").value).strip()
+                if node.has("suffix"):
+                    value += _render(node.get("suffix").value).strip()
+                if node.has("2") and str(node.get("2").value).strip():
+                    value += " × 10^{" + _render(node.get("2").value).strip() + "}"
+                if node.has("post"):
+                    value += " " + _render(node.get("post").value).strip()
+                out.append(value)
+            elif name == "casrn" and node.has("1"):
+                out.append(_render(node.get("1").value).strip())
+            elif name.startswith("infobox"):
+                fields = []
+                for parameter in node.params:
+                    key = str(parameter.name).strip()
+                    if any(word in key.casefold() for word in ("bild", "image", "logo", "flagge", "karte", "farbe", "navigation")):
+                        continue
+                    value = _render(parameter.value).strip()
+                    if value and parameter.showkey:
+                        fields.append(key + ": " + value)
+                if fields:
+                    out.append("\n\n" + "\n".join("- " + value for value in fields) + "\n\n")
         elif isinstance(node, nodes.Tag):
             tag = str(node.tag).casefold()
-            if tag in OMIT_TAGS or str(node.wiki_markup) == "{|":
+            if tag in OMIT_TAGS:
                 continue
             attributes = {str(a.name).casefold(): str(a.value or "").casefold() for a in node.attributes}
-            if set(attributes.get("class", "").split()) & {"navbox", "infobox", "metadata", "noprint", "thumb", "toc", "hatnote", "ambox", "sisterproject"} or "display:none" in attributes.get("style", "").replace(" ", ""):
+            if set(attributes.get("class", "").split()) & {"navbox", "metadata", "noprint", "thumb", "toc", "hatnote", "ambox", "sisterproject"} or "display:none" in attributes.get("style", "").replace(" ", ""):
                 continue
             body = _render(node.contents) if node.contents else ""
             if tag in {"b", "strong", "i", "em"}:
@@ -81,12 +107,22 @@ def _render(code):
                 out.append(marker + body + marker)
             elif tag == "math":
                 out.append("$" + str(node.contents).strip() + "$")
+            elif tag in {"sup", "sub"}:
+                out.append(("^{" if tag == "sup" else "_{") + body + "}")
             elif tag in {"code", "syntaxhighlight", "source", "pre"}:
                 out.append("\n```\n" + str(node.contents).strip() + "\n```\n" if tag != "code" else "`" + body + "`")
             elif tag == "li" and str(node.wiki_markup) in {"*", "#"}:
                 out.append("\x01" + str(node.wiki_markup) + "\x02")
             elif tag in {"p", "div", "section", "blockquote", "dl"}:
                 out.append("\n\n" + body + "\n\n")
+            elif tag == "table":
+                out.append("\n\n" + body + "\n\n")
+            elif tag == "tr":
+                out.append("\n" + body.strip() + "\n")
+            elif tag in {"td", "th"}:
+                out.append(" | " + body.strip().replace("\n", " ") + " ")
+            elif tag == "caption":
+                out.append("\n" + body.strip() + "\n")
             elif tag == "br":
                 out.append("\n")
             else:
@@ -148,10 +184,38 @@ def _section_text(section):
     return (("#" * section.level + " " + section.path[-1] + "\n\n") if section.path else "") + section.text
 
 
-def split_large(text, maximum):
+def split_large(text, maximum, counter=None):
     """Prefer paragraphs, then sentences/words; bound even one long Unicode word."""
     if maximum < 1:
         raise ValueError("maximum must be positive")
+    if counter is not None:
+        result = []
+        while text.strip():
+            if counter(text) <= maximum:
+                result.append(text.strip())
+                break
+            lo, hi = 1, len(text)
+            while lo < hi:
+                middle = (lo + hi + 1) // 2
+                if counter(text[:middle]) <= maximum:
+                    lo = middle
+                else:
+                    hi = middle - 1
+            cut = lo
+            whitespace = list(re.finditer(r"\s+", text[:cut + 1]))
+            if whitespace and whitespace[-1].start() > cut // 2:
+                cut = whitespace[-1].start()
+            part = text[:cut].strip()
+            # BPE lengths are not strictly monotonic at every character boundary.
+            # Validate each selected cut, shrinking until the actual count fits.
+            while part and counter(part) > maximum:
+                cut -= 1
+                part = text[:cut].strip()
+            if not part:
+                raise ValueError("Tokenizer budget cannot fit a character plus title/prompt")
+            result.append(part)
+            text = text[cut:].lstrip()
+        return result
     if tokens(text) <= maximum:
         return [text] if text.strip() else []
     parts, current, size = [], [], 0
@@ -179,17 +243,18 @@ def split_large(text, maximum):
     return parts
 
 
-def _split_prose(text, maximum):
+def _split_prose(text, maximum, counter=None):
     # Pack paragraphs/sentences first, falling back to bounded word splitting.
+    count = counter or tokens
     units = re.split(r"(?<=\n\n)(?=\S)|(?<=[.!?])(?=\s+\S)", text)
     pieces, current = [], ""
     for unit in units:
-        if tokens(current + unit) <= maximum:
+        if count(current + unit) <= maximum:
             current += unit
         else:
             if current.strip():
                 pieces.append(current.strip())
-            smaller = split_large(unit, maximum)
+            smaller = split_large(unit, maximum, counter)
             pieces.extend(smaller[:-1])
             current = smaller[-1] if smaller else ""
     if current.strip():
@@ -198,21 +263,22 @@ def _split_prose(text, maximum):
 
 
 def chunk_article(article_id, title, wiki, source, minimum=80, maximum=800,
-                  article_sections=None):
+                  article_sections=None, token_counter=None):
     if not 0 < minimum <= maximum:
         raise ValueError("Require 0 < minimum <= maximum")
     parsed = sections(wiki) if article_sections is None else article_sections
+    count = token_counter or tokens
     groups = []
     for section in parsed:
         # Keep the introduction separate, even when it is short.
         if groups and section.path and groups[-1][-1].path:
             previous = groups[-1]
             combined = "\n\n".join(_section_text(s) for s in previous + [section])
-            short = tokens("\n\n".join(_section_text(s) for s in previous)) < minimum or tokens(_section_text(section)) < minimum
+            short = count("\n\n".join(_section_text(s) for s in previous)) < minimum or count(_section_text(section)) < minimum
             # Merge adjacent short sections only within the configured budget.
             related = section.path[0] == previous[-1].path[0] or (
                 len(section.path) == 1 and all(len(s.path) == 1 for s in previous))
-            if related and short and tokens(combined) <= maximum:
+            if related and short and count(combined) <= maximum:
                 previous.append(section)
                 continue
         groups.append([section])
@@ -221,14 +287,17 @@ def chunk_article(article_id, title, wiki, source, minimum=80, maximum=800,
         paths = tuple((title,) + s.path for s in group)
         heading = " | ".join(" / ".join(p) for p in paths)
         text = "\n\n".join(_section_text(s) for s in group)
-        pieces = _split_prose(text, maximum)
-        if len(pieces) > 1 and tokens(pieces[-1]) < minimum:
+        pieces = _split_prose(text, maximum, token_counter)
+        if len(pieces) > 1 and count(pieces[-1]) < minimum:
             # Repack the last two pieces near their byte midpoint at a word boundary.
             combined = pieces[-2] + "\n\n" + pieces[-1]
             words = list(re.finditer(r"\s+", combined))
-            candidates = [m for m in words if max(tokens(combined[:m.start()]), tokens(combined[m.end():])) <= maximum]
-            if candidates:
-                boundary = min(candidates, key=lambda m: abs(len(combined[:m.start()].encode("utf-8")) - len(combined.encode("utf-8")) / 2))
+            midpoint = len(combined.encode("utf-8")) / 2
+            # Same closest valid boundary as before, but usually two tokenizer
+            # calls rather than tokenizing every possible cut in a long section.
+            ordered = sorted(words, key=lambda m: abs(len(combined[:m.start()].encode("utf-8")) - midpoint))
+            boundary = next((m for m in ordered if max(count(combined[:m.start()]), count(combined[m.end():])) <= maximum), None)
+            if boundary is not None:
                 pieces[-2:] = [combined[:boundary.start()].strip(), combined[boundary.end():].strip()]
         for part in pieces:
             identity = json.dumps(["wiki-chunk-v2", str(article_id), paths, part], ensure_ascii=False, separators=(",", ":"))

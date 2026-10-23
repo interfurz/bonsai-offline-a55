@@ -1,5 +1,43 @@
 # Bonsai Offline – technische Roadmap
 
+## Umsetzungsstand Dateninfrastruktur, 23. Oktober 2026
+
+Basis `main` 29fb2099b0518a4c11033f9f96ce7eb15a728c3c, Featurebranch
+`codex/offline-database-infrastructure`. Die folgenden Nachweise ergänzen die
+darunter erhaltene historische Planung; sie ersetzen keine Geräteabnahme.
+
+- [x] M1: echter 1.000er-Wikipedia-Pilot mit 17.285 tatsächlichen <=800-Token-
+  Chunks, gepinntem EmbeddingGemma 2, FP32/256D/INT8/IVF-Vergleich und fertigem
+  SAF-Paket. 40 menschliche GermanQuAD-Fragen über sechs Themen ausgewertet.
+- [x] M1.3: SAF-Import, Hash-/Schema-/ID-Prüfung, Abbruch, atomare Aktivierung,
+  unabhängige Schalter, bestehende Generationen erhalten. Vollständige Release-
+  Hosttests und Build bestanden; A55-Abnahme und Veröffentlichung offen.
+- [x] M2: diskbasierte Embedding-Shards mit Checkpoints und nachgewiesener
+  Wiederaufnahme; IVF ohne vollständige RAM-Sortierpermutation/Float-Kopie.
+- [x] 10.000 echte Wikipedia-Artikel / 163.058 Chunks importiert, Unterbrechung
+  und Resume sowie FTS-/ID-Integrität geprüft.
+- [x] Alle 163.058 Chunks des 10k-Bestands in FP32/CUDA vektorisiert;
+  drei echte IVF-Konfigurationen gebaut. Erweiterte Retrievalabnahme läuft.
+- [x] 100.000 echte Wikipedia-Artikel / 886.793 Chunks, 0 Importfehler,
+  Integrität und FTS-/Chunk-ID-Mengen geprüft.
+- [ ] Wikipedia-Vollimport, vollständige Vektorisierung und endgültiger
+  Ressourcen-/Recall-Nachweis. Laufende Verarbeitung ist kein Abschluss.
+- [x] M3: Wikibooks- und Stack-Exchange-Adapter sowie Multi-Korpus-Routing
+  implementiert. Electronics real ausgewählt; vollständige Textpakete offen.
+- [x] M5: Wiktionary- und Nährwert-/Konstanten-Schema, Import und sichere
+  Android-Tools implementiert. 257.707 OFF-Produkte des deutschen Marktes
+  aus dem datierten 2024-Snapshot und 355 CODATA-Konstanten plus pi/e und
+  712 Einheiten in geprüften Paketen vorhanden.
+- [x] Vollständiger deutscher Wiktionary-Dump einschließlich Varianten und
+  Weiterleitungen in einem geprüften Wörterbuchpaket; echte Android-Hostabfragen.
+- [ ] Produktiver Wikidata-Teilbestand und sämtliche
+  weiteren Textpakete fertigstellen. Alle sechs Bereiche gemeinsam abnehmen.
+
+Messwerte, Einschränkungen und Quellen: [DATABASE-VALIDATION.md](docs/DATABASE-VALIDATION.md).
+Reproduzierbare Befehle: [DATABASE-PIPELINE.md](docs/DATABASE-PIPELINE.md).
+
+## Historische Planung und Release-Evidenz
+
 Stand: **22. Oktober 2026**. Zielgerät: Samsung Galaxy A55 5G, Exynos 1480,
 Xclipse 530, ARM64, 8 GB RAM, Android 16 / One UI 8.x.
 
@@ -306,9 +344,9 @@ flowchart TD
   end
 ```
 
-Der Paketimport, Multi-Paketbetrieb und zusätzliche strukturierte Tools sind
-Zielarchitektur. Aktuell gibt es einen Text-DB-/Indexpfad, einen separaten
-Wikidata-DB-Pfad, fünf Tools und einen einzelnen Inferenzworker.
+Im damaligen Basisstand waren Paketimport, Multi-Paketbetrieb und zusätzliche
+strukturierte Tools Zielarchitektur. Der oben dokumentierte Featurestand
+implementiert diese mit sieben Tools; ein einzelner Inferenzworker bleibt.
 
 ### Verbindliche Schnittstellen
 
@@ -556,7 +594,8 @@ Datensatz, Begründung und Entscheidung vor dem großen Export dokumentiert werd
   Import vor Embedding abschließen. #13 lehnt Resume nach Vektorisierung bewusst ab.
 - **Teststrategie:** geplanter Importabbruch/Resume, FTS-/Chunkzählungen,
   SQLite-Integrität und Exporthashes; Modell-/Chunkprofil unverändert halten.
-  Embedding hat derzeit kein allgemeines Resume: vor Voll-Lauf getrennten,
+  Der alte `rag embed`-Befehl hat kein allgemeines Resume; der neue
+  `database_pipeline embed` besitzt geprüfte diskbasierte Shards. Vor Voll-Lauf getrennten,
   geprüften Restart-/Shardplan bauen oder ausreichend belegte Wiederholbarkeit vorsehen.
 - **Akzeptanz:** `ingest_status=complete`, keine ungeklärten verworfenen Artikel,
   Vektorzahl/ID-Menge deckungsgleich mit Chunks, Datei-/Profilhashes vollständig,
