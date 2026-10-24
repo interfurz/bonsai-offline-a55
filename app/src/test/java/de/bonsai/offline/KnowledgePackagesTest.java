@@ -121,8 +121,17 @@ public class KnowledgePackagesTest {
         try(ChatStore store=new ChatStore(RuntimeEnvironment.getApplication())) {
             JSONObject result=KnowledgeSearch.searchInstalled(store,"Aussagenlogik",()->false);
             assertTrue(result.getJSONArray("hits").length()>0);
+            assertEquals("Aussagenlogik",result.getJSONArray("hits").getJSONObject(0).getString("title"));
             assertEquals("dewiki-de",result.getJSONArray("hits").getJSONObject(0).getString("package_id"));
         }
+    }
+    @Test public void packageSearchConfigurationIsBoundedAndLegacyDefaultsRemainReadable() throws Exception {
+        assertEquals(16,KnowledgePackages.nprobe(new JSONObject()));
+        assertEquals(64,KnowledgePackages.nprobe(new JSONObject().put("search",new JSONObject().put("nprobe",64))));
+        for(Object invalid:new Object[]{0,-1,257,1.5,"64"}) {
+            try {KnowledgePackages.nprobe(new JSONObject().put("search",new JSONObject().put("nprobe",invalid)));fail("Unbounded nprobe accepted");}catch(IOException expected){}
+        }
+        try {KnowledgePackages.nprobe(new JSONObject().put("search",new JSONObject().put("nprobe",64).put("path","outside")));fail();}catch(IOException expected){}
     }
     @Test public void citationsUsePackageAndChunkIdentityTogether() throws Exception {
         SearchSources sources=new SearchSources();

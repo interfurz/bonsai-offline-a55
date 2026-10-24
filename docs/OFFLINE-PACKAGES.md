@@ -43,6 +43,22 @@ Richtungen der DB-/Index-ID-Mengen, Duplikate und Anzahl. IVF bleibt `BRAGIVF1`:
 Ein Modellname allein genügt nicht: Profil, HF-Revision und Query-GGUF-Pin
 müssen gemeinsam passen. Android akzeptiert derzeit genau das nachgewiesene Paar.
 
+RAG-Pakete können `"search":{"nprobe":64}` deklarieren. Zulässig sind ganze
+Zahlen von 1 bis 256 und höchstens die tatsächliche Clusterzahl. Ohne dieses
+optionale Feld bleiben bisherige Pakete bei 16. Android übernimmt den geprüften
+Wert pro Paket; es werden keine Pfade oder ausführbaren Einstellungen importiert.
+Paketbau: `package ... --nprobe 64`. Die Wahl gilt nur für den gemessenen Index.
+
+Der portable FTS4-Pfad sortiert seit dieser Erweiterung nach `fts4-bm25-v1`
+statt nach Chunk-ID. Bis zu 32 Anfragewörter, deutsche/englische Funktionswörter
+ausgenommen, werden anhand FTS4-Statistiken geordnet; höchstens zwölf gehen in
+die lexikalische Kandidatensuche ein. Maximal 65.536 Kandidaten werden gestreamt,
+ein Heap hält nur die besten 20. Dokumentlänge und Termhäufigkeiten kommen aus
+`matchinfo('pcnalx')`; die Dokumentfrequenz pro Term wird als Maximum der drei
+Spalten angenähert. Das ist kein identischer FTS5-BM25-Algorithmus. Formatquelle:
+https://www.sqlite.org/fts3.html#matchinfo. Host- und Android-Algorithmus teilen
+Normalisierung, Stopwörter, Grenzen, Formel und stabile ID-Auflösung.
+
 ## Paket bauen
 
 Die vollständigen Befehle sind über `python -m database_pipeline --help`

@@ -18,6 +18,18 @@ SITES={'stackoverflow.com','math.stackexchange.com','physics.stackexchange.com',
 TAGS={'python','python-3.x','java','c','c++','c#','javascript','typescript','android','linux','sql','sqlite','git','bash','powershell','numpy','pandas','pytorch','html','css','algorithms','data-structures'}
 
 
+def tags(value):
+    value=html.unescape(value or '')
+    if not value:return []
+    if value.startswith('|') and value.endswith('|'):
+        result=[item for item in value.split('|') if item]
+    else:
+        result=re.findall(r'<([^>]+)>',value)
+        if ''.join('<'+item+'>' for item in result)!=value:raise ValueError('Unknown Stack Exchange tag encoding')
+    if not result or any(any(char.isspace() for char in item) for item in result):raise ValueError('Invalid Stack Exchange tags')
+    return result
+
+
 class Markdown(HTMLParser):
     def __init__(self):super().__init__(convert_charrefs=True);self.output=[];self.pre=0;self.suppressed=0
     def handle_starttag(self,tag,attrs):
@@ -98,7 +110,7 @@ def extract(archive,directory):
 def select(posts,output,*,site,max_questions=50000,min_question_score=5,min_answer_score=0,resume=False):
     if site not in SITES or min(max_questions,min_question_score+1,min_answer_score+1)<1:raise ValueError('Invalid community selection')
     output=Path(output);output.parent.mkdir(parents=True,exist_ok=True);stage=output.with_name(output.name+'.building')
-    identity=json.dumps(dict(source=_fingerprint(posts),site=site,max_questions=max_questions,min_question_score=min_question_score,min_answer_score=min_answer_score,tags=sorted(TAGS) if site=='stackoverflow.com' else None),sort_keys=True)
+    identity=json.dumps(dict(pipeline='stackexchange-select-v2-tags',source=_fingerprint(posts),site=site,max_questions=max_questions,min_question_score=min_question_score,min_answer_score=min_answer_score,tags=sorted(TAGS) if site=='stackoverflow.com' else None),sort_keys=True)
     with _writer_lock(output):
         if output.exists():raise FileExistsError(output)
         if stage.exists()!=resume:raise ValueError('Resume flag must match existing staging generation')
@@ -118,9 +130,9 @@ def select(posts,output,*,site,max_questions=50000,min_question_score=5,min_answ
                 for position,row in enumerate(rows(posts),1):
                     if position<=after:continue
                     if phase=='questions' and row.get('PostTypeId')=='1' and int(row.get('Score','0'))>=min_question_score and row.get('AcceptedAnswerId') and not row.get('ClosedDate') and not row.get('DeletionDate'):
-                        tags=re.findall(r'<([^>]+)>',row.get('Tags',''))
-                        if site!='stackoverflow.com' or TAGS.intersection(tags):
-                            db.execute('INSERT INTO question VALUES(?,?,?,?,?,?)',(int(row['Id']),int(row['AcceptedAnswerId']),int(row['Score']),row.get('Title',''),json.dumps(tags),zlib.compress(json.dumps(row,ensure_ascii=False).encode())))
+                        row_tags=tags(row.get('Tags',''))
+                        if site!='stackoverflow.com' or TAGS.intersection(row_tags):
+                            db.execute('INSERT INTO question VALUES(?,?,?,?,?,?)',(int(row['Id']),int(row['AcceptedAnswerId']),int(row['Score']),row.get('Title',''),json.dumps(row_tags),zlib.compress(json.dumps(row,ensure_ascii=False).encode())))
                             eligible+=1
                     elif phase=='answers' and row.get('PostTypeId')=='2' and int(row.get('Score','0'))>=min_answer_score and not row.get('DeletionDate'):
                         parent=db.execute('SELECT accepted FROM question WHERE id=?',(int(row['ParentId']),)).fetchone()
@@ -136,9 +148,11 @@ def select(posts,output,*,site,max_questions=50000,min_question_score=5,min_answ
                 if phase=='questions':
                     db.execute('DELETE FROM question WHERE id NOT IN (SELECT id FROM question ORDER BY score DESC,id LIMIT ?)',(max_questions,))
                     db.execute("INSERT OR REPLACE INTO metadata VALUES('quality_eligible_questions',?)",(str(eligible),))
+                    if not db.execute('SELECT 1 FROM question LIMIT 1').fetchone():raise ValueError('Selection contains no eligible questions; verify tag encoding and filters')
                 db.execute("UPDATE metadata SET value=? WHERE key='phase'",('answers' if phase=='questions' else 'complete',));db.execute("UPDATE metadata SET value='0' WHERE key='position'");db.commit()
             db.execute('PRAGMA wal_checkpoint(TRUNCATE)');db.execute('PRAGMA journal_mode=DELETE')
             result=dict(questions=db.execute('SELECT count(*) FROM question').fetchone()[0],answers=db.execute('SELECT count(*) FROM answer').fetchone()[0])
+            if not result['answers']:raise ValueError('Selection contains no answers; do not publish an empty corpus')
         publish(stage,output);return result
 
 
@@ -153,6 +167,7 @@ def _export(selected,output,*,site,users=None):
     if output.exists():raise FileExistsError(output)
     stage=output.with_name(output.name+'.part')
     with closing(sqlite3.connect(Path(selected).resolve().as_uri()+'?mode=ro',uri=True)) as db:
+        if not db.execute('SELECT 1 FROM question LIMIT 1').fetchone() or not db.execute('SELECT 1 FROM answer LIMIT 1').fetchone():raise ValueError('Empty Stack Exchange selection cannot be exported')
         # Only selected author IDs are retained. Attribution names are resolved
         # against Users.xml with a disk table; deleted users retain dump names.
         with closing(sqlite3.connect(str(output)+'.authors.sqlite')) as authors,authors:
@@ -179,6 +194,7 @@ def _export(selected,output,*,site,users=None):
                     target.write(json.dumps(dict(id=site+':'+str(aid),title=title,text=text,original_text=json.dumps(dict(question=q,answer=a),ensure_ascii=False),source=source,revision_source=source,
                         revision_id=a.get('LastEditDate') or a.get('CreationDate',''),timestamp=a.get('LastActivityDate',''),license=a.get('ContentLicense','unspecified_in_dump'),format='markdown',
                         sections=[dict(path=['Frage'],level=2,text=question),dict(path=['Akzeptierte Antwort' if accepted else 'Antwort'],level=2,text='Frage: '+title+'\n\n'+answer)],
-                        post_metadata=dict(site=site,question_id=qid,answer_id=aid,accepted=bool(accepted),score=score,tags=re.findall(r'<([^>]+)>',q.get('Tags','')),question_author=attribution(q),answer_author=attribution(a))),ensure_ascii=False)+'\n')
+                        post_metadata=dict(site=site,question_id=qid,answer_id=aid,accepted=bool(accepted),score=score,tags=tags(q.get('Tags','')),question_author=attribution(q),answer_author=attribution(a))),ensure_ascii=False)+'\n')
                     count+=1
+    if not count:raise ValueError('No usable answers exported; empty corpus retained only as diagnostic partial')
     publish(stage,output);return dict(answer_documents=count,bytes=output.stat().st_size)

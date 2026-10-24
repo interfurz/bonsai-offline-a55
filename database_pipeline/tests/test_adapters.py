@@ -9,7 +9,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 from database_pipeline.dictionary import entries,normalize,ingest,lookup
-from database_pipeline.stackexchange import markdown,select,export,rows
+from database_pipeline.stackexchange import markdown,select,export,rows,tags
 from database_pipeline.tables import products,constants,convert
 from database_pipeline.packages import build as package
 from rag.corpus import build
@@ -85,17 +85,34 @@ class AdapterTests(unittest.TestCase):
 
     def test_stack_selection_context_code_math_attribution_and_shared_ingestion(self):
         posts=self.root/'Posts.xml';root=ET.Element('posts')
-        for row in [dict(Id='1',PostTypeId='1',Score='20',AcceptedAnswerId='3',Title='How to fix Python?',Body='<p>Why is this Python code failing?</p>',Tags='<python>',OwnerUserId='5',ContentLicense='CC BY-SA 4.0'),
+        for row in [dict(Id='1',PostTypeId='1',Score='20',AcceptedAnswerId='3',Title='How to fix Python?',Body='<p>Why is this Python code failing?</p>',Tags='|python|python-3.x|',OwnerUserId='5',ContentLicense='CC BY-SA 4.0'),
                     dict(Id='2',PostTypeId='1',Score='1',AcceptedAnswerId='4',Title='Low quality',Body='bad'),
                     dict(Id='3',PostTypeId='2',ParentId='1',Score='10',Body='<p>Use the function below. Keep $x^2$.</p><pre><code>if a &lt; b:\n    print(a)</code></pre>',OwnerUserId='6',ContentLicense='CC BY-SA 4.0')]:ET.SubElement(root,'row',row)
         posts.write_bytes(ET.tostring(root));users=self.root/'Users.xml';users.write_text('<users><row Id="5" DisplayName="Author Q"/><row Id="6" DisplayName="Author A"/></users>',encoding='utf-8')
         selected=self.root/'selected.sqlite';self.assertEqual(dict(questions=1,answers=1),select(posts,selected,site='stackoverflow.com'))
         output=self.root/'posts.jsonl';export(selected,output,site='stackoverflow.com',users=users)
         row=json.loads(output.read_text(encoding='utf-8'));self.assertTrue(row['post_metadata']['accepted']);self.assertEqual('Author A',row['post_metadata']['answer_author']['name'])
+        self.assertEqual(['python','python-3.x'],row['post_metadata']['tags'])
         self.assertIn('if a < b:\n    print(a)',row['text']);self.assertIn('$x^2$',row['text'])
         database=self.root/'corpus.sqlite';result=build(output,database,wiki='stackexchange',progress=False)
         self.assertGreater(result['chunks'],0)
         with closing(sqlite3.connect(database)) as db:self.assertEqual(1,db.execute('SELECT count(*) FROM post_metadata').fetchone()[0])
+        with closing(sqlite3.connect(database)) as db,db:
+            old=json.loads(db.execute('SELECT data_json FROM post_metadata').fetchone()[0]);old['tags']=[]
+            db.execute('UPDATE post_metadata SET data_json=?',(json.dumps(old),))
+        from database_pipeline.repair import stack_tags
+        upgraded=self.root/'tags-upgraded.sqlite';self.assertEqual(1,stack_tags(database,upgraded)['tag_upgrade']['updated'])
+        with closing(sqlite3.connect(upgraded)) as db:self.assertEqual(['python','python-3.x'],json.loads(db.execute('SELECT data_json FROM post_metadata').fetchone()[0])['tags'])
+        with closing(sqlite3.connect(database)) as db:self.assertEqual([],json.loads(db.execute('SELECT data_json FROM post_metadata').fetchone()[0])['tags'])
+
+    def test_stack_tag_formats_and_empty_production_selection_are_not_silently_accepted(self):
+        self.assertEqual(['c#','sql'],tags('|c#|sql|'))
+        self.assertEqual(['c++','python'],tags('&lt;c++&gt;&lt;python&gt;'))
+        with self.assertRaises(ValueError):tags('unsupported;encoding')
+        posts=self.root/'empty.xml';posts.write_text('<posts><row Id="1" PostTypeId="1" Score="1" Tags="|python|"/></posts>',encoding='utf-8')
+        output=self.root/'empty-selected.sqlite'
+        with self.assertRaisesRegex(ValueError,'no eligible questions'):select(posts,output,site='stackoverflow.com')
+        self.assertFalse(output.exists())
 
     def test_nutrition_keeps_unknown_separate_from_zero_and_rejects_invalid(self):
         source=self.root/'off.jsonl.gz'

@@ -81,6 +81,22 @@ Für diesen Weg sind weder eine zweite `.f32`-Vollkopie noch zusammengesetzte
 
 ## Weitere Adapter
 
+Stack-Exchange-Tags im echten April-2024-Dump sind mit `|tag|` codiert; ältere
+Exporte können `<tag>` verwenden. Beide Formen werden strikt geparst, unbekannte
+Formate brechen ab. Der erste SO-Lauf mit dem alten Winkelklammerparser fand
+fälschlich null geeignete Fragen. Seine leeren Diagnosegenerationen bleiben
+erhalten, sind keine fertigen Korpora und werden nicht paketiert. Die korrigierte
+Auswahl läuft als `stackoverflow-selected-v2.sqlite`, mit eigenem Pipeline-Pin.
+Leere Auswahl, leere Antwortausgabe und leere Textbestände scheitern jetzt vor
+Freigabe. Die Auswahlkriterien wurden dabei nicht gelockert.
+
+`stack-tags-upgrade OLD_DATABASE NEW_DATABASE [--resume]` stellt Tags für die
+vier bereits importierten Communities aus den komprimierten Originalfragen in
+einer neuen Generation wieder her. Chunk-Text und IDs bleiben identisch;
+Herkunftshash, bestätigte Position und Anzahl geänderter Metadaten werden
+protokolliert. Wegen des neuen DB-Hashes werden anschließende Embeddings an
+die neue Generation gebunden. Bestehende Originalgenerationen bleiben erhalten.
+
 - Wikibooks: derselbe Import mit `--wiki dewikibooks`; `book_structure` hält
   Buch und vollständigen Unterseitenpfad. Die URLs zeigen auf Wikibooks.
 - Stack Exchange: `stack-download SITE`, `stack-extract ARCHIVE DIRECTORY`,

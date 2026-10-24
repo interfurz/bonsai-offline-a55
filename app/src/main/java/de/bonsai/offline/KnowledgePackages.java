@@ -99,6 +99,7 @@ final class KnowledgePackages {
         if(!"passed".equals(m.getJSONObject("integrity").getString("integrity")))throw new IOException("Paket wurde nicht validiert.");
         JSONObject counts=m.getJSONObject("counts");
         for(String key:Arrays.asList("documents","chunks","records"))if(counts.getLong(key)<0)throw new IOException("Ungültige Datensatzanzahl.");
+        if(counts.getLong("records")==0 || (type.equals("rag") && counts.getLong("chunks")==0))throw new IOException("Leeres Wissenspaket wird nicht aktiviert.");
         Set<String> names=new HashSet<>();JSONArray files=m.getJSONArray("files");
         if(files.length()<1 || files.length()>NAMES.size())throw new IOException("Ungültige Dateiliste.");
         for(int i=0;i<files.length();i++) {
@@ -107,6 +108,7 @@ final class KnowledgePackages {
         }
         if(!names.contains("knowledge.sqlite"))throw new IOException("SQLite fehlt.");
         if(type.equals("rag")) {
+            nprobe(m);
             JSONObject e=m.getJSONObject("embedding");
             if(!EmbeddingGemma2Encoder.MODEL.equals(e.getString("model")) || !EmbeddingGemma2Encoder.PROFILE.equals(e.getString("profile")) || e.getInt("dimension")!=256 || !e.getString("revision").matches("[a-f0-9]{40}") || !names.contains("knowledge.ivf"))throw new IOException("Inkompatibles Embeddingprofil.");
             if(!ENCODER_SHA.equals(e.getString("query_gguf_sha256")))throw new IOException("Unbekannte Query-Modellgeneration.");
@@ -202,7 +204,7 @@ final class KnowledgePackages {
                     try {if(hasRow(db,"SELECT id FROM chunks EXCEPT SELECT rowid FROM "+fts+" LIMIT 1") || hasRow(db,"SELECT rowid FROM "+fts+" EXCEPT SELECT id FROM chunks LIMIT 1"))throw new IOException("FTS/Chunk-IDs passen nicht.");}
                     catch(android.database.sqlite.SQLiteException e){if(fts.equals("chunks_fts4"))throw new IOException("Android-FTS4 fehlt.",e);}
                 }
-                validateIndex(stage,db,expected,cancelled);
+                validateIndex(stage,db,expected,nprobe(manifest),cancelled);
             } else if(type.equals("wikidata")) {
                 if(!"true".equals(scalar(db,"SELECT value FROM metadata WHERE key='complete'")) || !"1113017159".equals(scalar(db,"PRAGMA application_id")))throw new IOException("Wikidata-Import unvollständig oder unbekannt.");
             } else {
@@ -238,12 +240,19 @@ final class KnowledgePackages {
         } catch(android.database.sqlite.SQLiteException e){throw new IOException("Datenbankspalten passen nicht zur Schema-Version.",e);}
     }
     private static boolean hasRow(SQLiteDatabase db,String sql){try(Cursor c=db.rawQuery(sql,null)){return c.moveToFirst();}}
-    private static void validateIndex(File stage,SQLiteDatabase corpus,long count,BooleanSupplier cancelled) throws Exception {
+    static int nprobe(JSONObject manifest) throws Exception {
+        if(!manifest.has("search") || manifest.isNull("search"))return 16;
+        JSONObject config=manifest.getJSONObject("search");Object value=config.get("nprobe");
+        if(config.length()!=1 || !(value instanceof Integer || value instanceof Long) || ((Number)value).longValue()<1 || ((Number)value).longValue()>256)throw new IOException("Ungültige Paket-Suchkonfiguration: nprobe 1..256 erforderlich.");
+        return ((Number)value).intValue();
+    }
+    private static void validateIndex(File stage,SQLiteDatabase corpus,long count,int probes,BooleanSupplier cancelled) throws Exception {
         File ivf=new File(stage,"knowledge.ivf");
         // Production reader validates all offsets, sizes, finite centers and
         // format flags; ID membership is checked with a disk B-tree below.
         KnowledgeSearch.IvfIndex checked=new KnowledgeSearch.IvfIndex(ivf);
         if(checked.count!=count)throw new IOException("IVF-Anzahl stimmt nicht.");
+        if(probes>checked.clusters)throw new IOException("nprobe überschreitet tatsächliche IVF-Clusterzahl.");
         File scratch=new File(stage,"validation.sqlite");
         try(SQLiteDatabase seen=SQLiteDatabase.openOrCreateDatabase(scratch,null); RandomAccessFile in=new RandomAccessFile(ivf,"r")) {
             seen.execSQL("PRAGMA cache_size=-4096");seen.execSQL("CREATE TABLE seen(id INTEGER PRIMARY KEY)");

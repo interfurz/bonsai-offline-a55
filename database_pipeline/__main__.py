@@ -11,6 +11,7 @@ def main():
     sub.add_parser('preflight');sub.add_parser('status')
     h=sub.add_parser('hash');h.add_argument('file')
     t=sub.add_parser('precision-eval');t.add_argument('baseline');t.add_argument('candidate');t.add_argument('database');t.add_argument('queries');t.add_argument('questions');t.add_argument('output');t.add_argument('--ivf')
+    t=sub.add_parser('portable-eval');t.add_argument('database');t.add_argument('ivf');t.add_argument('questions');t.add_argument('queries');t.add_argument('output');t.add_argument('--nprobes',type=int,nargs='+',default=[16,32,64,128])
     q=sub.add_parser('parity');q.add_argument('--model-path',required=True);q.add_argument('--gguf',required=True);q.add_argument('--cli',required=True);q.add_argument('--questions',required=True);q.add_argument('--output',required=True)
     s=sub.add_parser('stats');s.add_argument('database');s.add_argument('--report')
     w=sub.add_parser('wikidata-download');w.add_argument('snapshot')
@@ -32,10 +33,12 @@ def main():
     i=sub.add_parser('index');i.add_argument('reference');i.add_argument('output');i.add_argument('--clusters',type=int,default=4096);i.add_argument('--train-size',type=int,default=262144);i.add_argument('--backend',choices=['auto','faiss','sklearn'],default='auto');i.add_argument('--batch',type=int,default=8192)
     v=sub.add_parser('validate');v.add_argument('database');v.add_argument('--ivf');v.add_argument('--vectors');v.add_argument('--report')
     b=sub.add_parser('package');b.add_argument('database');b.add_argument('output');b.add_argument('--id',required=True);b.add_argument('--version',required=True);b.add_argument('--kind',choices=['rag','wikidata','dictionary','tables'],required=True);b.add_argument('--source-json',required=True);b.add_argument('--ivf');b.add_argument('--vectors');b.add_argument('--embedding-json')
+    b.add_argument('--nprobe',type=int,default=16)
     for command in ('dictionary','nutrition'):
         s=sub.add_parser(command);s.add_argument('source');s.add_argument('output');s.add_argument('--date',required=True);s.add_argument('--resume',action='store_true')
     c=sub.add_parser('constants');c.add_argument('source');c.add_argument('output');c.add_argument('--date',required=True)
     c=sub.add_parser('repair-noncontent');c.add_argument('source');c.add_argument('database');c.add_argument('output');c.add_argument('--wiki',default='dewikibooks')
+    c=sub.add_parser('stack-tags-upgrade');c.add_argument('database');c.add_argument('output');c.add_argument('--resume',action='store_true')
     c=sub.add_parser('nutrition-upgrade');c.add_argument('source');c.add_argument('output')
     c=sub.add_parser('dictionary-upgrade');c.add_argument('dump');c.add_argument('source');c.add_argument('output');c.add_argument('--dump-sha256',required=True);c.add_argument('--resume',action='store_true')
     s=sub.add_parser('stack-download');s.add_argument('site');s.add_argument('--component',choices=['posts','users'],default='posts')
@@ -72,6 +75,9 @@ def main():
     elif args.command=='precision-eval':
         from .precision import compare
         result=compare(args.baseline,args.candidate,args.database,args.queries,args.questions,args.output,ivf=args.ivf)
+    elif args.command=='portable-eval':
+        from .portable_eval import run
+        result=run(args.database,args.ivf,args.questions,args.queries,args.output,nprobes=args.nprobes)
     elif args.command=='parity':
         from .parity import run
         result=run(args.model_path,args.gguf,args.cli,args.questions,args.output)
@@ -130,13 +136,16 @@ def main():
             atomic_json(args.report,result)
     elif args.command=='package':
         from .packages import build
-        result=build(args.database,args.output,package_id=args.id,version=args.version,kind=args.kind,source=json.loads(Path(args.source_json).read_text(encoding='utf-8-sig')),ivf=args.ivf,vectors=args.vectors,embedding=json.loads(Path(args.embedding_json).read_text(encoding='utf-8-sig')) if args.embedding_json else None)
+        result=build(args.database,args.output,package_id=args.id,version=args.version,kind=args.kind,source=json.loads(Path(args.source_json).read_text(encoding='utf-8-sig')),ivf=args.ivf,vectors=args.vectors,embedding=json.loads(Path(args.embedding_json).read_text(encoding='utf-8-sig')) if args.embedding_json else None,nprobe=args.nprobe)
     elif args.command=='dictionary':
         from .dictionary import ingest
         result=ingest(args.source,args.output,date=args.date,resume=args.resume)
     elif args.command=='repair-noncontent':
         from .repair import noncontent
         result=noncontent(args.source,args.database,args.output,wiki=args.wiki)
+    elif args.command=='stack-tags-upgrade':
+        from .repair import stack_tags
+        result=stack_tags(args.database,args.output,resume=args.resume)
     elif args.command=='nutrition-upgrade':
         from .tables import upgrade_energy
         result=upgrade_energy(args.source,args.output)

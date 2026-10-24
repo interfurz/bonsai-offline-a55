@@ -1,5 +1,8 @@
 # Datenbank-Abnahme — laufender Stand 23.10.2026
 
+Fortschreibung 24.10.2026: größerer 10k-Test mit 688 menschlichen Fragen,
+native-Q8-Parität, FTS4-Relevanzkorrektur und strikte Stack-Exchange-Tagprüfung.
+
 Die Gesamtmission ist **nicht abgeschlossen**. Insbesondere sind der
 Wikipedia-Vollbestand und produktive Vektoren der weiteren Textkorpora noch
 nicht nachgewiesen. Diese Datei trennt fertige Komponenten, echte Messungen,
@@ -50,6 +53,7 @@ angebliche Gesamtzahl hochgerechnet.
 | Paket | Bytes | SHA256 |
 |---|---:|---|
 | `bonsai-dewiki-20261001-pilot-1k-v2.bonsai` | 127742451 | `be2a84133e30e579b812b43c5014e68657e3f4e227c986c47580bde78a35de7b` |
+| `bonsai-dewiki-20261001-pilot-10k-v1.bonsai` | 1112408984 | `237aae2317bb3337be00760ee1f7bd0abecc0aa59ef72514a821dff6baf61e3f` |
 | `bonsai-constants-codata2022-v3.bonsai` | 321813 | `b2f9c2f18dfc8eb97981bc31fd42f18a22252c0c5bdbd73908b93bf0702aac5f` |
 | `bonsai-food-germany-20240624-v1.bonsai` | 492004566 | `9fef75edc40e56dbb29a817d41ef31d10259a5c53d9e22f1256818f53724fe6d` |
 | `bonsai-dewiktionary-20261001-v1.bonsai` | 4594372574 | `42a2c578381d1f6d6444d50f504c72b33dc5f312d4dedc2390ebcfe42e816b73` |
@@ -61,6 +65,46 @@ Lebensmittel. Fertige Dateinamen werden nicht überschrieben, frühere lokale
 Generationen bleiben erhalten.
 
 ## Retrieval und numerische Prüfung
+
+Der größere 10k-Bestand enthält 688 exakt titelzuordenbare menschliche
+GermanQuAD-Fragen zu 66 Themen. Alle passen in die 256-Zeichen-Querygrenze.
+Die Titelzuordnung bewertet den passenden Artikel, nicht die tatsächliche
+Antwortspanne oder deren Aktualität. Auch dies ist kein repräsentatives Sample
+der gesamten Wikipedia.
+
+Mit HF-FP32-Queries und FTS5 erreicht 768D-Vollscan Recall@10 0,8604651,
+256D 0,8386628 und Hybrid-exakt256 0,8982558. Ein solcher FTS5-Test allein
+belegt den portablen Android-Pfad nicht: Der bisherige FTS4-Fallback nahm
+OR-Treffer in Chunk-ID-Reihenfolge und erreichte im selben Fragensatz 0/688
+passende Artikel unter Top-10. Dieser nachgewiesene Rankingfehler wird durch
+`fts4-bm25-v1` behoben; die Vektoren und Chunk-Identitäten bleiben gültig.
+
+Separater tatsächlich portabler Pfad mit 688 **nativen Q8-Queries**, dem
+FTS4-Ranker und IVF256 (Beleg `portable-10k-688-v3.json`):
+
+| Verfahren | Artikel-Recall@5 | Artikel-Recall@10 | MRR@10 |
+|---|---:|---:|---:|
+| FTS4 korrigiert | .770349 | .831395 | .659318 |
+| INT8-IVF/nprobe64, Q8-Queries | .796512 | .835756 | .722709 |
+| Hybrid/nprobe16 | .847384 | .892442 | .743978 |
+| Hybrid/nprobe64 | .851744 | .888081 | .754976 |
+| Hybrid/nprobe128 | .854651 | .888081 | .759609 |
+
+Für den 10k-Pilot wird IVF256/nprobe64 paketiert: höhere Top-3-Abdeckung
+(0,809593 gegenüber 0,800872 bei nprobe16), höhere MRR und gemessene ANN-
+Übereinstimmung 0,970494 zum INT8-Vollscan im HF-Query-Vergleich. Hybrid-Recall@10
+ist dabei nicht monoton mit nprobe; die vollständige Tabelle bleibt erhalten.
+Die FTS4-Kandidatengrenze wurde in keiner der 688 Abfragen erreicht. Mittlere
+warme FTS4-Hostzeit 81,311 ms, keine A55-Zeit und kein isolierter Benchmark.
+Der 10k-Pilot ist kein produktiver Voll-Wikipedia-Index.
+
+Native-Q8-Parität für dieselben 688 Fragen: minimale 256D-Kosinusähnlichkeit
+0,9989648366, Mittel 0,9998755563, maximale absolute Komponentendifferenz
+0,0089514636. HF-CPU 44,062 s, native CPU 203,688 s, einschließlich des konkret
+protokollierten Ablaufs; keine Android-/JNI-Messung. GGUF-/Runtime-/HF-Pins
+bleiben identisch zum 40-Fragen-Test.
+
+Die folgenden 1k-Zahlen beziehen sich auf die frühere **Host-FTS5**-Auswertung:
 
 40 menschliche GermanQuAD-Testfragen passen zu sechs Titeln im 1k-Pilotbestand.
 Das ist ein kleiner, thematisch geclusterter Test. Historische Antwortwerte
@@ -87,17 +131,17 @@ die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
 
 ## Tests und Builds
 
-- 47 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-Tests bestanden.
+- 48 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-Tests bestanden.
 - 16 Wikidata-Pipelinetests bestanden, einschließlich parallelem Bzip2-
   Resume, bytegleichem Stream, identischen DB-Inhalten, Quellbindung und
   Ablehnung beschädigter Blockindizes.
-- 15 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
+- 16 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
   einschließlich direktem 7z-Stream, Energie-Alias und auditierter CSS-Reparatur.
 - 5 weitere Hosttests einschließlich Runtime-Backport bestanden.
 - Neuer GBNF-Vertrag im echten gepinnten nativen Parser auf Windows geprüft:
   Wörterbuch, Tabellen und Korpusauswahl akzeptiert; SQL/OSM/falsche Argumente
   und Tools in der Finalrunde abgewiesen.
-- Vollständiger CPU-Release-Build sowie Release-Lint und 165 Release-/Robolectric-
+- Vollständiger CPU-Release-Build sowie Release-Lint und 167 Release-/Robolectric-
   Tests ohne Fehler oder übersprungene Tests erfolgreich ausgeführt. Nach
   weiteren Änderungen erneut mit dem finalen Commit abgleichen.
 - Der echte Wikipedia-Pilot wurde über denselben Android-Importer unter
@@ -159,7 +203,7 @@ $env:BONSAI_TEST_EVIDENCE_DIR = 'ABSOLUTER_PFAD_ZU_BENCHMARKS'
 
 Ohne `BONSAI_TEST_PACKAGE` entfällt der echte RAG-Pilotintegrationstest;
 ohne `BONSAI_TEST_PACKAGE_DIR` der zusätzliche große Strukturpakettest.
-Die übrigen Importtests erzeugen eigene Fixtures. Die 165er-Abnahme hatte beide
+Die übrigen Importtests erzeugen eigene Fixtures. Die 167er-Abnahme hatte beide
 Paketvariablen gesetzt und übersprang keinen Test.
 Python-/Windows-Einstieg, Quellbelege und Installationsschritte:
 [DATABASE-PIPELINE.md](DATABASE-PIPELINE.md), [DATASET-SOURCES.md](DATASET-SOURCES.md),

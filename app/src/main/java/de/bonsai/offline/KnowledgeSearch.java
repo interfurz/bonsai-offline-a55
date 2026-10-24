@@ -102,7 +102,7 @@ final class KnowledgeSearch {
             if(!corpus.equals("all") && !corpus.equals(item.manifest.getJSONObject("source").getString("corpus")))continue;
             check(cancelled);
             KnowledgeSearch search=new KnowledgeSearch(new File(item.directory,"knowledge.sqlite"),null,new File(item.directory,"knowledge.ivf"),
-                sharedEncoder,16,60);
+                sharedEncoder,KnowledgePackages.nprobe(item.manifest),60);
             JSONObject result=search.search(query,cancelled,CANDIDATES*2,true);JSONArray hits=result.getJSONArray("hits");
             if(result.has("warning"))warnings.put(item.id()+": "+result.getString("warning"));
             for(int i=0;i<hits.length();i++)candidates.add(hits.getJSONObject(i).put("package_id",item.id()));
@@ -143,7 +143,7 @@ final class KnowledgeSearch {
         check(cancelled);
         try(SQLiteDatabase db=SQLiteDatabase.openDatabase(database.getPath(),null,SQLiteDatabase.OPEN_READONLY)) {
             if(db.getVersion()!=1)throw new IOException("Unbekannte RAG-Datenbankversion.");
-            List<Long> lexical=lexical(db,query);
+            List<Long> lexical=lexical(db,query,cancelled);
             List<Long> semantic=new ArrayList<>();
             Map<Long,Double> semanticScores=new HashMap<>();
             String warning="";
@@ -207,7 +207,7 @@ final class KnowledgeSearch {
             return result;
         }
     }
-    private static List<Long> lexical(SQLiteDatabase db,String query) {
+    private static List<Long> lexical(SQLiteDatabase db,String query,BooleanSupplier cancelled) throws IOException {
         Matcher words=WORD.matcher(query.toLowerCase(Locale.ROOT));
         StringBuilder match=new StringBuilder();
         for(int i=0;i<32 && words.find();i++) {
@@ -219,7 +219,7 @@ final class KnowledgeSearch {
             return readIds(db,"SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts),rowid LIMIT 20",match.toString());
         } catch(SQLiteException noFts5) {
             // Android SQLite may omit FTS5; the exporter includes this compatibility index.
-            return readIds(db,"SELECT rowid FROM chunks_fts4 WHERE chunks_fts4 MATCH ? ORDER BY rowid LIMIT 20",match.toString());
+            return Fts4Search.search(db,query,cancelled);
         }
     }
     private static List<Long> readIds(SQLiteDatabase db,String sql,String query) {

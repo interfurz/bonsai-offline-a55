@@ -17,17 +17,18 @@ KINDS = {"rag", "wikidata", "dictionary", "tables"}
 FILES = {"knowledge.sqlite", "knowledge.ivf", "vectors.i8", "sources.json", "LICENSES.txt"}
 
 
-def build(database, output, *, package_id, version, kind, source, ivf=None, vectors=None, embedding=None):
+def build(database, output, *, package_id, version, kind, source, ivf=None, vectors=None, embedding=None,nprobe=16):
     Path(output).parent.mkdir(parents=True,exist_ok=True)
     with _writer_lock(database),_writer_lock(output):
         if any(Path(str(database)+suffix).exists() for suffix in ('-wal','-journal')):
             raise ValueError('Finish and close the source database before packaging')
-        return _build(database,output,package_id=package_id,version=version,kind=kind,source=source,ivf=ivf,vectors=vectors,embedding=embedding)
+        return _build(database,output,package_id=package_id,version=version,kind=kind,source=source,ivf=ivf,vectors=vectors,embedding=embedding,nprobe=nprobe)
 
 
-def _build(database, output, *, package_id, version, kind, source, ivf=None, vectors=None, embedding=None):
+def _build(database, output, *, package_id, version, kind, source, ivf=None, vectors=None, embedding=None,nprobe=16):
     if kind not in KINDS or not re.fullmatch(r"[a-z][a-z0-9.-]{1,63}", package_id):
         raise ValueError("Unknown package type or invalid package ID")
+    if type(nprobe) is not int or not 1<=nprobe<=256 or (kind!='rag' and nprobe!=16):raise ValueError('RAG nprobe must be an integer in 1..256')
     if not re.fullmatch(r"[a-zA-Z0-9._-]{1,80}", version):
         raise ValueError("Invalid generation version")
     if not all(source.get(key) for key in ("dataset", "url", "date", "license")):
@@ -79,6 +80,7 @@ def _build(database, output, *, package_id, version, kind, source, ivf=None, vec
         paths["knowledge.sqlite"] = staged_db
         if kind == "rag":
             validation = corpus(staged_db, ivf=ivf, vectors=vectors, scratch=temp)
+            if nprobe>validation['ivf']['clusters']:raise ValueError('nprobe exceeds actual IVF cluster count')
             counts = dict(documents=validation["documents"], chunks=validation["chunks"], records=validation["documents"])
         else:
             with closing(sqlite3.connect(staged_db.as_uri() + "?mode=ro", uri=True)) as db:
@@ -98,6 +100,7 @@ def _build(database, output, *, package_id, version, kind, source, ivf=None, vec
         manifest = dict(format="bonsai-offline-package", format_version=1, package_id=package_id,
                         version=version, type=kind, schema_version=1, source=source,
                         embedding=embedding, counts=counts, integrity=validation,
+                        search=dict(nprobe=nprobe) if kind=='rag' else None,
                         lineage=lineage,
                         files=[dict(name=name, bytes=path.stat().st_size, sha256=digest(path)) for name, path in paths.items()])
         encoded = (json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")

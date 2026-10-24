@@ -91,7 +91,7 @@ def structured(path):
     return result
 
 
-def corpus(database, *, vectors=None, ivf=None, scratch=None):
+def corpus(database, *, vectors=None, ivf=None, scratch=None,allow_empty=False):
     database = Path(database).resolve()
     started = time.monotonic()
     if any(Path(str(database) + suffix).exists() for suffix in ("-wal", "-journal")):
@@ -112,6 +112,7 @@ def corpus(database, *, vectors=None, ivf=None, scratch=None):
         result["documents"] = db.execute("SELECT count(*) FROM articles WHERE redirect_target='' ").fetchone()[0]
         result["redirects"] = db.execute("SELECT count(*) FROM redirects").fetchone()[0]
         result["chunks"] = db.execute("SELECT count(*) FROM chunks").fetchone()[0]
+        if not allow_empty and (not result['documents'] or not result['chunks']):raise ValueError('Empty text corpus cannot be validated for publication')
         result["errors"] = db.execute("SELECT count(*) FROM ingest_errors").fetchone()[0]
         if result["errors"]:
             raise ValueError(f"Import errors require repair: {result['errors']}")
