@@ -85,6 +85,7 @@ final class KernelOptimizer {
             List<Profile> all=profiles(original,original.gpu);
             if(compare && BuildConfig.VULKAN_BUILD) all.addAll(profiles(original,!original.gpu));
             boolean loadedBackend=original.gpu, haveContext=a.loaded;
+            if(BackendGuard.prepareReference(a,handle))haveContext=false;
             String reference="", referenceGroup="";
             for(int i=0;i<all.size();i++) {
                 if(a.cancelled) throw new IllegalStateException("Abgebrochen.");

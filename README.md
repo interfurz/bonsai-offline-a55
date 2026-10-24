@@ -169,6 +169,13 @@ Im aktuellen Quellcode **Modell importieren** auf dem Startscreen oder im Tab **
 
 Falls der Ladevorgang scheitert: andere Apps schließen und **Modell → Kontextlänge → 2.048 Tokens → Einstellungen speichern**, danach erneut laden. Die Größe der GGUF-Datei ist nicht der gesamte RAM-Bedarf. Android kann die App bei Speichermangel ohne auffangbare Fehlermeldung beenden.
 
+Beim normalen Modellladen wird das gewählte Backend direkt geladen. Die langsame
+skalare CPU-Referenz und die differentiellen Inferenzprüfungen laufen ausschließlich
+im ausdrücklich gestarteten Kernel-Optimierer. Dieser erstellt die Referenz bei
+Bedarf und verwendet sie für die Profilprüfung weiter. Der gewählte
+CPU-Kompatibilitätsmodus bleibt beim Laden wirksam; die GGUF-Prüfsumme wird weiterhin
+geprüft.
+
 ## Benchmark
 
 Über **Leistung → Benchmark öffnen** starten. Die Messung verwendet keinen Chatverlauf und speichert die Testausgabe nicht als Chat.

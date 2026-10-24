@@ -29,7 +29,8 @@ public class BackgroundInferenceTest {
         static CountDownLatch started, finish;
         static volatile boolean stopped, fail;
         static volatile boolean referenceMode, divergent;
-        static int loads,unloads;
+        static int loads,unloads,referenceProbes,candidateProbes;
+        static boolean cancelReference;
         @Implementation protected static void __staticInitializer__() {}
         @Implementation protected static void clearCache(long handle) {}
         @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] contents) {return BonsaiApp.utf8("{}");}
@@ -44,6 +45,11 @@ public class BackgroundInferenceTest {
             return ("{\"backend\":\""+(gpu?"Vulkan":"CPU")+"\"}").getBytes(StandardCharsets.UTF_8);
         }
         @Implementation protected static byte[] probe(long handle, int steps) {
+            if(referenceMode)referenceProbes++;else candidateProbes++;
+            if(cancelReference && referenceMode) {
+                ((BonsaiApp)RuntimeEnvironment.getApplication()).cancelled=true;
+                throw new IllegalStateException("Abgebrochen.");
+            }
             return ((!referenceMode && divergent)?"{\"signature\":[100,200],\"top_tokens\":[9,9]}":"{\"signature\":[1,2],\"top_tokens\":[1,2]}").getBytes(StandardCharsets.UTF_8);
         }
         @Implementation protected static byte[] generate(long handle, byte[][] roles, byte[][] contents, int maxTokens, int seed, NativeEngine.Stream stream,byte[] grammar,int reasoningBudget) throws Exception {
@@ -57,7 +63,7 @@ public class BackgroundInferenceTest {
     private BonsaiApp app;
     @Before public void prepare() {
         Engine.started=new CountDownLatch(1); Engine.finish=new CountDownLatch(1); Engine.stopped=false; Engine.fail=false; Engine.divergent=false; Engine.referenceMode=false;
-        Engine.loads=0; Engine.unloads=0;
+        Engine.loads=0; Engine.unloads=0;Engine.referenceProbes=0;Engine.candidateProbes=0;Engine.cancelReference=false;
         app=(BonsaiApp)RuntimeEnvironment.getApplication();
         app.prefs.edit().putBoolean("notificationsAsked",true).apply();
         app.loaded=true;
@@ -107,19 +113,57 @@ public class BackgroundInferenceTest {
         ServiceController<InferenceService> service=Robolectric.buildService(InferenceService.class).create().startCommand(0,1);
         assertFalse(lock(service.get()).isHeld()); service.destroy();
     }
-    @Test public void divergentOptimizedCpuFallsBackToIndependentScalarKernels() throws Exception {
+    @Test public void loadingDoesNotRunDifferentialInferenceOrChangeTheSelectedProfile() throws Exception {
         app.prefs.edit().putBoolean("cpuCompatibility",false).apply(); Engine.divergent=true;
-        assertEquals("CPU · kompatibel",BackendGuard.load(app,1));
-        assertTrue(app.cpuCompatibility); assertTrue(Engine.referenceMode);
-        assertTrue(app.prefs.getBoolean("cpuCompatibility",false));
-        assertEquals(1,app.microBatch());
+        assertEquals("CPU",BackendGuard.load(app,1));
+        assertFalse(app.cpuCompatibility); assertFalse(Engine.referenceMode);
+        assertFalse(app.prefs.getBoolean("cpuCompatibility",false));
+        assertEquals(32,app.microBatch());assertEquals(1,Engine.loads);
+        assertEquals(0,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+        assertNull(app.cpuReference);assertNull(app.readReport("cpu-reference.json"));
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        assertTrue(app.backendNotice.contains("unabhängige Rechenprüfung"));
+        assertEquals("",app.backendNotice);
     }
     @Test public void compatibleOptimizedCpuRemainsAvailable() throws Exception {
         app.prefs.edit().putBoolean("cpuCompatibility",false).apply();
         assertEquals("CPU",BackendGuard.load(app,1));
         assertFalse(app.cpuCompatibility); assertFalse(Engine.referenceMode);
+        assertEquals(0,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+    }
+    @Test public void explicitCompatibilityModeLoadsOnceWithoutProbes() throws Exception {
+        app.prefs.edit().putBoolean("cpuCompatibility",true).apply();
+        assertEquals("CPU · kompatibel",BackendGuard.load(app,1));
+        assertTrue(app.cpuCompatibility);assertTrue(Engine.referenceMode);
+        assertEquals(1,Engine.loads);assertEquals(0,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+    }
+    @Test public void selectedBackendLoadsDirectlyWithoutTemporaryReferenceContext() throws Exception {
+        app.prefs.edit().putBoolean("gpu",true).putBoolean("cpuCompatibility",false).apply();
+        assertEquals(BuildConfig.VULKAN_BUILD?"Vulkan":"CPU",BackendGuard.load(app,1));
+        assertEquals(1,Engine.loads);assertEquals(0,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+    }
+    @Test public void optimizerReferenceIsCreatedOnDemandAndReusedFromDisk() throws Exception {
+        assertTrue(BackendGuard.prepareReference(app,1));
+        assertFalse(app.cpuCompatibility);
+        assertEquals(1,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+        app.cpuReference=null;
+        assertFalse(BackendGuard.prepareReference(app,1));
+        assertEquals(1,Engine.loads);assertEquals(1,Engine.referenceProbes);
+        BackendGuard.load(app,1);
+        assertEquals(2,Engine.loads);assertEquals(1,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
+        assertFalse(Engine.referenceMode);
+    }
+    @Test public void changedContextInvalidatesOptimizerReference() throws Exception {
+        BackendGuard.prepareReference(app,1);
+        app.prefs.edit().putInt("context",2048).apply();
+        assertTrue(BackendGuard.prepareReference(app,1));
+        assertEquals(2,Engine.referenceProbes);
+    }
+    @Test public void cancelledOptimizerReferenceIsNotCachedAndRestoresCompatibilityFlag() throws Exception {
+        Engine.cancelReference=true;
+        try { BackendGuard.prepareReference(app,1);fail("Cancellation must propagate"); }
+        catch(IllegalStateException expected) {assertEquals("Abgebrochen.",expected.getMessage());}
+        assertNull(app.cpuReference);assertNull(app.readReport("cpu-reference.json"));
+        assertFalse(app.cpuCompatibility);assertFalse(app.prefs.getBoolean("cpuCompatibility",false));
     }
     @Test public void benchmarkIncludesFileChecksumAndActualAnswers() throws Exception {
         java.nio.file.Files.write(app.modelFile().toPath(),new byte[]{'G','G','U','F'});
