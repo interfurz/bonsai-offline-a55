@@ -29,6 +29,9 @@ darunter erhaltene historische Planung; sie ersetzen keine Geräteabnahme.
   Ressourcen-/Recall-Nachweis. Laufende Verarbeitung ist kein Abschluss.
 - [x] M3: Wikibooks- und Stack-Exchange-Adapter sowie Multi-Korpus-Routing
   implementiert. Electronics real ausgewählt; vollständige Textpakete offen.
+- [x] Wikibooks: 40.380 Inhaltsseiten / 339.997 Chunks vollständig importiert
+  und vektorisiert. IVF-Kandidaten mit 256/1.024/4.096 Clustern bestehen
+  Integrität; korpuseigene Retrievalabnahme und Paketfreigabe bleiben offen.
 - [x] M5: Wiktionary- und Nährwert-/Konstanten-Schema, Import und sichere
   Android-Tools implementiert. 257.707 OFF-Produkte des deutschen Marktes
   aus dem datierten 2024-Snapshot und 355 CODATA-Konstanten plus pi/e und

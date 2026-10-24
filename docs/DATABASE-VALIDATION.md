@@ -27,6 +27,7 @@ Die aktuellen freien Bytes werden mit `preflight`/`status` erneut ermittelt.
 | Wikipedia 10k | 10.000 Artikel, 1.436 Redirects, 163.058 Chunks, 1.472.348.160 Bytes DB, 0 Importfehler; Integrität und FTS-/Chunk-ID-Gleichheit bestanden |
 | Wikipedia 100k | 100.000 Artikel, 32.771 Redirects, 886.793 Chunks, 7.117.844.480 Bytes DB, 0 Fehler; SQLite-/FTS-/Chunk-Integrität bestanden. Fortsetzung ab 10k: 4.515,515 s, RSS-Summe maximal 913.342.464 Bytes |
 | Wikibooks vollständig | 40.380 Inhaltsseiten, 1.737 Redirects, 339.997 Chunks. 2.482.978.816 Bytes; zwei CSS-Begleitseiten in neuer Generation mit Quellabgleich auditierbar umklassifiziert; anschließend 0 Inhaltsfehler, Integrität/FTS-ID-Mengen bestanden |
+| Wikibooks BF16/CUDA und IVF | Alle 339.997 Vektoren in bestätigten Shards fertig. IVF 256/1.024/4.096: 90.025.216 / 90.819.840 / 93.990.144 Bytes. Alle drei Kandidaten bestehen SQLite-/FTS-/Vektor-ID-Integrität; eigene Retrievalabnahme und Paketfreigabe offen |
 | Echte Import-Unterbrechung | 10k-Lauf als Prozessbaum beendet; SQLite-Checkpoint wiederaufgenommen, 10k danach vollständig validiert |
 | EmbeddingGemma 2 FP32/CUDA | Alle 17.285 Pilot-Chunks exportiert; 1.867,594 s einschließlich Modellladen, abgetastete RSS-Summe 2.802.061.312 Bytes; dauerhafte Shards mit SHA256 |
 | EmbeddingGemma 2, 10k/CUDA | 163.058 Vektoren in bestätigten Shards, 17.141,953 s einschließlich Laden und Schreiben, abgetastete RSS-Summe 2.802.991.104 Bytes; IVF 256/512/1.024 gebaut, 688 menschliche Fragen ausgewertet, siehe unten |
@@ -204,7 +205,9 @@ gehören nicht zum APK-Quellcommit.
    überwunden; sie sind kein noch bestehender Downloadblocker.
 2. Der FP32-GPU-Export des 10k-Bestands und sein Testpaket sind vollständig.
    Produktionspräzision und Cluster-/nprobe-Wahl für große Bestände offen.
-3. Wikibooks ist vollständig importiert und geprüft; Embeddings/IVF/Paket fehlen.
+3. Wikibooks ist vollständig importiert und vektorisiert; drei IVF-Kandidaten
+   bestehen Integrität. Eigene Retrievalabnahme, finale nprobe-Wahl und Paket
+   fehlen noch. Keine Qualitätsfreigabe allein aufgrund gültiger IDs.
 4. Vollständiges Wiktionary-Paket ist geprüft; physische Android-16-Abnahme offen.
 5. Electronics, Physics, Super User und Mathematics sind als Textkorpora geprüft;
    Stack-Overflow-Auswahl läuft. Alle fünf Archive und das zusätzliche
