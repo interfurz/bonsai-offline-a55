@@ -2,18 +2,18 @@
 
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
-[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Version **0.5.1.1** reduziert die UI-Last beim Streaming und optimiert die weiterhin animierten Lichteffekte. Der anpassbare Systemprompt mit geschütztem Tool-Bereich und die einzeilige Thinking-/Prefill-Anzeige aus 0.5.1 bleiben enthalten. Sie enthält außerdem die Funktionen von 0.5: EmbeddingGemma 2, Wikipedia-/Wikidata-Pipelines, Hybrid-RAG, Cache-Diagnosen sowie die neue Chatoberfläche mit nativen Lichtzuständen und Icon-Familie. Der bereitgestellte Release-Keystore entspricht der Signieridentität von 0.5 und 0.4.3/0.4.4; er unterscheidet sich von 0.4.5/0.3.0. Signieridentität und Datenhinweise: [SIGNIEREN.md](SIGNIEREN.md). [Releasehinweise](release/0.5.1.1/RELEASE-NOTES.md), [technische Roadmap](ROADMAP.md) und [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md).
+[CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases). Version **0.5.2** ergänzt den Offline-Import geprüfter Wissenspakete, getrennte Korpora sowie sichere Wörterbuch- und Tabellentools. Die UI- und Streamingoptimierungen aus 0.5.1.1 sowie der anpassbare Systemprompt bleiben enthalten. Die Wissensbestände und Modellgewichte werden separat importiert. Der bereitgestellte Release-Keystore entspricht der Signieridentität von 0.5 und 0.4.3/0.4.4; er unterscheidet sich von 0.4.5/0.3.0. Signieridentität und Datenhinweise: [SIGNIEREN.md](SIGNIEREN.md). [Releasehinweise](release/0.5.2/RELEASE-NOTES.md), [technische Roadmap](ROADMAP.md) und [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md).
 
-## Offline-Dateninfrastruktur im Featurestand
+## Offline-Dateninfrastruktur
 
-Der Branch `codex/offline-database-infrastructure` ergänzt wiederaufnehmbare
+Version 0.5.2 ergänzt wiederaufnehmbare
 Embedding-Shards, begrenzten IVF-Bau, echte Wikimedia-/Stack-Exchange-Adapter,
 strukturierte Wörterbuch-/Tabellendaten und einen SAF-Paketimport mit atomarer
 Aktivierung. Einstieg und PowerShell-Befehle: [Datenpipeline](docs/DATABASE-PIPELINE.md).
 Die [gemessene Validierung](docs/DATABASE-VALIDATION.md) trennt fertige Pakete,
 laufende Vollimporte und offene Freigaben. Der Wikipedia-Pilot ist ausdrücklich
-kein vollständiger Wikipedia-Bestand; diese Erweiterungen sind noch kein
-veröffentlichtes, auf dem A55 geprüftes Release.
+kein vollständiger Wikipedia-Bestand. Die Gesamtaufbereitung der sechs Bereiche
+läuft weiter; die physische A55-Abnahme ist noch offen.
 
 ## UI-Überarbeitung im aktuellen Quellcode
 
