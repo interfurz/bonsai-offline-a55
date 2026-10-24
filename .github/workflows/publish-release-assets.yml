@@ -1,0 +1,51 @@
+name: Attach signed release assets
+
+# Signing stays local. This opt-in job only publishes already signed files.
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag (for example v0.5.1.1)
+        required: true
+        type: string
+      downloads_commit:
+        description: Full commit SHA containing the signed files on downloads
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      DOWNLOADS_COMMIT: ${{ inputs.downloads_commit }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Validate release selectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){1,3}$ ]]
+          [[ "$DOWNLOADS_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.downloads_commit }}
+          persist-credentials: false
+          sparse-checkout: ${{ inputs.release_tag }}
+      - name: Check APK and attach signed files to the existing release
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd "$RELEASE_TAG" && sha256sum --check SHA256SUMS.txt)
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO"
+          gh release upload "$RELEASE_TAG" --repo "$GH_REPO" \
+            "$RELEASE_TAG"/*.apk \
+            "$RELEASE_TAG/SHA256SUMS.txt" \
+            "$RELEASE_TAG/build-info.json" \
+            "$RELEASE_TAG/signature-verification.txt" \
+            "$RELEASE_TAG/update-compatibility.json"
