@@ -26,7 +26,8 @@ public class KernelTemperatureTest {
         app.prefs.edit().clear().commit();
         app.cpuReference=new JSONObject(NativeFixture.PROBE).put("identity",BackendGuard.identity(app));
         app.loaded=true;app.busy=true;app.optimizing=true;app.cancelled=false;
-        NativeFixture.probes=0;NativeFixture.heatOnProbe=0;
+        NativeFixture.probes=0;NativeFixture.heatOnProbe=0;NativeFixture.referenceProbes=0;
+        NativeFixture.referenceMode=false;NativeFixture.divergent=false;
         setThermal(PowerManager.THERMAL_STATUS_NONE);
     }
     private static void setThermal(int status) {
@@ -59,6 +60,22 @@ public class KernelTemperatureTest {
         NativeFixture.heatOnProbe=1;
         runAndAssertCompleted(PowerManager.THERMAL_STATUS_NONE,PowerManager.THERMAL_STATUS_SEVERE);
     }
+    @Test public void firstOptimizationCreatesReferenceThenMeasuresTheSelectedBackend() throws Exception {
+        app.cpuReference=null;
+        new java.io.File(app.getFilesDir(),"cpu-reference.json").delete();
+        runAndAssertCompleted(PowerManager.THERMAL_STATUS_NONE,PowerManager.THERMAL_STATUS_NONE);
+        assertEquals(1,NativeFixture.referenceProbes);
+        assertNotNull(BackendGuard.reference(app));
+        assertFalse(app.cpuCompatibility);assertFalse(NativeFixture.referenceMode);
+    }
+    @Test public void divergentProfilesStillFailTheExplicitOptimizerCheck() throws Exception {
+        NativeFixture.divergent=true;
+        KernelOptimizer.run(app,1,false);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertFalse(app.readReport("optimizer-attempt.json").getBoolean("completed"));
+        assertTrue(app.error.contains("Kein Profil"));assertFalse(app.optimized());
+        assertTrue(app.loaded);assertFalse(app.busy);
+    }
     @Test public void heatingDuringWinnerConfirmationDoesNotAbort() throws Exception {
         NativeFixture.heatOnProbe=KernelOptimizer.profiles(KernelOptimizer.current(app),false).size()*3+1;
         runAndAssertCompleted(PowerManager.THERMAL_STATUS_NONE,PowerManager.THERMAL_STATUS_SEVERE);
@@ -79,19 +96,22 @@ public class KernelTemperatureTest {
     @Implements(value=NativeEngine.class,isInAndroidSdk=false)
     public static class NativeFixture {
         static final String PROBE="{\"signature\":[1,2,3,4],\"top_tokens\":[1,2,3,4],\"fingerprint\":\"test-fixture-only\",\"score_ms\":100,\"tokens_per_second\":10}";
-        static int probes,heatOnProbe;
+        static int probes,heatOnProbe,referenceProbes;
+        static boolean referenceMode,divergent;
         @Implementation protected static void __staticInitializer__() { }
         @Implementation protected static void clearCache(long handle) {}
         @Implementation protected static byte[] commitTurn(long handle,byte[][] roles,byte[][] contents) {return BonsaiApp.utf8("{}");}
         @Implementation protected static long create() { return 1; }
         @Implementation protected static void resetStop(long handle) { }
-        @Implementation protected static void referenceCpu(boolean enabled) { }
+        @Implementation protected static void referenceCpu(boolean enabled) { referenceMode=enabled; }
         @Implementation protected static void configure(long handle,int threads,int batchThreads,int microBatch) { }
         @Implementation protected static byte[] load(long handle,byte[] path,int context,int threads,boolean gpu) {
             return BonsaiApp.utf8("{\"backend\":\"CPU\"}");
         }
         @Implementation protected static byte[] probe(long handle,int steps) {
+            if(referenceMode)referenceProbes++;
             if(++probes==heatOnProbe)setThermal(PowerManager.THERMAL_STATUS_SEVERE);
+            if(divergent && !referenceMode)return BonsaiApp.utf8("{\"signature\":[100,200,300,400],\"top_tokens\":[99,99,99,99]}");
             return BonsaiApp.utf8(PROBE);
         }
         @Implementation protected static byte[] generate(long handle,byte[][] roles,byte[][] contents,int maxTokens,int seed,NativeEngine.Stream callback,byte[] grammar,int reasoningBudget) {

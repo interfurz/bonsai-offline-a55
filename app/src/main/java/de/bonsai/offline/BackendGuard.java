@@ -28,43 +28,30 @@ final class BackendGuard {
         return null;
     }
     static String load(BonsaiApp a,long handle) throws Exception {
+        if(a.cancelled)throw new IllegalStateException("Abgebrochen.");
         KernelOptimizer.Profile requested=KernelOptimizer.current(a);
-        JSONObject reference=reference(a);
-        String backend="CPU";
-        a.cpuCompatibility=true;
-        backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
-        if(reference==null) {
+        a.cpuCompatibility=a.prefs.getBoolean("cpuCompatibility",false) && !requested.gpu;
+        // Normal startup loads the selected backend once, without inference probes.
+        String backend=KernelOptimizer.load(a,handle,requested);
+        String notice=a.cpuCompatibility?"CPU-Kompatibilitätsmodus: skalare Bonsai-Kernel sind aktiv.":"";
+        a.main.post(()->a.backendNotice=notice);
+        return backend;
+    }
+    /** Returns true when a temporary scalar context was loaded; the caller must reload its profile. */
+    static boolean prepareReference(BonsaiApp a,long handle) throws Exception {
+        if(a.cancelled)throw new IllegalStateException("Abgebrochen.");
+        if(reference(a)!=null)return false;
+        KernelOptimizer.Profile requested=KernelOptimizer.current(a);
+        boolean compatibility=a.cpuCompatibility;
+        try {
+            a.cpuCompatibility=true;
+            KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
             a.main.post(()->{a.status="Unabhängige CPU-Referenz wird geprüft …";a.notifyUi();});
-            reference=KernelOptimizer.probe(handle,8);
+            JSONObject reference=KernelOptimizer.probe(handle,8);
+            if(a.cancelled)throw new IllegalStateException("Abgebrochen.");
             reference.put("identity",identity(a));
             KernelOptimizer.write(a,"cpu-reference.json",reference);a.cpuReference=reference;
-        }
-        String notice="";
-        try {
-            if(a.cancelled)throw new IllegalStateException("Abgebrochen.");
-            if(a.prefs.getBoolean("cpuCompatibility",false) && !requested.gpu) {
-                KernelOptimizer.configure(handle,requested);
-                a.main.post(()->a.backendNotice="CPU-Kompatibilitätsmodus: skalare Bonsai-Kernel sind aktiv.");
-                return backend;
-            }
-            a.cpuCompatibility=false;
-            NativeEngine.referenceCpu(false);
-            if(requested.gpu) backend=KernelOptimizer.load(a,handle,requested);
-            else { KernelOptimizer.configure(handle,requested); backend="CPU"; }
-            JSONObject candidate=KernelOptimizer.probe(handle,8);
-            if(!matches(reference,candidate))throw new IllegalStateException("Testlogits weichen von der CPU-Referenz ab.");
-        } catch(Exception e) {
-            if(a.cancelled)throw e;
-            notice=(requested.gpu?"Vulkan":"Der optimierte CPU-Pfad")+" hat die unabhängige Rechenprüfung nicht bestanden. Skalare Bonsai-Kernel aktiviert. Ursache: "+e.getMessage();
-            NativeEngine.resetStop(handle);
-            a.cpuCompatibility=true;
-            backend=KernelOptimizer.load(a,handle,new KernelOptimizer.Profile(false,requested.threads,requested.batchThreads,1));
-            if(!matches(reference,KernelOptimizer.probe(handle,8)))
-                throw new IllegalStateException("Auch die CPU-Referenz ist nicht reproduzierbar. Modell bitte neu importieren.");
-            a.prefs.edit().putBoolean("gpu",false).putBoolean("cpuCompatibility",true).putInt("microBatch",1).remove("optimizedFor").apply();
-        }
-        String note=notice;
-        a.main.post(()->{a.backendNotice=note;});
-        return backend;
+            return true;
+        } finally { a.cpuCompatibility=compatibility; }
     }
 }
