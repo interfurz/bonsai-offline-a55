@@ -1,4 +1,3 @@
-v0.5.1.1: API 28+ verification
 Verifies
 Verified using v1 scheme (JAR signing): false
 Verified using v2 scheme (APK Signature Scheme v2): false
@@ -17,7 +16,7 @@ Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870
 Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
 Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
 
-Separate v2 verification for API 24-27
+API 24–27 verifier (v2):
 Verifies
 Verified using v1 scheme (JAR signing): false
 Verified using v2 scheme (APK Signature Scheme v2): true
@@ -26,83 +25,4 @@ Verified using v3.1 scheme (APK Signature Scheme v3.1): false
 Verified using v4 scheme (APK Signature Scheme v4): false
 Verified for SourceStamp: false
 Number of signers: 1
-Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
-Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
-Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
-Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
-Signer #1 key algorithm: RSA
-Signer #1 key size (bits): 4096
-Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
-Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
-Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
 WARNING: APK Signature Scheme v2 signer #1: APK Signature Scheme v2 signer: 0 references unknown APK signature scheme ID: 3
-
-16-KiB ZIP alignment
-Verifying alignment of /workspace/scratch/v0511/Bonsai-Offline-0.5.1.1-arm64-CPU-Vulkan.apk (4)...
-      87 META-INF/com/android/build/gradle/app-metadata.properties (OK - compressed)
-     208 META-INF/version-control-info.textproto (OK - compressed)
-     376 classes.dex (OK)
-  262144 lib/arm64-v8a/libbonsai-jni.so (OK)
-66797568 lib/arm64-v8a/libc++_shared.so (OK)
-68051172 assets/third_party_notices.txt (OK - compressed)
-68152509 AndroidManifest.xml (OK - compressed)
-68153914 res/2Q.xml (OK - compressed)
-68154389 res/2v.xml (OK - compressed)
-68154802 res/3G.xml (OK - compressed)
-68155328 res/3T.xml (OK - compressed)
-68155746 res/4j.xml (OK - compressed)
-68156224 res/5x.xml (OK - compressed)
-68156711 res/8-.xml (OK - compressed)
-68157140 res/8s.xml (OK - compressed)
-68157555 res/DN.xml (OK - compressed)
-68157966 res/Di.xml (OK - compressed)
-68158422 res/Ef.xml (OK - compressed)
-68158842 res/Fi.xml (OK - compressed)
-68159325 res/Hf.xml (OK - compressed)
-68159773 res/MH.xml (OK - compressed)
-68160232 res/MM.xml (OK - compressed)
-68160599 res/OS.xml (OK - compressed)
-68161068 res/Q-.xml (OK - compressed)
-68161577 res/Rq.xml (OK - compressed)
-68161944 res/UP.xml (OK - compressed)
-68162483 res/Vj.xml (OK - compressed)
-68162976 res/X5.xml (OK - compressed)
-68163403 res/YK.xml (OK - compressed)
-68163825 res/ZJ.xml (OK - compressed)
-68164297 res/_t.xml (OK - compressed)
-68164790 res/aP.xml (OK - compressed)
-68165206 res/aU.xml (OK - compressed)
-68165686 res/bY.xml (OK - compressed)
-68166102 res/df.xml (OK - compressed)
-68166570 res/eY.xml (OK - compressed)
-68166992 res/fU.xml (OK - compressed)
-68167443 res/hb.xml (OK - compressed)
-68167947 res/iS.xml (OK - compressed)
-68168430 res/mJ.xml (OK - compressed)
-68168851 res/n1.xml (OK - compressed)
-68169301 res/oh.xml (OK - compressed)
-68169778 res/q-.xml (OK - compressed)
-68170261 res/qr.xml (OK - compressed)
-68170774 res/xb.xml (OK - compressed)
-68171252 res/xk.xml (OK - compressed)
-68171716 resources.arsc (OK)
-Verification succesful
-
-Published v0.5.1 reference certificate
-Verifies
-Verified using v1 scheme (JAR signing): false
-Verified using v2 scheme (APK Signature Scheme v2): false
-Verified using v3 scheme (APK Signature Scheme v3): true
-Verified using v3.1 scheme (APK Signature Scheme v3.1): false
-Verified using v4 scheme (APK Signature Scheme v4): false
-Verified for SourceStamp: false
-Number of signers: 1
-Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
-Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
-Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
-Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
-Signer #1 key algorithm: RSA
-Signer #1 key size (bits): 4096
-Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
-Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
-Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078

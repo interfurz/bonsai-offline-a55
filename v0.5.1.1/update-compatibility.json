@@ -4,14 +4,14 @@
   "previous_apk_sha256": "0046bf0ae77773e5b854793ba933bea730a7e5afcb5795f8dc40645aa91a638c",
   "new_version": "0.5.1.1",
   "new_version_code": 15,
+  "new_apk_sha256": "0ee1e4bfd7e8098812198757877bcae13442303bd9ce1b2d017c7bd4bf7e9253",
   "package": "de.bonsai.offline.debug",
   "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
   "matching_update_signing_identity": true,
   "device_update_tested": false,
+  "verification": "Actual published v0.5.1 and new APK checked with apksigner and aapt2",
   "incompatible_signatures": [
     "0.4.5",
     "0.3.0"
-  ],
-  "verification": "Actual published v0.5.1 and newly signed v0.5.1.1 APKs checked with apksigner and aapt; no device installation",
-  "new_apk_sha256": "c3307efef72b9b469b4108624ecf9215d874f9bf9ae9a7e60983d37e90bed120"
+  ]
 }
