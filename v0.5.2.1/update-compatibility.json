@@ -1,0 +1,43 @@
+{
+  "previous_version": "0.5.2",
+  "previous_version_code": 17,
+  "new_version": "0.5.2.1",
+  "new_version_code": 18,
+  "package": "de.bonsai.offline.debug",
+  "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+  "matching_update_signing_identity": true,
+  "higher_version_code": true,
+  "device_update_tested": false,
+  "variants": [
+    {
+      "backend": "CPU",
+      "previous_version": "0.5.2",
+      "previous_version_code": 17,
+      "previous_apk_sha256": "99d27908852c70a45a4583d9505de923d20082df58a279cc254f27fc5128a019",
+      "new_version": "0.5.2.1",
+      "new_version_code": 18,
+      "new_apk_sha256": "6aa0fa6b426c782bbde2da71ef6e024e54e9066b1c8f1ff0ea31ef7919e1b3a1",
+      "package": "de.bonsai.offline.debug",
+      "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+      "matching_update_signing_identity": true,
+      "higher_version_code": true,
+      "device_update_tested": false,
+      "verification": "actual published v0.5.2 and locally signed v0.5.2.1 APKs compared using apksigner and aapt2"
+    },
+    {
+      "backend": "CPU-Vulkan",
+      "previous_version": "0.5.2",
+      "previous_version_code": 17,
+      "previous_apk_sha256": "e6cb700277d0b44f334ac455acf85e72fa41e389092ed5c7b1b46056edbb77dc",
+      "new_version": "0.5.2.1",
+      "new_version_code": 18,
+      "new_apk_sha256": "b751678f29727be983e40dcdb24b4fedb6980e8423547e7bd311c092f01fcba6",
+      "package": "de.bonsai.offline.debug",
+      "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+      "matching_update_signing_identity": true,
+      "higher_version_code": true,
+      "device_update_tested": false,
+      "verification": "actual published v0.5.2 and locally signed v0.5.2.1 APKs compared using apksigner and aapt2"
+    }
+  ]
+}

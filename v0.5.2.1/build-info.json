@@ -1,0 +1,254 @@
+{
+  "version": "0.5.2.1",
+  "version_code": 18,
+  "package": "de.bonsai.offline.debug",
+  "source_commit": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+  "main_merge_commit": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+  "included_pull_requests": [
+    28
+  ],
+  "runtime_revision": "e3de715222b2667c54a267441159a5729f11155e",
+  "runtime_patch_sha256": "e4a0a8d772a1af1e7b7697d04a3a81293ad321c77ffaab167cd909557a9ea5f3",
+  "debuggable": false,
+  "no_internet_permission": true,
+  "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+  "signing": "user-supplied existing release key; signed locally; no signing secrets sent to Git or CI",
+  "cpu_build": {
+    "origin": "local source build",
+    "source_commit": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+    "junit": {
+      "tests": 175,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "lint": {
+      "Error": 0,
+      "Fatal": 0,
+      "Warning": 20,
+      "Information": 0
+    }
+  },
+  "cpu_vulkan_build": {
+    "origin": "unsigned CI artifact, downloaded and signed locally",
+    "run_id": 40087208825,
+    "url": "https://github.com/interfurz/bonsai-offline-a55/actions/runs/40087208825",
+    "source_commit": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+    "junit": {
+      "tests": 175,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    },
+    "lint": {
+      "Error": 0,
+      "Fatal": 0,
+      "Warning": 21,
+      "Information": 0
+    },
+    "provenance": {
+      "source_sha": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+      "runtime_revision": "e3de715222b2667c54a267441159a5729f11155e",
+      "vulkan_sdk_version": "1.4.363.0",
+      "vulkan_sdk_sha256": "197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43",
+      "vulkan_config_sha256": "5a4d3ee31f3c215fd8a370b90f785325deecd5276d59fa56bef0204dcc6eda8c",
+      "android": {
+        "platform": 35,
+        "build_tools": "35.0.0",
+        "ndk": "28.2.13676358",
+        "cmake": "3.22.1",
+        "java": "17",
+        "gradle": "8.11.1"
+      },
+      "variant": "release",
+      "bonsaiVulkan": true,
+      "signing": "unsigned; local signing only",
+      "physical_device_test": "not performed",
+      "robolectric_scope": "release JVM tests; no device JNI/Vulkan execution",
+      "steps": {
+        "ready": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        },
+        "kernels": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        },
+        "tests": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        },
+        "lint": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        },
+        "build": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        },
+        "verify": {
+          "outputs": {},
+          "outcome": "success",
+          "conclusion": "success"
+        }
+      }
+    }
+  },
+  "android_search_regression": {
+    "sdk": 35,
+    "runtime": "Android emulator ART via app_process",
+    "original_code": "ExceptionInInitializerError and NoClassDefFoundError reproduced",
+    "fixed_code": "two searches plus Unicode lexical/fixture encoder checks passed",
+    "source_tested": "c0fb0d8e44955675f841d7cf970b58dbcecee58a",
+    "release_KnowledgeSearch_source_identical": true,
+    "KnowledgeSearch_source_sha256": "454cb8d911505e44f3d0356fbdc61744d0a673819838ca6955bc036326d06103"
+  },
+  "artifacts": [
+    {
+      "name": "Bonsai-Offline-0.5.2.1-arm64-CPU.apk",
+      "bytes": 9255668,
+      "sha256": "6aa0fa6b426c782bbde2da71ef6e024e54e9066b1c8f1ff0ea31ef7919e1b3a1",
+      "unsigned_sha256": "99fb49e672a3bfd7c24c9fb574f835f454d4e7ad01b737746a271175b0ddcffa",
+      "backends": [
+        "CPU"
+      ],
+      "signature_verified": true,
+      "zipalign_16k_verified": true,
+      "elf_load_16k_verified": true,
+      "apk_contents_unchanged_after_signing": true,
+      "native_libraries": [
+        {
+          "name": "lib/arm64-v8a/libbonsai-jni.so",
+          "sha256": "0309f6634653752eb6e1e299a8a88786fbb0a84162b2da9c2563058146749e64",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "name": "lib/arm64-v8a/libc++_shared.so",
+          "sha256": "cd61762848882a16c8244c964a6f396c0caa0b440588a210ce9cc4ab0e6d9f0c",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        }
+      ],
+      "metadata": {
+        "package": "de.bonsai.offline.debug",
+        "version_code": 18,
+        "version": "0.5.2.1",
+        "debuggable": false,
+        "permissions": [
+          "android.permission.FOREGROUND_SERVICE",
+          "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+          "android.permission.POST_NOTIFICATIONS",
+          "android.permission.WAKE_LOCK"
+        ]
+      }
+    },
+    {
+      "name": "Bonsai-Offline-0.5.2.1-arm64-CPU-Vulkan.apk",
+      "bytes": 68238068,
+      "sha256": "b751678f29727be983e40dcdb24b4fedb6980e8423547e7bd311c092f01fcba6",
+      "unsigned_sha256": "fc78b4a4dd4e302966a1a906ad6d474f65cf9e240ac2865d7f55513ab56eaf9a",
+      "backends": [
+        "CPU",
+        "Vulkan"
+      ],
+      "signature_verified": true,
+      "zipalign_16k_verified": true,
+      "elf_load_16k_verified": true,
+      "apk_contents_unchanged_after_signing": true,
+      "native_libraries": [
+        {
+          "name": "lib/arm64-v8a/libbonsai-jni.so",
+          "sha256": "3c4a1adb3a9d246daac678f2f444104e466fd5fe0fd2bde21d37a159ad8ddb27",
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ]
+        },
+        {
+          "name": "lib/arm64-v8a/libc++_shared.so",
+          "sha256": "cd61762848882a16c8244c964a6f396c0caa0b440588a210ce9cc4ab0e6d9f0c",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ]
+        }
+      ],
+      "metadata": {
+        "package": "de.bonsai.offline.debug",
+        "version_code": 18,
+        "version": "0.5.2.1",
+        "debuggable": false,
+        "permissions": [
+          "android.permission.FOREGROUND_SERVICE",
+          "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+          "android.permission.POST_NOTIFICATIONS",
+          "android.permission.WAKE_LOCK"
+        ]
+      }
+    }
+  ],
+  "update_compatibility": {
+    "previous_version": "0.5.2",
+    "previous_version_code": 17,
+    "new_version": "0.5.2.1",
+    "new_version_code": 18,
+    "package": "de.bonsai.offline.debug",
+    "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+    "matching_update_signing_identity": true,
+    "higher_version_code": true,
+    "device_update_tested": false,
+    "variants": [
+      {
+        "backend": "CPU",
+        "previous_version": "0.5.2",
+        "previous_version_code": 17,
+        "previous_apk_sha256": "99d27908852c70a45a4583d9505de923d20082df58a279cc254f27fc5128a019",
+        "new_version": "0.5.2.1",
+        "new_version_code": 18,
+        "new_apk_sha256": "6aa0fa6b426c782bbde2da71ef6e024e54e9066b1c8f1ff0ea31ef7919e1b3a1",
+        "package": "de.bonsai.offline.debug",
+        "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+        "matching_update_signing_identity": true,
+        "higher_version_code": true,
+        "device_update_tested": false,
+        "verification": "actual published v0.5.2 and locally signed v0.5.2.1 APKs compared using apksigner and aapt2"
+      },
+      {
+        "backend": "CPU-Vulkan",
+        "previous_version": "0.5.2",
+        "previous_version_code": 17,
+        "previous_apk_sha256": "e6cb700277d0b44f334ac455acf85e72fa41e389092ed5c7b1b46056edbb77dc",
+        "new_version": "0.5.2.1",
+        "new_version_code": 18,
+        "new_apk_sha256": "b751678f29727be983e40dcdb24b4fedb6980e8423547e7bd311c092f01fcba6",
+        "package": "de.bonsai.offline.debug",
+        "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+        "matching_update_signing_identity": true,
+        "higher_version_code": true,
+        "device_update_tested": false,
+        "verification": "actual published v0.5.2 and locally signed v0.5.2.1 APKs compared using apksigner and aapt2"
+      }
+    ]
+  },
+  "physical_a55_tested": false,
+  "real_bonsai_2b_inference_tested": false,
+  "device_update_tested": false,
+  "release_url": "https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.2.1",
+  "recorded_at": "2026-10-24T11:05:44.854204+00:00"
+}

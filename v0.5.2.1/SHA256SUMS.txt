@@ -1,0 +1,2 @@
+6aa0fa6b426c782bbde2da71ef6e024e54e9066b1c8f1ff0ea31ef7919e1b3a1  Bonsai-Offline-0.5.2.1-arm64-CPU.apk
+b751678f29727be983e40dcdb24b4fedb6980e8423547e7bd311c092f01fcba6  Bonsai-Offline-0.5.2.1-arm64-CPU-Vulkan.apk
