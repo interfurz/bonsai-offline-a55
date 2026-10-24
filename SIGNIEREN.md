@@ -1,5 +1,11 @@
 # Bonsai-Release signieren
 
+Hotfix **0.5.2.1**, Versionscode **18**, verwendet denselben bereitgestellten
+Release-Schlüssel und das Paket `de.bonsai.offline.debug` wie 0.5.2.
+Die APKs werden lokal signiert; Keystore und Passwort bleiben außerhalb von
+Git, CI und Release-Assets. Die Nachweise liegen bei den
+[Release-Downloads](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.2.1).
+
 Release **0.5.1.1** wird auf ausdrücklichen Wunsch mit dem hochgeladenen
 `bonsai-release.keystore` signiert (Alias `bonsai-release`, PKCS12).
 Sein Zertifikat stimmt mit der tatsächlich heruntergeladenen und per
