@@ -136,7 +136,7 @@ die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
 - 16 Wikidata-Pipelinetests bestanden, einschließlich parallelem Bzip2-
   Resume, bytegleichem Stream, identischen DB-Inhalten, Quellbindung und
   Ablehnung beschädigter Blockindizes.
-- 16 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
+- 17 Adapter-/Downloadtests bestanden, ohne Netzwerk und Modellgewichte;
   einschließlich direktem 7z-Stream, Energie-Alias und auditierter CSS-Reparatur.
 - 5 weitere Hosttests einschließlich Runtime-Backport bestanden.
 - Neuer GBNF-Vertrag im echten gepinnten nativen Parser auf Windows geprüft:
@@ -174,7 +174,11 @@ decken beide Fälle ab. Kleine Shard-/IVF-Fixtures wählen explizit null zusätz
 Reserve; benötigte Dateibytes werden weiterhin geprüft. Die produktive API behält
 5 GiB Mindestreserve, der gemeinsame Index-Einstieg standardmäßig 20 GiB und
 `--reserve-gib` für größere Produktionsreserven. Diese Änderung beseitigt die
-Abhängigkeit winziger Tests von 5 GiB freiem CI-Speicher.
+Abhängigkeit winziger Tests von 5 GiB freiem CI-Speicher. Zusätzlich wurden
+kleine Adapter-, Reparatur-, Paket- und Downloadfixtures entsprechend isoliert;
+50 RAG- plus 17 Adapter-/Downloadtests bestehen gemeinsam bei simulierten
+4 GiB freiem Speicher. Ein eigener Test bestätigt, dass der produktive
+Standard weiterhin bei unterschrittener 5-GiB-Reserve abweist.
 
 ## Lokal signierte Vorschau-APK
 

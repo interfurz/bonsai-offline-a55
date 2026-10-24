@@ -1,5 +1,6 @@
 from contextlib import closing
 from decimal import Decimal
+from functools import partial
 import gzip
 import json
 from pathlib import Path
@@ -7,17 +8,32 @@ import sqlite3
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+from unittest.mock import patch
 
 from database_pipeline.dictionary import entries,normalize,ingest,lookup
 from database_pipeline.stackexchange import markdown,select,export,rows,tags
 from database_pipeline.tables import products,constants,convert
 from database_pipeline.packages import build as package
+from database_pipeline.common import require_space
 from rag.corpus import build
 
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
+        # These tiny fixtures still require their actual file bytes, but do not
+        # reserve 5 GiB of unused production headroom on the CI runner.
+        for module in ('repair','dictionary_upgrade','packages'):
+            guard=patch('database_pipeline.'+module+'.require_space',partial(require_space,reserve=0))
+            guard.start();self.addCleanup(guard.stop)
+
+    def test_production_disk_reserve_remains_enforced(self):
+        from collections import namedtuple
+        usage=namedtuple('usage','total used free')(8*1024**3,4*1024**3,4*1024**3)
+        with patch('database_pipeline.common.shutil.disk_usage',return_value=usage):
+            with self.assertRaisesRegex(OSError,'Insufficient disk'):
+                require_space(self.root,1)
+            self.assertEqual(4*1024**3,require_space(self.root,1,reserve=0))
 
     def test_dictionary_language_sense_forms_translation_and_umlauts(self):
         text='== Baum ({{Sprache|Deutsch}}) ==\n=== {{Wortart|Substantiv|Deutsch}} ===\n{{Deutsch Substantiv Übersicht|Genus=m|Nominativ Singular=Baum|Nominativ Plural=Bäume}}\n{{Bedeutungen}}\n:[1] verholzte Pflanze\n{{Gegenwörter}}\n:[1] [[Kraut]]\n==== Übersetzungen ====\n{{Ü-Tabelle|1|Ü-Liste={{Ü|en|tree}}}}'

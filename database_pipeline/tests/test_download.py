@@ -1,12 +1,20 @@
 import hashlib,json
+from functools import partial
 from pathlib import Path
 import tempfile,unittest
 from unittest.mock import patch
 from database_pipeline.download import parallel_wikimedia,verified_file,curl,json_document
+from database_pipeline.common import require_space
 import subprocess
 
 
 class DownloadTests(unittest.TestCase):
+    def setUp(self):
+        # Fake downloads are at most a few MiB; retain real byte checks while
+        # excluding unused production reserve from these isolated fixtures.
+        guard=patch('database_pipeline.download.require_space',partial(require_space,reserve=0))
+        guard.start();self.addCleanup(guard.stop)
+
     def test_incomplete_metadata_is_not_published_and_retries_a_fresh_document(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'metadata.json'
