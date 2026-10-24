@@ -1,6 +1,6 @@
 # Bonsai Offline – technische Roadmap
 
-## Umsetzungsstand Dateninfrastruktur, 23. Oktober 2026
+## Umsetzungsstand Dateninfrastruktur, 24. Oktober 2026
 
 Basis `main` 29fb2099b0518a4c11033f9f96ce7eb15a728c3c, Featurebranch
 `codex/offline-database-infrastructure`. Die folgenden Nachweise ergänzen die
@@ -17,7 +17,12 @@ darunter erhaltene historische Planung; sie ersetzen keine Geräteabnahme.
 - [x] 10.000 echte Wikipedia-Artikel / 163.058 Chunks importiert, Unterbrechung
   und Resume sowie FTS-/ID-Integrität geprüft.
 - [x] Alle 163.058 Chunks des 10k-Bestands in FP32/CUDA vektorisiert;
-  drei echte IVF-Konfigurationen gebaut. Erweiterte Retrievalabnahme läuft.
+  drei echte IVF-Konfigurationen gebaut. 688 menschliche GermanQuAD-Fragen
+  mit nativen Q8-Queries und korrigiertem FTS4-Ranking ausgewertet;
+  IVF256/nprobe64-Testpaket gebaut und über Android-Hostimport geprüft.
+- [x] CPU-ARM64-Vorschau 0.5.2-db-preview (Code 16) mit bisheriger
+  Release-Identität signiert; Signatur, Ausrichtung und Berechtigungen geprüft.
+  167 Android-Tests, Release-Lint und Build bestanden; A55-Abnahme offen.
 - [x] 100.000 echte Wikipedia-Artikel / 886.793 Chunks, 0 Importfehler,
   Integrität und FTS-/Chunk-ID-Mengen geprüft.
 - [ ] Wikipedia-Vollimport, vollständige Vektorisierung und endgültiger

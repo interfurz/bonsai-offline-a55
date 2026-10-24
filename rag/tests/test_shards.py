@@ -1,4 +1,5 @@
 from contextlib import closing
+from functools import partial
 import json
 from pathlib import Path
 import sqlite3
@@ -9,6 +10,9 @@ from unittest.mock import patch
 from rag.corpus import build
 from rag.embeddings import HashEncoder, embed
 from rag.shards import export, assemble
+
+export = partial(export, reserve_bytes=0)
+assemble = partial(assemble, reserve_bytes=0)
 
 
 class ShardTests(unittest.TestCase):
@@ -92,6 +96,7 @@ class ShardTests(unittest.TestCase):
     def test_direct_shard_index_matches_assembled_bytes_without_full_float_copy(self):
         import numpy as np
         from rag.ivf import build_index,float_source
+        build_index=partial(build_index,reserve_bytes=0)
         from rag.shard_source import ShardFloatSource
         from database_pipeline.common import digest
         folder=self.root/'source-shards';output=self.root/'assembled'

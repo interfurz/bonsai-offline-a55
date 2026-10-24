@@ -29,7 +29,7 @@ Die aktuellen freien Bytes werden mit `preflight`/`status` erneut ermittelt.
 | Wikibooks vollständig | 40.380 Inhaltsseiten, 1.737 Redirects, 339.997 Chunks. 2.482.978.816 Bytes; zwei CSS-Begleitseiten in neuer Generation mit Quellabgleich auditierbar umklassifiziert; anschließend 0 Inhaltsfehler, Integrität/FTS-ID-Mengen bestanden |
 | Echte Import-Unterbrechung | 10k-Lauf als Prozessbaum beendet; SQLite-Checkpoint wiederaufgenommen, 10k danach vollständig validiert |
 | EmbeddingGemma 2 FP32/CUDA | Alle 17.285 Pilot-Chunks exportiert; 1.867,594 s einschließlich Modellladen, abgetastete RSS-Summe 2.802.061.312 Bytes; dauerhafte Shards mit SHA256 |
-| EmbeddingGemma 2, 10k/CUDA | 163.058 Vektoren in bestätigten Shards, 17.141,953 s einschließlich Laden und Schreiben, abgetastete RSS-Summe 2.802.991.104 Bytes; IVF 256/512/1.024 gebaut, erweiterter Recalltest läuft |
+| EmbeddingGemma 2, 10k/CUDA | 163.058 Vektoren in bestätigten Shards, 17.141,953 s einschließlich Laden und Schreiben, abgetastete RSS-Summe 2.802.991.104 Bytes; IVF 256/512/1.024 gebaut, 688 menschliche Fragen ausgewertet, siehe unten |
 | Faiss mit realen Pilotvektoren | 64/128/256 Cluster trainiert; BRAGIVF1-Dateien 4.629.760 / 4.699.392 / 4.830.464 Bytes; keine Größen-/Latenzbehauptung für Millionen realer Vektoren |
 | Wiktionary-Pilot | 1.000 Seiten, 1.437 Sprache-/Wortart-Einträge, 7.327 Formen; `Hallos` → deutsches Lemma `Hallo`; vollständiger Dumpimport läuft separat |
 | Wiktionary-Vollimport, erste Generation | 1.265.548 Inhaltsseiten, 1.320.680 Sprache-/Wortart-Einträge, 1.549.379 Formen, 11.993.874 Details, 4.556.926.976 Bytes; Integrität und Referenzen bestanden. 35.024 Seiten ohne Standard-Wortartabschnitt: Varianten-/Weiterleitungsupgrade vor Paketfreigabe |
@@ -58,7 +58,8 @@ angebliche Gesamtzahl hochgerechnet.
 | `bonsai-food-germany-20240624-v1.bonsai` | 492004566 | `9fef75edc40e56dbb29a817d41ef31d10259a5c53d9e22f1256818f53724fe6d` |
 | `bonsai-dewiktionary-20261001-v1.bonsai` | 4594372574 | `42a2c578381d1f6d6444d50f504c72b33dc5f312d4dedc2390ebcfe42e816b73` |
 
-Der Wikipedia-Container ist ausdrücklich ein 1k-Pilot. Der Nährwertcontainer
+Die beiden Wikipedia-Container sind ausdrücklich 1k-/10k-Piloten mit derselben
+Paket-ID; jeweils die zuletzt importierte Generation wird aktiv. Der Nährwertcontainer
 enthält einen vollständigen selektierten Marktbestand des offiziellen **2024**-
 Exports; er ist kein aktueller 2026-Nährwertnachweis und keine Tabelle generischer
 Lebensmittel. Fertige Dateinamen werden nicht überschrieben, frühere lokale
@@ -131,7 +132,7 @@ die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
 
 ## Tests und Builds
 
-- 48 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-Tests bestanden.
+- 50 RAG-/IVF-/Wikipedia-/Shard-/Fachkonverter-/Benchmark-Tests bestanden.
 - 16 Wikidata-Pipelinetests bestanden, einschließlich parallelem Bzip2-
   Resume, bytegleichem Stream, identischen DB-Inhalten, Quellbindung und
   Ablehnung beschädigter Blockindizes.
@@ -152,6 +153,10 @@ die veröffentlichten Pilotvektoren wurden nicht damit vermischt.
   Android-Importer unter Robolectric installiert und mit echten Inhalten
   abgefragt: Konvergenz, Nordatlantic, Bank, Haferflocken und 3 Lichtjahre.
   Belege und Hostimportzeiten in `android-real-structured-packages.json`.
+- Der zusätzliche gezielte Android-Hosttest importiert das echte 1.112.408.984-
+  Byte-10k-Paket, prüft seine Integrität und findet per read-only FTS den Titel
+  Aussagenlogik. Ein Test ohne Fehler bestanden; dies ergänzt die archivierte
+  167er-Gesamtabnahme und ersetzt keine Geräteprüfung.
 - Mehrkorpus-RRF vereinigt semantische Kandidaten über vergleichbare normalisierte
   Scores aller kompatiblen Pakete. Ein Regressionstest mit fünf Communities
   verhindert, dass alphabetisch spätere Pakete dauerhaft aus Top-3 verschwinden.
@@ -162,6 +167,30 @@ Assertions und natives SQLite bleiben aktiviert. Weitere Windows-Befunde:
 Unix-absolut aussehende Pfade explizit ablehnen, gemappte Testdateien nicht
 in-place verändern, Runtime-Patch-EOLs vor abschließender Byteprüfung behandeln.
 
+CI am 24.10.2026 zeigte zusätzlich eine Race beim Sampling kurzlebiger SQLite-
+Journaldateien. Der Sampler toleriert deren Verschwinden und beendet bei eigenen
+Fehlern seinen Importprozess, bevor Dateien freigegeben werden. Zwei Regressionen
+decken beide Fälle ab. Kleine Shard-/IVF-Fixtures wählen explizit null zusätzliche
+Reserve; benötigte Dateibytes werden weiterhin geprüft. Die produktive API behält
+5 GiB Mindestreserve, der gemeinsame Index-Einstieg standardmäßig 20 GiB und
+`--reserve-gib` für größere Produktionsreserven. Diese Änderung beseitigt die
+Abhängigkeit winziger Tests von 5 GiB freiem CI-Speicher.
+
+## Lokal signierte Vorschau-APK
+
+`Bonsai-Offline-0.5.2-db-preview-arm64-CPU.apk`, Versionscode 16, wurde aus
+Commit `0a7e4e59200c1fb1c7492de2667fb34935594ca0` gebaut. 9.272.052 Bytes,
+SHA256 `6cc60323d12162663facd3eba57a1385a3f10ea0b4e4c8b4f2dda777ad3b2b97`.
+Die tatsächliche v3-Signatur und 16-KiB-ZIP-Ausrichtung sind verifiziert;
+Zertifikat-SHA256 `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d`
+entspricht der bisherigen Release-Identität. ARM64-CPU-Release, App-ID
+`de.bonsai.offline.debug` wie bisher, keine Internetberechtigung. Die Endung
+der App-ID ist kein Nachweis einer debuggbaren APK. Schlüssel und Passwort
+bleiben außerhalb des Repositories. Kein Release auf GitHub veröffentlicht;
+Installation und Signaturvergleich mit einer tatsächlich auf dem A55
+installierten APK bleiben offen. Nachfolgende Host-/Dokumentationsänderungen
+gehören nicht zum APK-Quellcommit.
+
 ## Noch offen / laufend
 
 1. Nach bestandenem 100k-Gate und vollständiger offizieller Dumpprüfung läuft
@@ -169,7 +198,7 @@ in-place verändern, Runtime-Patch-EOLs vor abschließender Byteprüfung behande
    endgültige Artikel-/Chunkzahl, vollständige Vektorisierung und Index fehlen.
    Die zuvor beobachteten HTTP-429 wurden durch begrenzten Wiederanlauf
    überwunden; sie sind kein noch bestehender Downloadblocker.
-2. Der FP32-GPU-Export des 10k-Bestands läuft in bestätigten Shards.
+2. Der FP32-GPU-Export des 10k-Bestands und sein Testpaket sind vollständig.
    Produktionspräzision und Cluster-/nprobe-Wahl für große Bestände offen.
 3. Wikibooks ist vollständig importiert und geprüft; Embeddings/IVF/Paket fehlen.
 4. Vollständiges Wiktionary-Paket ist geprüft; physische Android-16-Abnahme offen.
@@ -184,9 +213,9 @@ in-place verändern, Runtime-Patch-EOLs vor abschließender Byteprüfung behande
    Bestands und paketübergreifende Antwortabnahme bleiben erforderlich.
 9. Kein A55 in `adb devices -l`. SAF-Import auf physischem Gerät, Flugmodus,
    Bonsai-Toolwahl, gleichzeitiger RAM, Query-Ladezeit, Latenzen und Thermik offen.
-10. APK-Version 0.5.2-db-preview / Code 16 ist als CPU-Release gebaut. Die
-    Signierung mit der vorhandenen Updateidentität und A55-Installation sind
-    getrennt nachzuweisen. Keine erfundenen Gerätebenchmarks.
+10. APK-Version 0.5.2-db-preview / Code 16 ist als CPU-Release gebaut und mit
+    der bisherigen Release-Identität signiert/verifiziert. Die A55-Installation
+    bleibt offen. Keine erfundenen Gerätebenchmarks.
 
 ## Reproduktion
 

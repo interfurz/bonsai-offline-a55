@@ -169,6 +169,10 @@ nach dem Commit und ist nach Freigabe von Speicher wiederaufnehmbar.
 `embed` prüft dieselbe konfigurierbare Reserve vor jedem neuen Shard; bereits
 bestätigte Shards bleiben bei Platzmangel gültig. Eine andere Speicherreserve
 ändert die Embeddingidentität nicht.
+`index` und `assemble` unterstützen ebenfalls `--reserve-gib` mit 20 GiB
+Standardreserve. Der Index prüft vor dem Training die temporären Labels und die
+fertige Datei zusätzlich zur Reserve. Kleine CI-Fixtures setzen die Python-
+Reserve explizit auf null; die tatsächlichen Ausgabebytes bleiben erforderlich.
 
 Embedding-Shards werden erst nach fsync beider Dateien, Hashprüfung und atomarem
 Checkpoint wiederverwendet. Änderungen der Corpus-Datei, Modellrevision oder

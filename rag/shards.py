@@ -157,8 +157,10 @@ def export(database, directory, *, model=DEFAULT_MODEL, revision=None, device=No
                 raise
 
 
-def assemble(directory, output):
+def assemble(directory, output, *, reserve_bytes=5*1024**3):
     """Produce legacy Android/index inputs without holding all IDs in RAM."""
+    if reserve_bytes < 0:
+        raise ValueError("Nonnegative disk reserve required")
     directory, output = Path(directory), Path(output)
     output.mkdir(parents=True, exist_ok=True)
     with _writer_lock(directory / "export"), _writer_lock(output / "assemble"):
@@ -173,7 +175,7 @@ def assemble(directory, output):
             target = output / name
             if target.exists():
                 raise FileExistsError(target)
-            require_space(output, 16 + sum(info[kind + "_bytes"] - 16 for info in state["shards"]))
+            require_space(output, 16 + sum(info[kind + "_bytes"] - 16 for info in state["shards"]),reserve=reserve_bytes)
             part = target.with_suffix(target.suffix + ".part")
             with part.open("wb") as stream:
                 stream.write(struct.pack("<8sII", magic, dim, count))

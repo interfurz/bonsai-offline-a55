@@ -30,7 +30,9 @@ def main():
     e.add_argument('--compute-dtype',choices=['float32','bfloat16'],default='float32')
     e.add_argument('--reserve-gib',type=int,default=20)
     a=sub.add_parser('assemble');a.add_argument('directory');a.add_argument('output')
+    a.add_argument('--reserve-gib',type=int,default=20)
     i=sub.add_parser('index');i.add_argument('reference');i.add_argument('output');i.add_argument('--clusters',type=int,default=4096);i.add_argument('--train-size',type=int,default=262144);i.add_argument('--backend',choices=['auto','faiss','sklearn'],default='auto');i.add_argument('--batch',type=int,default=8192)
+    i.add_argument('--reserve-gib',type=int,default=20)
     v=sub.add_parser('validate');v.add_argument('database');v.add_argument('--ivf');v.add_argument('--vectors');v.add_argument('--report')
     b=sub.add_parser('package');b.add_argument('database');b.add_argument('output');b.add_argument('--id',required=True);b.add_argument('--version',required=True);b.add_argument('--kind',choices=['rag','wikidata','dictionary','tables'],required=True);b.add_argument('--source-json',required=True);b.add_argument('--ivf');b.add_argument('--vectors');b.add_argument('--embedding-json')
     b.add_argument('--nprobe',type=int,default=16)
@@ -124,10 +126,10 @@ def main():
         result=export(args.database,args.directory,revision=args.revision,device=args.device,batch=args.batch,shard_rows=args.shard_rows,model_path=args.model_path,compute_dtype=args.compute_dtype,reserve_bytes=args.reserve_gib*1024**3)
     elif args.command=='assemble':
         from rag.shards import assemble
-        result=assemble(args.directory,args.output)
+        result=assemble(args.directory,args.output,reserve_bytes=args.reserve_gib*1024**3)
     elif args.command=='index':
         from rag.ivf import build_index
-        result=build_index(args.reference,args.output,clusters=args.clusters,train_size=args.train_size,backend=args.backend,batch=args.batch)
+        result=build_index(args.reference,args.output,clusters=args.clusters,train_size=args.train_size,backend=args.backend,batch=args.batch,reserve_bytes=args.reserve_gib*1024**3)
     elif args.command=='validate':
         from .validate import database
         result=database(args.database,ivf=args.ivf,vectors=args.vectors)

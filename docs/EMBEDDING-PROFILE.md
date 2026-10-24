@@ -36,6 +36,14 @@ bei 1,0; mittlere Top-10-Nachbarüberlappung der Query-Pfade 0,9625.
 Belege: `query-parity-40.json` und `query-parity-retrieval-40.json` im lokalen
 Benchmarkverzeichnis. Dies erweitert den Hostnachweis, nicht die Geräteabnahme.
 
+Der größere 10k-Test vergleicht zusätzlich 688 menschliche GermanQuAD-Fragen:
+minimale Kosinusähnlichkeit 0,9989648366, Mittel 0,9998755563, maximale absolute
+Komponentenabweichung 0,0089514636. HF-CPU benötigte 44,062 s, die native
+Q8-CPU-CLI 203,688 s für diesen Lauf. Kein isolierter A55-Benchmark und kein
+JNI-Nachweis. `query-parity-688.json` bindet Modell-/CLI-/Fragenhashes;
+`portable-10k-688-v3.json` misst mit denselben nativen Queries den tatsächlich
+portablen FTS4-/IVF-/Hybridpfad, siehe [DATABASE-VALIDATION.md](DATABASE-VALIDATION.md).
+
 Der rohe Tokenizer-JSON-Pfad stimmt bei vier Unicode-/Prompt-Proben mit
 AutoTokenizer überein. Der echte 1k-Korpus enthält 17.285 Chunks; sämtliche
 Dokumentprompts sind höchstens 800 Tokens lang. Zuvor lag das Maximum der

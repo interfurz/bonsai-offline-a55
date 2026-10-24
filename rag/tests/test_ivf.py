@@ -1,4 +1,5 @@
 from contextlib import closing
+from functools import partial
 import gc
 import json
 from pathlib import Path
@@ -15,6 +16,8 @@ from rag.evaluate_ivf import evaluate, make_questions, markdown, write_report
 from rag.benchmark_ivf import synthetic, measure, write_queries
 
 DATA = Path(__file__).resolve().parents[1] / 'data'
+# Tiny fixtures need their actual bytes, not a production disk reservation.
+build_index = partial(build_index, reserve_bytes=0)
 
 
 class IvfTests(unittest.TestCase):

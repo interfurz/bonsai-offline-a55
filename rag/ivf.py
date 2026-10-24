@@ -188,15 +188,17 @@ def train_centroids(sample, clusters, backend='auto', device='cpu', seed=42, ite
 
 
 def build_index(reference, output, clusters=DEFAULT_CLUSTERS, train_size=262144,
-                backend='auto', device='cpu', batch=8192, seed=42):
+                backend='auto', device='cpu', batch=8192, seed=42, reserve_bytes=5*1024**3):
     from .corpus import _writer_lock
+    if reserve_bytes < 0:
+        raise ValueError("Nonnegative disk reserve required")
     Path(output).parent.mkdir(parents=True,exist_ok=True)
     reference_lock=Path(reference)/'export' if Path(reference).is_dir() else reference
     with _writer_lock(reference_lock),_writer_lock(output):
-        return _build_index(reference,output,clusters,train_size,backend,device,batch,seed)
+        return _build_index(reference,output,clusters,train_size,backend,device,batch,seed,reserve_bytes)
 
 
-def _build_index(reference, output, clusters, train_size, backend, device, batch, seed):
+def _build_index(reference, output, clusters, train_size, backend, device, batch, seed,reserve_bytes):
     if min(clusters, train_size, batch) < 1:
         raise ValueError("clusters, train_size and batch must be positive")
     if Path(output).exists():
@@ -218,7 +220,7 @@ def _build_index(reference, output, clusters, train_size, backend, device, batch
     if count and train_size < actual_clusters:
         raise ValueError("train_size must be >= actual cluster count")
     from database_pipeline.common import require_space
-    require_space(Path(output).parent, count * (4 + 8 + DIM) + actual_clusters * (DIM * 4 + 16))
+    require_space(Path(output).parent, count * (4 + 8 + DIM) + actual_clusters * (DIM * 4 + 16),reserve=reserve_bytes)
     with tempfile.TemporaryDirectory(prefix='bonsai-ivf-', dir=Path(output).parent) as temp, ExitStack() as cleanup:
         if hasattr(source,'close'):cleanup.callback(source.close)
         if hasattr(source, '_mmap'):
