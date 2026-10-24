@@ -10,8 +10,8 @@ android {
         applicationId 'de.bonsai.offline'
         minSdk 28
         targetSdk 35
-        versionCode 15
-        versionName '0.5.1.1'
+        versionCode 17
+        versionName '0.5.2'
         ndk { abiFilters 'arm64-v8a' }
         externalNativeBuild {
             cmake {
@@ -37,6 +37,10 @@ android {
         unitTests.includeAndroidResources = true
         unitTests.all {
             maxHeapSize = '2g'
+            // Robolectric's Windows native SQLite can crash its finalizer when
+            // native state survives across class sandboxes. Isolate classes;
+            // all tests and the real SQLite backend remain enabled.
+            if (System.getProperty('os.name').startsWith('Windows')) forkEvery = 1
             systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
         }
     }

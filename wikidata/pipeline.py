@@ -39,7 +39,10 @@ def packed(value):
                                     allow_nan=False).encode(), 9)
 
 
-def open_dump(path):
+def open_dump(path,*,bzip2_threads=1,index_path=None,identity=None):
+    if str(path).endswith('.bz2') and bzip2_threads>1:
+        from .streams import IndexedDump
+        return IndexedDump(path,bzip2_threads,index_path,identity)
     return (gzip.open if str(path).endswith(".gz") else
             bz2.open if str(path).endswith(".bz2") else open)(path, "rb")
 
@@ -214,7 +217,7 @@ def insert_entity(db, obj, config):
 
 def build(source, output, *, dump_date, config=None, resume=False, batch=1000,
           max_bytes=7_000_000_000, max_errors=0, max_line_bytes=16 * 1024 * 1024,
-          stop_after=None, progress=None):
+          stop_after=None, progress=None,bzip2_threads=1):
     """Return False on an intentional checkpoint stop, True after atomic publication.
 
     Source must be immutable while importing. Identity uses stat plus edge hashes;
@@ -225,12 +228,14 @@ def build(source, output, *, dump_date, config=None, resume=False, batch=1000,
     validate_config(config)
     if batch < 1 or max_bytes < 65536 or max_errors < 0 or max_line_bytes < 128:
         raise ValueError("Invalid resource/error limits")
+    if not 1<=bzip2_threads<=16:raise ValueError('Require 1..16 bzip2 threads')
     source, output = Path(source), Path(output)
     if output.exists():
         raise FileExistsError(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(str(output) + ".building")
-    signature = json.dumps({"source": source_identity(source), "config": config,
+    identity=source_identity(source)
+    signature = json.dumps({"source": identity, "config": config,
                             "dump_date": dump_date, "max_bytes": max_bytes,
                             "max_line_bytes": max_line_bytes}, sort_keys=True)
     runtime_config = {key: set(value) if key in ("entities", "classes", "exclude_classes", "properties")
@@ -260,17 +265,20 @@ def build(source, output, *, dump_date, config=None, resume=False, batch=1000,
                 raise ValueError("Resume source/configuration differs from checkpoint")
             state = json.loads(meta["state"])
         processed = 0
+        active_stream=None
 
         def checkpoint():
             db.execute("UPDATE metadata SET value=? WHERE key='state'", (json.dumps(state),))
             db.commit()
+            if active_stream is not None and hasattr(active_stream,'checkpoint'):active_stream.checkpoint()
             if progress:
                 progress(dict(state, database_bytes=staging.stat().st_size))
 
         for phase in ("entities", "labels"):
             if state["phase"] != phase:
                 continue
-            with open_dump(source) as stream:
+            with open_dump(source,bzip2_threads=bzip2_threads,index_path=Path(str(output)+'.bz2-index.json'),identity=identity) as stream:
+                active_stream=stream
                 for start, end, obj, error in records(stream, state["offset"], max_line_bytes):
                     if not db.in_transaction:
                         db.execute("BEGIN")
@@ -309,6 +317,7 @@ def build(source, output, *, dump_date, config=None, resume=False, batch=1000,
                     if stop_after is not None and processed >= stop_after:
                         checkpoint()
                         return False
+            active_stream=None
             state["phase"] = "labels" if phase == "entities" else "finalize"
             state["offset"] = 0
             checkpoint()

@@ -39,6 +39,20 @@ public class KnowledgeSearchTest {
         String text=decode(texts[texts.length-1]);
         return new JSONObject(text.substring(text.indexOf('>')+1,text.indexOf("</tool_result>")));
     }
+    @Test public void globalFusionDoesNotStarveLaterCommunitiesAndKeepsCompositeIds() throws Exception {
+        List<JSONObject> candidates=new java.util.ArrayList<>();
+        for(String id:new String[]{"a-electronics","b-math","c-physics","stackoverflow","superuser"}) {
+            double cosine=id.equals("stackoverflow")?.95:.1;
+            candidates.add(new JSONObject().put("package_id",id).put("chunk_id",42).put("_lexical_rank",1).put("_semantic_score",cosine));
+        }
+        JSONArray result=KnowledgeSearch.fusePackages(candidates);
+        assertEquals(3,result.length());assertEquals("stackoverflow",result.getJSONObject(0).getString("package_id"));
+        assertFalse(result.getJSONObject(0).has("_semantic_score"));
+        java.util.Collections.reverse(candidates);
+        assertEquals(result.toString(),KnowledgeSearch.fusePackages(candidates).toString());
+        assertNotEquals(result.getJSONObject(0).getString("package_id"),result.getJSONObject(1).getString("package_id"));
+        assertEquals(42,result.getJSONObject(1).getLong("chunk_id"));
+    }
     @Test public void realPythonExportHasLexicalAndHybridHitsWithSources() throws Exception {
         for(File vector:new File[]{null,vectors}) {
             JSONArray hits=new KnowledgeSearch(database,vector).search("Photosynthese",()->false).getJSONArray("hits");

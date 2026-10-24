@@ -8,6 +8,7 @@ from contextlib import closing
 import json
 import platform
 import sqlite3
+import stat
 import subprocess
 import sys
 import time
@@ -37,6 +38,19 @@ def synthetic(path, count):
         stream.write(b'</mediawiki>')
 
 
+def _disk_bytes(database):
+    total = 0
+    for path in database.parent.glob(database.name + "*"):
+        try:
+            info = path.stat()
+        except FileNotFoundError:
+            # SQLite can unlink a journal between directory enumeration and stat.
+            continue
+        if stat.S_ISREG(info.st_mode):
+            total += info.st_size
+    return total
+
+
 def measure(source, database, workers, fts4=True, sample_seconds=.02):
     import psutil
     source, database = Path(source), Path(database)
@@ -49,24 +63,42 @@ def measure(source, database, workers, fts4=True, sample_seconds=.02):
     stdout_path, stderr_path = Path(str(database) + ".stats.json"), Path(str(database) + ".stderr")
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
         process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
-        parent = psutil.Process(process.pid)
-        while process.poll() is None:
-            total = 0
-            try:
-                parent_rss = parent.memory_info().rss
-                peak_parent = max(peak_parent, parent_rss)
-                total = parent_rss
-                for child in parent.children(recursive=True):
-                    try:
-                        total += child.memory_info().rss
-                    except psutil.Error:
-                        pass
-            except psutil.Error:
-                pass
-            peak_tree = max(peak_tree, total)
-            peak_disk = max(peak_disk, sum(p.stat().st_size for p in database.parent.glob(database.name + "*") if p.is_file()))
-            samples += 1
-            time.sleep(sample_seconds)
+        try:
+            parent = psutil.Process(process.pid)
+            while process.poll() is None:
+                total = 0
+                try:
+                    parent_rss = parent.memory_info().rss
+                    peak_parent = max(peak_parent, parent_rss)
+                    total = parent_rss
+                    for child in parent.children(recursive=True):
+                        try:
+                            total += child.memory_info().rss
+                        except psutil.Error:
+                            pass
+                except psutil.Error:
+                    pass
+                peak_tree = max(peak_tree, total)
+                peak_disk = max(peak_disk, _disk_bytes(database))
+                samples += 1
+                time.sleep(sample_seconds)
+        finally:
+            children = []
+            if process.poll() is None:
+                try:
+                    children = psutil.Process(process.pid).children(recursive=True)
+                    for child in children:
+                        try:
+                            child.kill()
+                        except psutil.Error:
+                            pass
+                except psutil.Error:
+                    pass
+                process.terminate()
+            process.wait()
+            # On Windows a venv launcher can exit before its killed Python child
+            # releases inherited stdout/stderr handles.
+            psutil.wait_procs(children, timeout=10)
         if process.returncode:
             raise RuntimeError("ingest failed: " + stderr_path.read_text(encoding="utf-8")[-2000:])
     elapsed = time.perf_counter() - started

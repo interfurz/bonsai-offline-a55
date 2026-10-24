@@ -53,6 +53,21 @@ int main(int argc,char ** argv) {
             require(matches(tools,call),std::string("Rejected Wikidata tool: ")+call);
             require(!matches(final,call),"Final round must reject Wikidata");
         }
+        for(const auto & call:{
+                R"(<tool>{"name":"woerterbuch","args":{"word":"Bäume","language":"Deutsch"}}</tool>)",
+                R"(<tool>{"name":"woerterbuch","args":{"word":"Konvergenz"}}</tool>)",
+                R"(<tool>{"name":"tabellen","args":{"op":"food","name":"Haferflocken"}}</tool>)",
+                R"(<tool>{"name":"tabellen","args":{"op":"constant","name":"Lichtgeschwindigkeit"}}</tool>)",
+                R"(<tool>{"name":"tabellen","args":{"op":"convert","value":"3","from":"Lichtjahre","to":"m"}}</tool>)",
+                R"(<tool>{"name":"suche","args":{"query":"Python Fehler","corpus":"stackexchange"}}</tool>)"}) {
+            require(matches(tools,call),std::string("Rejected knowledge tool: ")+call);
+            require(!matches(final,call),"Final round must reject knowledge tools");
+        }
+        for(const auto & invalid:{
+                R"(<tool>{"name":"tabellen","args":{"op":"sql","name":"DROP TABLE food"}}</tool>)",
+                R"(<tool>{"name":"suche","args":{"query":"x","corpus":"openstreetmap"}}</tool>)",
+                R"(<tool>{"name":"woerterbuch","args":{"word":12}}</tool>)"})
+            require(!matches(tools,invalid),"Accepted invalid structured knowledge tool");
         for(const auto & invalid:{
                 R"(<tool>{"name":"wikidata","args":{"op":"sql","entity":"DROP TABLE entity"}}</tool>)",
                 R"(<tool>{"name":"wikidata","args":{"op":"facts","entity":"Japan"}}</tool>)",

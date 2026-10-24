@@ -1,4 +1,5 @@
 from contextlib import closing
+from functools import partial
 import gc
 import json
 from pathlib import Path
@@ -15,6 +16,8 @@ from rag.evaluate_ivf import evaluate, make_questions, markdown, write_report
 from rag.benchmark_ivf import synthetic, measure, write_queries
 
 DATA = Path(__file__).resolve().parents[1] / 'data'
+# Tiny fixtures need their actual bytes, not a production disk reservation.
+build_index = partial(build_index, reserve_bytes=0)
 
 
 class IvfTests(unittest.TestCase):
@@ -112,7 +115,7 @@ class IvfTests(unittest.TestCase):
             index.search(np.full(DIM, np.nan))
 
     def test_hundred_question_quality_report_is_computed(self):
-        questions = json.loads((DATA / 'ivf_questions.json').read_text())
+        questions = json.loads((DATA / 'ivf_questions.json').read_text(encoding='utf-8'))
         self.assertEqual(100, len(questions))
         self.assertEqual(questions, make_questions(DATA / 'articles.jsonl'))
         report = evaluate(self.db, self.reference, self.index, questions)
@@ -122,7 +125,7 @@ class IvfTests(unittest.TestCase):
         self.assertIn('nprobe=32', markdown(report))
         output = self.directory / 'quality.json'
         write_report(output, report)
-        self.assertEqual(report, json.loads(output.read_text()))
+        self.assertEqual(report, json.loads(output.read_text(encoding='utf-8')))
 
     def test_benchmark_measures_small_synthetic_without_downloads(self):
         path = self.directory / 'synthetic.ivf'

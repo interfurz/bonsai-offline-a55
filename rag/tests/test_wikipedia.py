@@ -47,13 +47,14 @@ class WikipediaTests(unittest.TestCase):
                           ("Gestaltung", "Schnitt"), ("Pflege",),
                           ("Pflege", "Wasser und Licht"), ("Gesundheit",)], [s.path for s in parsed])
         text = "\n".join(s.text for s in parsed)
-        for unwanted in ("Tabellenrauschen", "Galerierauschen", "Navigationsrauschen",
+        for unwanted in ("Galerierauschen", "Navigationsrauschen",
                          "Bibliographierauschen", "Kommentar", "Versteckter Beleg", "Kategorie:", "{{"):
             self.assertNotIn(unwanted, text)
         for wanted in ("**Bonsai**", "*heller*", "**sauberes**", "盆栽", "$E = m c^2$", "`H2O`",
                        "- Morgens", "  - Bei Hitze", "1. Erst", "[Pflegehinweise](https://example.org/pflege)"):
             self.assertIn(wanted, text)
         self.assertIn("== Kein Abschnitt ==", text)
+        self.assertIn("Tabellenrauschen", text)  # Content tables are knowledge, not navigation.
         self.assertEqual("kursiv", clean("{{lang|de|kursiv}}"))
         self.assertEqual("", clean("[[Datei:X.png]] [[:Kategorie:Test]] <references/>"))
 

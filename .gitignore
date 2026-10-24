@@ -15,3 +15,16 @@ __pycache__/
 .env
 .env.*
 /work/
+/data/
+*.bonsai
+*.sqlite.building
+*.sqlite-wal
+*.sqlite-shm
+*.ivf
+*.f32
+*.i8
+*.xml.bz2
+*.jsonl.gz
+*.7z
+*.safetensors
+hs_err_pid*.log

@@ -546,6 +546,7 @@ public final class MainActivity extends Activity {
         drawerAura=light(LightArea.DRAWER,PulsingBorder.Mode.BORDER,24,.55f);drawerAura.addView(fresh,new FrameLayout.LayoutParams(-1,-2));
         panel.addView(drawerAura);
         TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));addSpaced(menu,model,24);
+        TextView knowledge=menuItem("Offline-Wissenspakete");knowledge.setOnClickListener(v->closeDrawer(()->startActivity(new Intent(this,KnowledgePackagesActivity.class))));addSpaced(menu,knowledge,8);
         TextView performance=menuItem("Leistung");decorateAction(performance,"performance");performance.setOnClickListener(v->closeDrawer(()->navigate(2)));menu.addView(performance);
         TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); menu.addView(label);
         LinearLayout entries=column();menu.addView(entries);
