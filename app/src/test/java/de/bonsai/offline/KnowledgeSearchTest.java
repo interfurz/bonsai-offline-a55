@@ -87,6 +87,18 @@ public class KnowledgeSearchTest {
         assertEquals(0,lexical.search("\" OR * ()",()->false).getJSONArray("hits").length());
         assertEquals(0,search().search("!!!",()->false).getJSONArray("hits").length());
     }
+    @Test public void unicodeQueriesKeepPythonFixtureEncodingAndLexicalHits() throws Exception {
+        // Expected vector from rag.embeddings.HashEncoder, including non-Latin letters and digits.
+        float[] expected=new float[256];
+        expected[106]=1;expected[200]=1;expected[207]=1;expected[254]=-1;
+        assertArrayEquals(expected,new KnowledgeSearch.SampleEncoder().encode("Überblick Quantenphysik 量子物理 ١٢٣"),0f);
+        KnowledgeSearch lexical=new KnowledgeSearch(database,null);
+        for(int attempt=0;attempt<2;attempt++) {
+            JSONArray hits=lexical.search("München",()->false).getJSONArray("hits");
+            assertEquals("München",hits.getJSONObject(0).getString("title"));
+            assertEquals(0,lexical.search("Quantenphysik",()->false).getJSONArray("hits").length());
+        }
+    }
     @Test public void missingDatabaseIsNotCreated() throws Exception {
         File missing=new File(directory,"absent.sqlite");
         try{new KnowledgeSearch(missing,vectors).search("Berlin",()->false);fail();}

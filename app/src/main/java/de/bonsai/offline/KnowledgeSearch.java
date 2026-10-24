@@ -31,7 +31,8 @@ import org.json.JSONObject;
 final class KnowledgeSearch {
     static final int MAX_HITS=3, MAX_TEXT=600, MAX_HEADING=160, MAX_SOURCE=240, MAX_QUERY=256;
     static final int DIM=256, CANDIDATES=20, MAX_ORIGINAL_BYTES=32768;
-    private static final Pattern WORD=Pattern.compile("[\\p{L}\\p{N}]+",Pattern.UNICODE_CHARACTER_CLASS);
+    // Android rejects UNICODE_CHARACTER_CLASS; explicit Unicode categories need no flag.
+    private static final Pattern WORD=Pattern.compile("[\\p{L}\\p{N}]+");
     interface QueryEncoder {
         String model();
         float[] encode(String query) throws Exception;
