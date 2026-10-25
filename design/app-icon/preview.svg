@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="344" viewBox="0 0 960 344">
+<defs>
+<symbol id="art" viewBox="209 209 836 836">
+<defs>
+<linearGradient id="trunk" gradientUnits="userSpaceOnUse" x1="470" y1="460" x2="780" y2="930">
+<stop offset="0" stop-color="#E0D0FF"/>
+<stop offset="0.6" stop-color="#C4ADFF"/>
+<stop offset="1" stop-color="#9160E8"/>
+</linearGradient>
+<linearGradient id="crown" gradientUnits="userSpaceOnUse" x1="510" y1="220" x2="650" y2="680">
+<stop offset="0" stop-color="#D8C4FF"/>
+<stop offset="0.48" stop-color="#AD83F0"/>
+<stop offset="1" stop-color="#7545D6"/>
+</linearGradient>
+<linearGradient id="bowl" gradientUnits="userSpaceOnUse" x1="360" y1="1020" x2="880" y2="890">
+<stop offset="0" stop-color="#7545D6"/>
+<stop offset="0.55" stop-color="#A47AED"/>
+<stop offset="1" stop-color="#E0D0FF"/>
+</linearGradient>
+</defs>
+<path fill="#161618" d="M0 0H1254V1254H0Z"/>
+<g transform="translate(627 627) scale(0.86) translate(-627 -627)">
+<path fill="url(#trunk)" d="M638,458 C706,505 723,550 691,602 C668,640 623,675 599,704 C577,690 557,687 532,680 C501,672 486,660 481,637 L435,640 C442,681 459,701 505,714 C558,730 585,757 601,800 C627,858 597,883 552,889 L785,889 C778,856 751,831 729,807 C735,779 759,759 798,747 C845,733 868,715 880,676 L842,673 C832,700 809,708 774,716 C736,725 709,743 691,766 C663,733 681,702 711,663 C745,617 759,579 739,532 C727,502 711,481 696,467 Z"/>
+<path fill="url(#crown)" d="M429,389 C431,350 459,330 499,311 C540,292 559,263 593,245 C655,211 727,215 775,242 C818,266 832,297 860,319 C891,344 927,359 942,393 C962,438 934,472 891,486 C833,507 777,490 724,476 C669,461 640,459 585,460 C506,461 425,451 429,389 Z"/>
+<path fill="url(#crown)" d="M212,593 C211,558 244,540 276,519 C316,491 342,472 384,465 C446,456 496,468 529,496 C556,520 566,527 594,542 C627,561 638,588 625,610 C611,639 569,643 523,642 C478,641 449,640 412,650 C358,666 314,672 266,660 C231,652 213,625 212,593 Z"/>
+<path fill="url(#crown)" d="M767,628 C773,600 803,590 827,572 C865,538 902,530 940,539 C970,546 988,565 1011,583 C1043,608 1055,635 1030,660 C1001,690 958,692 922,684 C884,676 864,676 833,678 C792,680 759,662 767,628 Z"/>
+<path fill="url(#bowl)" d="M358,887 H895 C912,887 921,899 915,915 C885,986 818,1032 746,1032 H506 C432,1032 368,987 339,916 C333,901 340,887 358,887 Z"/>
+</g>
+</symbol>
+<symbol id="mono" viewBox="209 209 836 836">
+<defs>
+<linearGradient id="trunk" gradientUnits="userSpaceOnUse" x1="470" y1="460" x2="780" y2="930">
+<stop offset="0" stop-color="#E0D0FF"/>
+<stop offset="0.6" stop-color="#C4ADFF"/>
+<stop offset="1" stop-color="#9160E8"/>
+</linearGradient>
+<linearGradient id="crown" gradientUnits="userSpaceOnUse" x1="510" y1="220" x2="650" y2="680">
+<stop offset="0" stop-color="#D8C4FF"/>
+<stop offset="0.48" stop-color="#AD83F0"/>
+<stop offset="1" stop-color="#7545D6"/>
+</linearGradient>
+<linearGradient id="bowl" gradientUnits="userSpaceOnUse" x1="360" y1="1020" x2="880" y2="890">
+<stop offset="0" stop-color="#7545D6"/>
+<stop offset="0.55" stop-color="#A47AED"/>
+<stop offset="1" stop-color="#E0D0FF"/>
+</linearGradient>
+</defs>
+<path fill="#E9DEFF" d="M0 0H1254V1254H0Z"/>
+<g transform="translate(627 627) scale(0.86) translate(-627 -627)">
+<path fill="#4F3583" d="M638,458 C706,505 723,550 691,602 C668,640 623,675 599,704 C577,690 557,687 532,680 C501,672 486,660 481,637 L435,640 C442,681 459,701 505,714 C558,730 585,757 601,800 C627,858 597,883 552,889 L785,889 C778,856 751,831 729,807 C735,779 759,759 798,747 C845,733 868,715 880,676 L842,673 C832,700 809,708 774,716 C736,725 709,743 691,766 C663,733 681,702 711,663 C745,617 759,579 739,532 C727,502 711,481 696,467 Z"/>
+<path fill="#4F3583" d="M429,389 C431,350 459,330 499,311 C540,292 559,263 593,245 C655,211 727,215 775,242 C818,266 832,297 860,319 C891,344 927,359 942,393 C962,438 934,472 891,486 C833,507 777,490 724,476 C669,461 640,459 585,460 C506,461 425,451 429,389 Z"/>
+<path fill="#4F3583" d="M212,593 C211,558 244,540 276,519 C316,491 342,472 384,465 C446,456 496,468 529,496 C556,520 566,527 594,542 C627,561 638,588 625,610 C611,639 569,643 523,642 C478,641 449,640 412,650 C358,666 314,672 266,660 C231,652 213,625 212,593 Z"/>
+<path fill="#4F3583" d="M767,628 C773,600 803,590 827,572 C865,538 902,530 940,539 C970,546 988,565 1011,583 C1043,608 1055,635 1030,660 C1001,690 958,692 922,684 C884,676 864,676 833,678 C792,680 759,662 767,628 Z"/>
+<path fill="#4F3583" d="M358,887 H895 C912,887 921,899 915,915 C885,986 818,1032 746,1032 H506 C432,1032 368,987 339,916 C333,901 340,887 358,887 Z"/>
+</g>
+</symbol>
+<clipPath id="circle"><circle cx="140" cy="164" r="86"/></clipPath>
+<clipPath id="rounded"><rect x="292" y="78" width="172" height="172" rx="43"/></clipPath>
+<clipPath id="themed"><circle cx="616" cy="164" r="86"/></clipPath>
+<clipPath id="small"><rect x="830" y="140" width="48" height="48" rx="12"/></clipPath>
+</defs>
+<path fill="#FAFAFA" d="M0 0H960V344H0Z"/>
+<text x="54" y="40" font-family="sans-serif" font-size="22" font-weight="600" fill="#1B1B20">Bonsai · App-Icon</text>
+<use href="#art" x="54" y="78" width="172" height="172" clip-path="url(#circle)"/>
+<use href="#art" x="292" y="78" width="172" height="172" clip-path="url(#rounded)"/>
+<use href="#mono" x="530" y="78" width="172" height="172" clip-path="url(#themed)"/>
+<use href="#art" x="830" y="140" width="48" height="48" clip-path="url(#small)"/>
+<g font-family="sans-serif" font-size="16" fill="#62626E" text-anchor="middle">
+<text x="140" y="292">Rund</text><text x="378" y="292">Abgerundet</text>
+<text x="616" y="292">Android-Designfarbe</text><text x="854" y="292">48 px</text>
+</g></svg>

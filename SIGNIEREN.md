@@ -1,10 +1,14 @@
 # Bonsai-Release signieren
 
-Hotfix **0.5.2.1**, Versionscode **18**, verwendet denselben bereitgestellten
-Release-Schlüssel und das Paket `de.bonsai.offline.debug` wie 0.5.2.
-Die APKs werden lokal signiert; Keystore und Passwort bleiben außerhalb von
-Git, CI und Release-Assets. Die Nachweise liegen bei den
-[Release-Downloads](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.2.1).
+Release **0.5.3**, Versionscode **19**, verwendet den bereitgestellten
+Release-Schlüssel (Alias `bonsai-release`) und das Paket
+`de.bonsai.offline.debug` wie 0.5.2.1. CPU- und CPU/Vulkan-APKs werden lokal
+signiert; Keystore und Passwort bleiben außerhalb von Git, CI und Release-Assets.
+Zertifikat SHA256: `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d`.
+Die Veröffentlichungsnachweise liegen bei den
+[Release-Downloads](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.3).
+Ein höherer Versionscode bei gleichem Paket und Zertifikat ermöglicht ein
+Update über 0.5.2.1; ein physischer A55-Updateversuch steht weiterhin aus.
 
 Release **0.5.1.1** wird auf ausdrücklichen Wunsch mit dem hochgeladenen
 `bonsai-release.keystore` signiert (Alias `bonsai-release`, PKCS12).
@@ -18,9 +22,11 @@ Release**; der Paket-Suffix `.debug` ändert dieses Buildflag nicht.
 | 0.4.3 / 0.4.4 / 0.5 / 0.5.1 / 0.5.1.1, Release-Schlüssel | `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d` |
 | 0.4.0 / 0.4.1, historischer Schlüssel | `933bc216a40682ce964cb0a2db03fb7ab511ae1916a7ea3bd0d0328c153bc462` |
 
-**Mit demselben Release-Schlüssel ist 0.5.1.1 signaturkompatibel mit 0.5.1, 0.5 und 0.4.3/0.4.4:** Paket und Signatur bleiben
+**0.5.1.1 ist signaturkompatibel mit 0.5.1, 0.5 und 0.4.3/0.4.4:** Paket und Signatur bleiben
 gleich; Versionscode 15 ist höher als deren Versionscodes. Die veröffentlichte
-0.4.4-APK wurde erneut heruntergeladen und mit `apksigner` geprüft.
+0.5.1-APK wurde erneut heruntergeladen und mit `apksigner` geprüft.
+[Konkreter Updatevergleich](release/0.5.1.1/update-compatibility.json) und
+[Signaturprotokoll](release/0.5.1.1/signature-verification.txt) dokumentieren die neue APK.
 Ein konkreter Installations-/Updateversuch auf dem A55 wurde nicht durchgeführt.
 
 **Kein direktes Update von 0.4.5/0.3.0 auf diese 0.5.1.1-APK.** Android
