@@ -77,6 +77,7 @@ public final class BonsaiApp extends Application {
     @Override public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        migratePrefillSettings(prefs);
         if(!prefs.contains("cpuCompatibility")) {
             prefs.edit().putBoolean("cpuCompatibility",false).remove("optimizedFor").apply();
         }
@@ -102,13 +103,19 @@ public final class BonsaiApp extends Application {
     int context() { return prefs.getInt("context", 4096); }
     int threads() { return prefs.getInt("threads", 4); }
     int batchThreads() { return prefs.getInt("batchThreads",threads()); }
-    int microBatch() { return prefs.getInt("microBatch",gpu()?1:32); }
+    static void migratePrefillSettings(SharedPreferences prefs) {
+        if(prefs.getBoolean("cpuPrefill512",false))return;
+        SharedPreferences.Editor editor=prefs.edit().putBoolean("cpuPrefill512",true).remove("optimizedFor");
+        if(!prefs.getBoolean("gpu",false) && !prefs.getBoolean("cpuCompatibility",false))editor.putInt("microBatch",512);
+        editor.apply();
+    }
+    int microBatch() { return prefs.getInt("microBatch",gpu()?1:512); }
     String profileIdentity() { return profileIdentity(gpu(),threads(),batchThreads(),microBatch()); }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch) {
         return profileIdentity(gpu,threads,batchThreads,microBatch,prefs.getBoolean("flashAttention",false),prefs.getBoolean("kvQ8",false));
     }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch,boolean flash,boolean q8) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":repack-v1";
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {
@@ -517,7 +524,7 @@ public final class BonsaiApp extends Application {
                     .put("model_metadata",readReport("model-metadata.json"))
                     .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("context_tokens",selectedContext).put("threads",selectedThreads).put("max_output_tokens",128)
-                    .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention_requested",prefs.getBoolean("flashAttention",false)).put("kv_q8_requested",prefs.getBoolean("kvQ8",false))
+                    .put("batch_tokens",512).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention_requested",prefs.getBoolean("flashAttention",false)).put("kv_q8_requested",prefs.getBoolean("kvQ8",false))
                     .put("thinking",false).put("seed",42).put("prompt",prompt).put("runs",runs)
                     .put("thermal_before",thermalStatus()).put("battery_celsius_before",batteryTemperature())
                     .put("rss_baseline_kb",baseline).put("rss_sample_interval_ms",250)

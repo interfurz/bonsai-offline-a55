@@ -585,7 +585,8 @@ public class AppExperienceTest {
         assertTrue("A saved winner must be recognized after applying its settings",a.optimized());
         List<KernelOptimizer.Profile> cpu=KernelOptimizer.profiles(new KernelOptimizer.Profile(false,4,4,32),false);
         assertEquals(cpu.size(),cpu.stream().map(KernelOptimizer.Profile::key).distinct().count());
-        assertTrue(cpu.stream().allMatch(p->!p.gpu && p.microBatch<=256 && p.threads<=8));
+        assertTrue(cpu.stream().allMatch(p->!p.gpu && p.microBatch<=512 && p.threads<=8));
+        assertTrue(cpu.stream().anyMatch(p->p.microBatch==512));
     }
     @Test public void divergentAndNonFiniteKernelResultsAreRejected() throws Exception {
         org.json.JSONObject ref=new org.json.JSONObject("{\"signature\":[1,2,3,4],\"top_tokens\":[1,2,3,4]}");

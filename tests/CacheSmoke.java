@@ -15,6 +15,7 @@ public final class CacheSmoke {
         byte[][] r=roles.stream().map(CacheSmoke::bytes).toArray(byte[][]::new),t=texts.stream().map(CacheSmoke::bytes).toArray(byte[][]::new);
         JSONObject stats=new JSONObject(new String(NativeEngine.generate(handle,r,t,32,42,c->output.write(c,0,c.length),grammar==null?null:bytes(grammar),budget),StandardCharsets.UTF_8));
         require(stats.getInt("cleanup_decoded_tokens")==0,"Reply completion replayed tokens: "+stats);
+        require(stats.getInt("micro_batch")==512,"Requested microbatch was clamped: "+stats);
         answer=output.toString(StandardCharsets.UTF_8);
         if(answer.contains("think") || answer.contains("hidden"))throw new AssertionError("Reasoning leaked: "+answer);
         return stats;
@@ -39,7 +40,7 @@ public final class CacheSmoke {
             require(committed.getInt("commit_decoded_tokens")==0,"Commit replayed the answer");
             canonicalTokens=previousCached+committed.getInt("commit_pending_tokens");
             for(String text:texts)require(!text.contains("hidden") && !text.contains("<think>"),"Reasoning retained in history");
-            NativeEngine.configure(handle,turn%2+1,2,32);
+            NativeEngine.configure(handle,turn%2+1,2,512);
             System.out.println("Host turn "+(turn+1)+": reused="+stats.getInt("reused_prompt_tokens")+", decoded="+stats.getInt("decoded_prompt_tokens")+", clean KV="+previousCached);
         }
         // A cold commit renders the same canonical history, but must not decode it.
@@ -73,6 +74,7 @@ public final class CacheSmoke {
         long handle=NativeEngine.create();
         try {
             NativeEngine.load(handle,bytes(args[0]),1024,2,false);
+            NativeEngine.configure(handle,2,2,512);
             for(boolean gbnf : new boolean[]{false,true}) {
                 NativeEngine.clearCache(handle);
                 String system="You are helpful. Local tools: calc, remember, recall."+(gbnf?" Use <final> for answers.":"");
