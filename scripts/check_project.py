@@ -19,9 +19,12 @@ def main():
     permissions = {node.get(android + "name") for node in manifest.findall("uses-permission")}
     assert permissions == {"android.permission." + name for name in (
         "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_SPECIAL_USE", "WAKE_LOCK", "POST_NOTIFICATIONS")}, permissions
-    service = manifest.find("application/service")
+    services = {node.get(android + "name"): node for node in manifest.findall("application/service")}
+    service = services[".InferenceService"]
     assert service.get(android + "foregroundServiceType") == "specialUse"
     assert service.get(android + "exported") == "false"
+    assert services[".SympyService"].get(android + "exported") == "false"
+    assert services[".SympyService"].get(android + "process") == ":sympy"
     for xml in (ROOT / "app/src/main/res").rglob("*.xml"):
         ET.parse(xml)
     assert manifest.find("application").get("{http://schemas.android.com/apk/res/android}allowBackup") == "false"

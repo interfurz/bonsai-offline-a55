@@ -68,7 +68,7 @@ public class ChatStoreTest {
             store.deleteChat(42);
         }
         try(ChatStore store=new ChatStore(context)) {
-            assertEquals(3,store.getReadableDatabase().getVersion());
+            assertEquals(4,store.getReadableDatabase().getVersion());
             assertEquals("Alex 🪴",store.recall(key));
             assertNull(store.recall("name"));
             assertTrue(store.chats(true).isEmpty());

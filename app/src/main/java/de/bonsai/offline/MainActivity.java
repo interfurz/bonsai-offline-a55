@@ -42,6 +42,7 @@ import java.util.Locale;
 public final class MainActivity extends Activity {
     private static final int IMPORT=10, EXPORT=11, EXPORT_OPTIMIZER=12;
     private DesignTokens tokens;
+    private AnswerMarkdown answerMarkdown;
     private int BG, PANEL, TEXT, MUTED, ACCENT, LINE;
     private FrameLayout screenHost;
     private LinearLayout page, chatPage, modelPage, performancePage, statusCard, composerGroup;
@@ -90,6 +91,7 @@ public final class MainActivity extends Activity {
         super.onCreate(saved);
         app=(BonsaiApp)getApplication();
         tokens=new DesignTokens(getResources());
+        answerMarkdown=new AnswerMarkdown(this,tokens);
         BG=tokens.background; PANEL=tokens.surface; TEXT=tokens.text; MUTED=tokens.muted; ACCENT=tokens.primary; LINE=tokens.border;
         if(android.os.Build.VERSION.SDK_INT>=30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(BG);
@@ -465,8 +467,7 @@ public final class MainActivity extends Activity {
             body.setTextIsSelectable(!pending);body.setTextColor(pending?MUTED:TEXT);
         }
         String text=pending?(app.generationLine.isEmpty()?"Antwort wird vorbereitet …":app.generationLine):message.text;
-        if(android.text.TextUtils.equals(body.getText(),text))return false;
-        body.setText(text);return true;
+        return answerMarkdown.setText(body,text,!pending && message.role.equals("assistant"));
     }
 
     private android.graphics.drawable.Drawable answerGlyph(int resource,int size) {
@@ -547,6 +548,7 @@ public final class MainActivity extends Activity {
         panel.addView(drawerAura);
         TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));addSpaced(menu,model,24);
         TextView knowledge=menuItem("Offline-Wissenspakete");knowledge.setOnClickListener(v->closeDrawer(()->startActivity(new Intent(this,KnowledgePackagesActivity.class))));addSpaced(menu,knowledge,8);
+        TextView personal=menuItem("Gedächtnis und Sicherung");personal.setOnClickListener(v->closeDrawer(()->startActivity(new Intent(this,PersonalDataActivity.class))));addSpaced(menu,personal,8);
         TextView performance=menuItem("Leistung");decorateAction(performance,"performance");performance.setOnClickListener(v->closeDrawer(()->navigate(2)));menu.addView(performance);
         TextView label=text(archived?"Archivierte Chats":"Deine Chats",12,MUTED); label.setPadding(dp(12),dp(24),0,dp(12)); menu.addView(label);
         LinearLayout entries=column();menu.addView(entries);

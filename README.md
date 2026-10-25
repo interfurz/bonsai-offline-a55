@@ -17,6 +17,35 @@ Updateidentität: [SIGNIEREN.md](SIGNIEREN.md).
 
 ## Offline-Dateninfrastruktur
 
+Aktueller Abgleich der Roadmap mit dem Quellcode, neuen Funktionen und noch
+fehlenden Abnahmen: [Roadmap-Status](docs/ROADMAP-STATUS.md). TTS und STT sind
+aus dem aktuellen Arbeitsumfang ausgeschlossen; auf Nutzerwunsch werden auch
+Echtwelt-/Gerätetests ausgelassen.
+
+Unter **Menü → Gedächtnis und Sicherung** lassen sich Erinnerungen mit Herkunft
+und Änderungsdatum anzeigen, nach Text durchsuchen, hinzufügen, bearbeiten und
+nach Bestätigung löschen. Bestehende Daten werden auf Schema 4 migriert.
+Die Herkunft unterscheidet manuelle Einträge, das Chat-Tool und ältere Bestände;
+sie ist kein Nachweis eines bestimmten Ursprungschats. Die optionale semantische
+Suche nutzt das importierte EmbeddingGemma-Modell und einen persistenten lokalen
+Index. Änderungen und Löschen invalidieren die zugehörigen Vektoren. Ohne Modell
+bleibt die Textsuche verfügbar. Teilindizes werden ausdrücklich angezeigt.
+
+Dort werden Chats einschließlich Archive und Erinnerungen als lesbare lokale
+JSON-Sicherung exportiert und importiert (bis 16 MiB, 10.000 Chats/Erinnerungen,
+100.000 Nachrichten). Import ergänzt Chats und behält bei gleichen
+Erinnerungsschlüsseln den vorhandenen Wert. Wiederholter Import erzeugt zusätzliche
+Chats. Fehler brechen den gesamten Datenbankimport ab. Modelle, Pakete und
+Einstellungen sind nicht enthalten; Sicherungsdateien sind nicht verschlüsselt.
+
+Unter **Offline-Wissenspakete → Version wählen** können vollständig installierte
+ältere Generationen erneut aktiviert werden. Hashes, Schema, Datenbank und
+gegebenenfalls Index werden vorher erneut geprüft; Abbruch oder Fehler lassen
+die aktive Zuordnung unverändert. Der Ein-/Aus-Schalter bleibt erhalten. Ältere, nicht registrierte Generationen
+können nach Bestätigung entfernt werden. Die aktuelle Generation ist auch bei
+deaktiviertem Paket geschützt. Optionales Titel-/Abschnittsreranking lässt sich
+in derselben Ansicht einschalten; es ist standardmäßig aus.
+
 Version 0.5.2 ergänzt wiederaufnehmbare
 Embedding-Shards, begrenzten IVF-Bau, echte Wikimedia-/Stack-Exchange-Adapter,
 strukturierte Wörterbuch-/Tabellendaten und einen SAF-Paketimport mit atomarer
@@ -28,9 +57,46 @@ läuft weiter; die physische A55-Abnahme ist noch offen.
 
 ## UI-Überarbeitung im aktuellen Quellcode
 
+KI-Antworten unterstützen Markdown: Überschriften, Fett/Kursiv, Durchstreichungen,
+Listen, Zitate, Inline-Code, Codeblöcke, Links und Tabellen. Die Formatierung wird
+auch beim Streaming und beim erneuten Öffnen gespeicherter Chats lokal gerendert.
+Eigene Nachrichten und die vorübergehende Thinking-/Statuszeile bleiben Klartext.
+„Antwort kopieren“ übernimmt den ursprünglichen Markdown-Text. Bilder werden nicht
+aus dem Netz geladen; HTTP-/HTTPS- und E-Mail-Links öffnen sich erst beim Antippen
+in einer passenden externen App. HTML und Syntax-Highlighting werden nicht unterstützt.
+
 Die Oberfläche verwendet ruhige neutrale Flächen, einen nahezu schwarzen Dark Mode und violette Aktionen. Der Chat ist die Hauptansicht, ohne Chat/Work-Umschalter. Modell, Leistung und Verlauf sind über das Menü links oben erreichbar. Eine native Java-Umsetzung des gewünschten Pulsing-Border-Effekts beleuchtet Chatbar, Bildschirmränder, neueste Antwort, Seitenleiste sowie Modell-/Leistungskarten und Hauptaktionen: Blau/Violett im Leerlauf, mehrfarbig beim Generieren und kurz Grün nach erfolgreichem Abschluss. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
 
 Die Lichteffekte bleiben auch während Berechnungen animiert. Ein gemeinsamer, an die Bildsynchronisation gebundener Taktgeber, weniger Zeichenschichten und begrenzte Highlightbereiche senken den Aufwand. Animationen berücksichtigen Systemanimationen, Energiesparmodus und den Activity-Lebenszyklus. „Neu generieren“ speichert eine Antwortvariante als eigenen Chat und erhält den ursprünglichen Verlauf. [Performance-Korrektur und Prüfnachweise](docs/validation/PERFORMANCE-UI.md).
+
+## Lokale Mathematik und Erinnerungssuche
+
+Das Tool `mathe` verwendet ausschließlich **SymPy 1.14.0**, lokal eingebettet
+über Chaquopy 17.1.0 und CPython 3.12. Die frühere Java-Polynomengine ist entfernt.
+Der numerische Rechner `calc` bleibt unabhängig verfügbar. SymPy und mpmath werden
+beim APK-Bau eingebettet; zur Nutzung ist kein Python-/Modell-Download nötig.
+
+Unterstützt werden Vereinfachen, Expandieren, Faktorisieren, rationale und
+trigonometrische Umformungen, Ableitungen, bestimmte/unbestimmte Integrale,
+Gleichungen und Gleichungssysteme, numerische Nullstellen, gewöhnliche
+Differentialgleichungen, Grenzwerte, Reihen, Summen/Produkte, Matrizen und
+Zahlentheorie. Beispiele und vollständiger Argumentvertrag:
+[SymPy-Engine](docs/SYMPY.md).
+
+Die Berechnung läuft in einem privaten separaten Android-Prozess. Abbruch oder
+20 Sekunden Gesamtzeit beenden ihn; der Inferenzprozess bleibt getrennt.
+Mathematische AST-Verarbeitung erlaubt keine Python-Anweisungen, Attribute,
+Imports oder Dateizugriffe. Eine nicht ausgewertete Lösung oder numerische
+Näherung wird ausdrücklich gekennzeichnet. Annahmen, Definitionsbedingungen
+und Integrationskonstanten bleiben Teil der mathematischen Interpretation.
+
+Das Tool `erinnern` mit `args.query` sucht tatsächlich gespeicherte Erinnerungen,
+auch ohne bekannten Schlüssel. Textsuche funktioniert ohne Modell; die optionale
+semantische Suche wird unter **Gedächtnis und Sicherung** aktiviert. Pro Suche
+werden höchstens 8 neue Vektoren für bis zu 200 aktuelle Einträge aufgebaut;
+Warnungen kennzeichnen Teilindizes. Textsuche berücksichtigt alle Einträge.
+Nach diesem Abruf sperrt die Tool-Schleife weitere Speicheränderungen derselben
+Antwort gegen Anweisungen aus Erinnerungstexten.
 
 ## Stand
 
@@ -53,7 +119,7 @@ Implementiert:
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 - Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
-Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Die RAG-/IVF-Suchschnittstelle ist enthalten; Wissensdatenbank und Index werden nicht mit der APK ausgeliefert. Python läuft für die Vorbereitung auf dem Laptop, nicht in der App. SymPy, STT und TTS sind nicht enthalten. Das Gedächtnis ist keine semantische Suche. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
+Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Die RAG-/IVF-Suchschnittstelle ist enthalten; Wissensdatenbank und Index werden nicht mit der APK ausgeliefert. Python dient der Datenvorbereitung auf dem Laptop und läuft für SymPy zusätzlich in einem privaten Android-Prozess. STT und TTS sind nicht enthalten. Die optionale semantische Gedächtnissuche nutzt einen eigenen abgeleiteten Index. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
 
 ## Inkrementeller Kontext und Reasoning
 
@@ -123,7 +189,7 @@ Die PrismML-Runtime ist als Submodul auf den exakten Release-Commit gebunden. Al
 
 ## APK auf dem XMG-Laptop bauen
 
-Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3. Die Downloads erfolgen beim Bauen auf dem Laptop. Der Betrieb der installierten App ist davon unabhängig und offline.
+Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3.12 (für den Chaquopy-Build). Bei abweichendem Python-Pfad: `-PbonsaiBuildPython=/pfad/zu/python3.12`. Die Downloads erfolgen beim Bauen auf dem Laptop. Der Betrieb der installierten App ist davon unabhängig und offline.
 
 1. Dieses Projekt entpacken. Im Projektordner ein Terminal öffnen.
 2. Den passenden Runtime-Quellcode herunterladen:

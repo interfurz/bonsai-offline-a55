@@ -12,6 +12,27 @@ Version 0.5.3 verwendet Versionscode 19 und den bisherigen Release-Schlüssel.
 Die nachfolgende Dateninfrastruktur-Planung bleibt erhalten; eine physische
 A55-, Modell- oder Geräteupdateabnahme wird dadurch nicht ersetzt.
 
+## Fortschreibung 25. Oktober 2026
+
+Der aktuelle Auftrag umfasst die Softwarefunktionen der Roadmap **ohne TTS, STT
+und Echtwelt-/Gerätetests**. Ein vollständiger
+Abgleich steht unter [Roadmap-Status](docs/ROADMAP-STATUS.md). Die historische
+Statusmatrix weiter unten ist kein aktuelles Feature-Inventar.
+
+Neu im Arbeitsstand: Markdown-Ausgabe, Gedächtnisübersicht mit Textsuche,
+Bearbeiten/Löschen und Herkunft/Datum (M5.3-Teilumfang), logische lokale
+Sicherung/Wiederherstellung für Chats/Archive/Gedächtnis (M6.3-Teilumfang) sowie
+erneut geprüfter Wechsel auf installierte Paketgenerationen (M6.2-Teilumfang).
+Ergänzt wurden außerdem eine allgemeine lokale SymPy-Engine (`mathe`), optionale
+semantische Gedächtnissuche (`erinnern`), experimentelles Titel-/Abschnittsreranking
+und bestätigte Bereinigung nicht registrierter alter Paketgenerationen.
+Die frühere Java-Polynomengine wurde auf ausdrücklichen Wunsch entfernt.
+SymPy 1.14.0, mpmath 1.3.0 und die Python-ARM64-Laufzeit werden über Chaquopy
+17.1.0 in die App eingebettet; [Operationen und Prozessgrenzen](docs/SYMPY.md).
+Das ist keine Freigabe der vollständigen Roadmap. Vollbestände, echte Modell-
+und Gerätequalität sowie die bedingten Erweiterungen benötigen weiterhin die
+dort aufgeführten Daten, Messungen und Voraussetzungen.
+
 ## Umsetzungsstand Dateninfrastruktur, 24. Oktober 2026
 
 Basis `main` 29fb2099b0518a4c11033f9f96ce7eb15a728c3c, Featurebranch

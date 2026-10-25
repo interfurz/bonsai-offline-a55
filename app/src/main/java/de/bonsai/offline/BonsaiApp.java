@@ -76,6 +76,8 @@ public final class BonsaiApp extends Application {
 
     @Override public void onCreate() {
         super.onCreate();
+        // The disposable CAS process must never initialize inference or recover chat state.
+        if(Application.getProcessName().endsWith(":sympy"))return;
         prefs = getSharedPreferences("settings", MODE_PRIVATE);
         if(!prefs.contains("cpuCompatibility")) {
             prefs.edit().putBoolean("cpuCompatibility",false).remove("optimizedFor").apply();

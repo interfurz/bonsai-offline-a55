@@ -67,7 +67,7 @@ final class ToolLoop {
             if(incomplete) throw new IllegalStateException("Tool-Aufruf wurde unterbrochen oder hat das Antwortlimit erreicht.");
             if(round==MAX_ROUNDS-1) throw new IllegalStateException("Tool-Limit erreicht. Keine Endantwort erhalten.");
             JSONObject reply=execute(match.group(1),store,cancelled,!untrustedKnowledge);
-            if(java.util.Arrays.asList("suche","wikidata","woerterbuch","tabellen").contains(reply.optString("name")))untrustedKnowledge=true;
+            if(java.util.Arrays.asList("suche","wikidata","woerterbuch","tabellen","erinnern").contains(reply.optString("name")))untrustedKnowledge=true;
             sources.collect(reply);
             facts.collect(reply);
             structured.collect(reply);
@@ -124,6 +124,13 @@ final class ToolLoop {
             JSONObject args=call.getJSONObject("args");
             checkCancelled(cancelled);
             switch(name) {
+                case "mathe":
+                    reply.put("result",SympyMath.run(store.context,args,cancelled));
+                    break;
+                case "erinnern":
+                    if(args.length()!=1)throw new IllegalArgumentException("erinnern erwartet query.");
+                    reply.put("result",MemorySearch.search(store,string(args,"query",256),cancelled));
+                    break;
                 case "woerterbuch": case "tabellen":
                     reply.put("result",StructuredKnowledge.query(store,name,args,cancelled));
                     break;

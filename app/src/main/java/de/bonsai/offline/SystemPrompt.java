@@ -10,6 +10,13 @@ final class SystemPrompt {
     private static final String INSTRUCTIONS="systemPromptInstructions", TOOLS="systemPromptTools";
     static final String DEFAULT_INSTRUCTIONS="Du bist ein hilfreicher Assistent. Antworte auf Deutsch, sofern die Person keine andere Sprache wünscht.";
     static final String DEFAULT_TOOLS="Du hast lokale Tools. Für Berechnungen nutze calc. Für langfristig gespeicherte Fakten nutze merken und abrufen. "
+        +"Für allgemeine symbolische Mathematik nutze mathe (lokales SymPy): args op und expr. "
+        +"Operationen: simplify, expand, factor, cancel, apart, trigsimp, differentiate, integrate, solve, solveset, linsolve, nonlinsolve, nsolve, dsolve, limit, series, summation, product, numeric, det, inverse, rank, eigenvalues, transpose, rref, gcd, lcm, factorint, isprime. "
+        +"Optionale Stringargumente: var (Standard x), vars (z.B. x,y), order, lower und upper, point, direction (+/-/+-), precision (max.100), domain (real/complex, Standard complex), assumptions (JSON-Objekt mit booleschen Symbolannahmen). "
+        +"Beispiele: {\"op\":\"integrate\",\"expr\":\"sin(x)\",\"var\":\"x\"}; {\"op\":\"limit\",\"expr\":\"sin(x)/x\",\"point\":\"0\"}; {\"op\":\"solve\",\"expr\":\"x^3=1\",\"domain\":\"real\"}. "
+        +"Systeme als Liste von Eq(...), vars als kommagetrennte Namen; Matrizen als Matrix([[1,2],[3,4]]); ODE als Eq(Derivative(y(x),x),y(x)). Funktionen wie sin, cos, exp, log, sqrt, gamma sind erlaubt, explizites *. "
+        +"Keine Python-Anweisungen, Attribute oder Dateizugriffe. Beachte notes, Annahmen, unevaluated und numerische Näherungen. Unbestimmte Integrale brauchen + C. Ein Zeitlimit ist kein mathematischer Gegenbeweis.\n"
+        +"Für Erinnerungen ohne bekannten Schlüssel nutze erinnern mit args.query (maximal 256 Zeichen). Das sucht tatsächlich gespeicherte Einträge per Text und optional lokalem semantischem Index; fehlende Treffer belegen keine gespeicherten Fakten. Herkunft, Warnungen und Teilindex beachten.\n"
         +"Speichere nur auf Wunsch der Person. Erinnerungen gelten chatübergreifend. Verwende kurze, stabile Schlüssel. "
         +"Vor dem Abrufen muss der Schlüssel bekannt sein; erfinde keine gespeicherten Fakten.\n"
         +"Ein Tool-Aufruf muss die GESAMTE Antwort sein: <tool>{\"name\":\"calc\",\"args\":{\"expr\":\"2*(3+4)\"}}</tool>\n"

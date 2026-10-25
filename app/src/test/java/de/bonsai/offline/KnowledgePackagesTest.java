@@ -71,6 +71,28 @@ public class KnowledgePackagesTest {
         KnowledgePackages.setEnabled(files,"constants-test",false);assertTrue(KnowledgePackages.active(files,"tables").isEmpty());
         KnowledgePackages.setEnabled(files,"constants-test",true);assertEquals("v2",KnowledgePackages.active(files,"tables").get(0).manifest.getString("version"));
     }
+    @Test public void rollbackRevalidatesFilesAndPreservesEnabledState() throws Exception {
+        install("v1");File first=KnowledgePackages.installed(files).get(0).directory;
+        install("v2");File second=KnowledgePackages.installed(files).get(0).directory;
+        assertEquals(2,KnowledgePackages.generations(files,"constants-test").size());
+        KnowledgePackages.setEnabled(files,"constants-test",false);
+        KnowledgePackages.activateGeneration(files,"constants-test",first.getName(),()->false,s->{});
+        assertEquals(first,KnowledgePackages.installed(files).get(0).directory);assertTrue(KnowledgePackages.active(files,"tables").isEmpty());
+        try(FileOutputStream out=new FileOutputStream(new File(second,"knowledge.sqlite"),true)){out.write(1);}
+        try{KnowledgePackages.activateGeneration(files,"constants-test",second.getName(),()->false,s->{});fail();}catch(IOException expected){}
+        assertEquals(first,KnowledgePackages.installed(files).get(0).directory);
+        try{KnowledgePackages.activateGeneration(files,"constants-test","../escape",()->false,s->{});fail();}catch(IOException expected){}
+        try{KnowledgePackages.activateGeneration(files,"constants-test",first.getName(),()->true,s->{});fail();}catch(CancellationException expected){}
+        assertEquals(first,KnowledgePackages.installed(files).get(0).directory);
+    }
+    @Test public void cleanupNeverDeletesRegisteredGenerationEvenWhenDisabled() throws Exception {
+        install("v1");File first=KnowledgePackages.installed(files).get(0).directory;
+        install("v2");File second=KnowledgePackages.installed(files).get(0).directory;
+        KnowledgePackages.setEnabled(files,"constants-test",false);
+        try{KnowledgePackages.removeGeneration(files,"constants-test",second.getName());fail();}catch(IOException expected){}
+        assertTrue(second.isDirectory());assertTrue(KnowledgePackages.removeGeneration(files,"constants-test",first.getName())>0);assertFalse(first.exists());
+        assertEquals(second,KnowledgePackages.installed(files).get(0).directory);
+    }
     @Test public void validHashesButIncompatibleColumnsCannotReplaceActiveGeneration() throws Exception {
         install("v1");File old=KnowledgePackages.active(files,"tables").get(0).directory;
         try(SQLiteDatabase db=SQLiteDatabase.openDatabase(database.getPath(),null,SQLiteDatabase.OPEN_READWRITE)) {db.execSQL("ALTER TABLE unit RENAME COLUMN scale TO incompatible_scale");}

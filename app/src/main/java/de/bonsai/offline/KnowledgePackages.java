@@ -80,6 +80,58 @@ final class KnowledgePackages {
             JSONObject value=registry(files);value.getJSONObject(id).put("enabled",enabled);writeRegistry(files,value);
         }
     }
+    static List<Installed> generations(File files,String id) throws Exception {
+        synchronized(IMPORT_LOCK) {
+            List<Installed> result=new ArrayList<>();File[] directories=root(files).listFiles();
+            if(directories==null)return result;
+            for(File directory:directories) {
+                if(!directory.getName().matches("[a-f0-9-]{36}") || new File(directory,".importing").exists())continue;
+                if(!directory.getCanonicalFile().getParentFile().equals(root(files).getCanonicalFile()))continue;
+                try(InputStream in=new FileInputStream(new File(directory,"manifest.json"))) {
+                    JSONObject manifest=new JSONObject(readSmall(in,262144));validateManifest(manifest);
+                    if(id.equals(manifest.getString("package_id")))result.add(new Installed(manifest,directory,false));
+                }catch(IOException | JSONException ignored) { /* Damaged generations cannot be selected. */ }
+            }
+            result.sort((a,b)->Long.compare(b.directory.lastModified(),a.directory.lastModified()));
+            return result;
+        }
+    }
+    static void activateGeneration(File files,String id,String generation,BooleanSupplier cancelled,Progress progress) throws Exception {
+        synchronized(IMPORT_LOCK) {
+            Installed target=null;
+            for(Installed item:generations(files,id))if(item.directory.getName().equals(generation))target=item;
+            if(target==null)throw new IOException("Keine vollständige Generation für dieses Paket gefunden.");
+            JSONArray entries=target.manifest.getJSONArray("files");
+            for(int i=0;i<entries.length();i++) {
+                JSONObject entry=entries.getJSONObject(i);File file=new File(target.directory,entry.getString("name"));
+                if(!file.getCanonicalFile().getParentFile().equals(target.directory.getCanonicalFile()) || file.length()!=entry.getLong("bytes"))throw new IOException("Paketdatei fehlt oder wurde verändert.");
+                progress.update("Prüfen: "+entry.getString("name"));MessageDigest digest=MessageDigest.getInstance("SHA-256");
+                try(InputStream input=new FileInputStream(file)){byte[] buffer=new byte[1024*1024];int n;while((n=input.read(buffer))!=-1){check(cancelled);digest.update(buffer,0,n);}}
+                if(!ModelIntegrity.hex(digest.digest()).equals(entry.getString("sha256")))throw new IOException("Paketdatei beschädigt.");
+            }
+            validateDatabase(target.directory,target.manifest,cancelled);check(cancelled);
+            synchronized(REGISTRY_LOCK) {
+                JSONObject value=registry(files);JSONObject previous=value.getJSONObject(id);
+                value.put(id,new JSONObject().put("generation",generation).put("enabled",previous.getBoolean("enabled")));
+                writeRegistry(files,value);
+            }
+        }
+    }
+    static long removeGeneration(File files,String id,String generation) throws Exception {
+        synchronized(IMPORT_LOCK) {synchronized(REGISTRY_LOCK) {
+            Installed target=null;for(Installed item:generations(files,id))if(item.directory.getName().equals(generation))target=item;
+            if(target==null)throw new IOException("Paketgeneration nicht gefunden.");
+            JSONObject records=registry(files);
+            for(Iterator<String> keys=records.keys();keys.hasNext();)if(generation.equals(records.getJSONObject(keys.next()).getString("generation")))throw new IOException("Aktuelle Paketgeneration kann nicht gelöscht werden, auch wenn deaktiviert.");
+            File[] children=target.directory.listFiles();if(children==null)throw new IOException("Generation nicht lesbar.");
+            long bytes=0;for(File child:children){if(!child.isFile() || !child.getCanonicalFile().getParentFile().equals(target.directory.getCanonicalFile()))throw new IOException("Unerwarteter Inhalt der Generation.");bytes+=child.length();}
+            File trash=new File(root(files),"trash-"+generation);
+            java.nio.file.Files.move(target.directory.toPath(),trash.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            for(File child:children)if(!new File(trash,child.getName()).delete())throw new IOException("Alte Generation zur Bereinigung vorgemerkt; Dateien noch verwendet.");
+            if(!trash.delete())throw new IOException("Restverzeichnis wird noch verwendet.");
+            return bytes;
+        }}
+    }
     private static void check(BooleanSupplier cancelled) {
         if(cancelled.getAsBoolean() || Thread.currentThread().isInterrupted())throw new CancellationException("Import abgebrochen; aktives Paket bleibt erhalten.");
     }
@@ -287,7 +339,7 @@ final class KnowledgePackages {
             File[] children=directory.listFiles();if(children==null)return 0;
             for(File candidate:children) {
                 String name=candidate.getName();
-                if(retained.contains(name) || !candidate.isDirectory() || !(name.matches("staging-[a-f0-9-]{36}") || (name.matches("[a-f0-9-]{36}") && new File(candidate,".importing").isFile())))continue;
+                if(retained.contains(name) || !candidate.isDirectory() || !(name.matches("(?:staging|trash)-[a-f0-9-]{36}") || (name.matches("[a-f0-9-]{36}") && new File(candidate,".importing").isFile())))continue;
                 File canonical=candidate.getCanonicalFile();
                 if(!directory.equals(canonical.getParentFile()))throw new IOException("Ungültiger Staging-Pfad.");
                 File[] pending=canonical.listFiles();if(pending==null)throw new IOException("Staging-Verzeichnis nicht lesbar.");
