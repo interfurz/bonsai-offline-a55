@@ -50,6 +50,6 @@ ausgeführt. Die Silhouette liegt einschließlich Antialiasing innerhalb der
 33-dp-Sicherheitszone (gemessener Außenradius: 32,28 dp). Die Vorschau zeigt
 Kreis, abgerundetes Quadrat, Designfarbe und 48-px-Darstellung.
 
-Ein vollständiger APK-Bau war in diesem Checkout durch den fehlenden
-EmbeddingGemma-2-Backport in `vendor/llama.cpp` blockiert. Die Runtime wurde
-für die Iconänderung nicht verändert. Ein physischer Launcher-Test steht aus.
+Der zuvor fehlende EmbeddingGemma-2-Backport wurde für den Release-Bau über
+`python3 scripts/fetch_runtime.py` angewendet und anhand der hinterlegten
+Dateihashes geprüft. Ein physischer Launcher-Test steht aus.
