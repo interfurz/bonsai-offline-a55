@@ -46,7 +46,7 @@ Reproduzierbare Befehle: [DATABASE-PIPELINE.md](docs/DATABASE-PIPELINE.md).
 
 ## Historische Planung und Release-Evidenz
 
-Stand: **22. Oktober 2026**. Zielgerät: Samsung Galaxy A55 5G, Exynos 1480,
+Stand: **23. Oktober 2026**. Zielgerät: Samsung Galaxy A55 5G, Exynos 1480,
 Xclipse 530, ARM64, 8 GB RAM, Android 16 / One UI 8.x.
 
 Diese Datei ist eine Analyse und Arbeitsplanung. Sie implementiert keine Features.
@@ -97,6 +97,19 @@ Updatevergleich mit der tatsächlichen v0.5-APK sowie ZIP-/ELF-Ausrichtung sind
 geprüft. [v0.5.1-Buildnachweis](release/0.5.1/build-info.json) und
 [Releasehinweise](release/0.5.1/RELEASE-NOTES.md) identifizieren das Artefakt.
 Die v0.5-Nachweise oben bleiben historische Belege; physische A55-Abnahme offen.
+
+Release-Nachtrag **v0.5.1.1**, Versionscode **15**: PR #23 ist in `main`
+integriert; Buildquelle ist `29fb2099b0518a4c11033f9f96ce7eb15a728c3c` nach #24.
+Streaming aktualisiert nur Antwort und Fortschritt. Die Lichteffekte bleiben
+animiert, zeichnen weniger Schichten, begrenzen Highlights auf sichtbare
+Bereiche und nutzen einen gemeinsamen, an VSync gebundenen Taktgeber mit getrennten
+Updateabständen für Konturen und Hintergrund. 154 lokale Release-Tests,
+Release-Lint ohne Fehler und signierter ARM64-CPU/Vulkan-Build sind erfolgreich.
+Die neue APK wurde mit der tatsächlich heruntergeladenen v0.5.1-APK auf Paket,
+Signatur und höheren Versionscode verglichen; Geräteupdate und A55-Leistung
+bleiben offen. [Buildnachweis](release/0.5.1.1/build-info.json) und
+[Releasehinweise](release/0.5.1.1/RELEASE-NOTES.md) enthalten den CI-Status sowie
+die konkreten Artefakthashes. Der Host-Rendervergleich ist kein A55-Benchmark.
 
 ## A. Projektziel und Definition of Done
 
