@@ -49,6 +49,7 @@ Implementiert:
 - Import einer lokalen GGUF-Datei über den Android-Dateiauswahldialog. Die App erstellt eine private Kopie; ein abgebrochener Import ersetzt das alte Modell nicht.
 - JNI-Anbindung an den originalen PrismML-Fork mit PQ2_0/PTQ1_0 und Bonsai-2-Transformationen.
 - CPU als Ausgangspunkt, 4 Threads, 4.096 Tokens Kontext, maximal 512 Antworttokens. Thinking deaktiviert.
+- CPU-Prefill verwendet Batch und Microbatch 512. Unterstützte Tensorformate dürfen optimierte Repack-Kernel nutzen; der skalare CPU-Kompatibilitätsmodus bleibt davon ausgenommen. Bestehende normale CPU-Profile werden einmalig auf Microbatch 512 umgestellt. Der Standard-Systemprompt erklärt die lokalen Tools in kompakter Form. Ein Geschwindigkeitsgewinn auf dem A55 muss am Gerät gemessen werden.
 - Modell laden/entladen, Kontext-/Thread-Einstellungen und Anzeige des Prozess-RAM.
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 - Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.

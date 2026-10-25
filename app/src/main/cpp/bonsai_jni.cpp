@@ -298,8 +298,8 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         mp.n_gpu_layers = gpu ? 99 : 0;
         mp.devices = devices;  // Empty list on CPU prevents accidental GPU buffer allocations.
         mp.load_mode = LLAMA_LOAD_MODE_MMAP;
-        // Repacked tensors bypass the dot-product reference wrappers.
-        mp.use_extra_bufts = false;
+        // Scalar reference checks must bypass repacked kernels.
+        mp.use_extra_bufts = !bonsai_reference_cpu.load(std::memory_order_relaxed);
         mp.progress_callback = load_progress;
         mp.progress_callback_user_data = &e;
         Model model(llama_model_load_from_file(bytes(env, path).c_str(), mp), llama_model_free);
@@ -307,8 +307,8 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
             "Modell konnte nicht geladen werden. GGUF-Datei, freien RAM und Runtime-Version pruefen.");
         auto cp = llama_context_default_params();
         cp.n_ctx = context_size;
-        cp.n_batch = 256;
-        cp.n_ubatch = gpu ? 1 : 32;
+        cp.n_batch = 512;
+        cp.n_ubatch = gpu || bonsai_reference_cpu.load(std::memory_order_relaxed) ? 1 : 512;
         cp.n_seq_max = 1;
         cp.n_threads = threads;
         cp.n_threads_batch = threads;
@@ -349,7 +349,7 @@ static void configure_context(JNIEnv * env,jlong handle,jint threads,jint batch_
         auto & e = engine(handle);
         if (!e.model) throw std::runtime_error("Kein Modell geladen.");
         if (threads < 1 || threads > 8 || batch_threads < 1 || batch_threads > 8 ||
-            micro_batch < 1 || micro_batch > 256 || (micro_batch & (micro_batch - 1)))
+            micro_batch < 1 || micro_batch > 512 || (micro_batch & (micro_batch - 1)))
             throw std::runtime_error("Ungueltiges Optimierungsprofil.");
         if (e.stop) throw std::runtime_error("Abgebrochen.");
         if(q8 && !flash)throw std::runtime_error("Q8 KV benoetigt Flash Attention.");
@@ -359,7 +359,7 @@ static void configure_context(JNIEnv * env,jlong handle,jint threads,jint batch_
         }
         auto cp = llama_context_default_params();
         cp.n_ctx = e.context_size;
-        cp.n_batch = 256;
+        cp.n_batch = 512;
         cp.n_ubatch = micro_batch;
         cp.n_seq_max = 1;
         cp.n_threads = threads;

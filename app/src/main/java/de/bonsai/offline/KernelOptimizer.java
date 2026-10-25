@@ -49,17 +49,17 @@ final class KernelOptimizer {
     }
     static List<Profile> profiles(Profile original,boolean gpu) {
         Map<String,Profile> unique=new LinkedHashMap<>();
-        Profile baseline=original.gpu==gpu?original:new Profile(gpu,4,4,gpu?1:32);
+        Profile baseline=original.gpu==gpu?original:new Profile(gpu,4,4,gpu?1:512);
         unique.put(baseline.key(),baseline);
         if(gpu) {
             for(int u:new int[]{1,8,32,128}) { Profile p=new Profile(true,4,4,u); unique.put(p.key(),p); }
         } else {
-            for(int t:new int[]{2,4,6,8}) { Profile p=new Profile(false,t,t,32); unique.put(p.key(),p); }
-            for(int t:new int[]{4,8}) { Profile p=new Profile(false,t,8,128); unique.put(p.key(),p); }
+            for(int t:new int[]{2,4,6,8}) { Profile p=new Profile(false,t,t,512); unique.put(p.key(),p); }
+            for(int t:new int[]{4,8})for(int u:new int[]{128,256}) { Profile p=new Profile(false,t,8,u); unique.put(p.key(),p); }
         }
         if(original.flashAttention) {
             // Only requested experiments enter the existing differential/timing probes.
-            for(int u:new int[]{1,8,32,128}) {
+            for(int u:gpu?new int[]{1,8,32,128}:new int[]{128,256,512}) {
                 Profile p=new Profile(gpu,4,4,u,true,original.kvQ8);unique.put(p.key(),p);
             }
         }

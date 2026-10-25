@@ -25,7 +25,8 @@ keine Chatnachrichten. Er verwendet dieselbe Tool-Schleife wie normale Antworten
    Bedingungen erneut ausführen und als `vulkan.json` exportieren. Möglichst
    mehrere Läufe mit vertauschter Reihenfolge machen. Ladezustand, angeschlossenes
    Ladegerät und Umgebungstemperatur ebenfalls festhalten.
-4. Optional Microbatch 1/8/32/128, Flash Attention und Q8 KV einzeln vergleichen.
+4. CPU verwendet standardmäßig Microbatch 512; optional kleinere Microbatches
+   sowie Flash Attention und Q8 KV einzeln vergleichen.
    Die Optionen werden gespeichert, das Rechenprofil lädt das Modell neu.
    Q8 für K **und** V verlangt Flash Attention. Alle Optionen lassen sich wieder
    ausschalten. Der Kernel Optimizer prüft angeforderte Varianten mit denselben
@@ -88,6 +89,8 @@ Antworttexte; die exportierte Benchmarkdatei enthält Fragen und Antworten.
 
 Es gibt weiterhin einen KV-Cache und eine Sequenz. `n_ctx` wird nicht erhöht.
 Vorwärmen nutzt denselben Cache. Bei Rechenprofilwechsel wird der vorherige Kontext
-vor dem neuen freigegeben. F16 KV, Flash Attention aus und Vulkan-Microbatch 1
-bleiben die Standardwerte; eine Beschleunigung auf dem Galaxy A55 ist damit nicht
-behauptet.
+vor dem neuen freigegeben. Batch 512, CPU-Microbatch 512, F16 KV,
+Flash Attention aus und Vulkan-Microbatch 1 sind die Standardwerte. Im normalen
+Betrieb sind CPU-Repack-Kernel für unterstützte Tensorformate erlaubt; der
+skalare Referenzmodus deaktiviert sie weiterhin. Ein Geschwindigkeitsgewinn auf
+dem Galaxy A55 ist damit nicht gemessen.
