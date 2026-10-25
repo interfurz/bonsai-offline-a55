@@ -1,0 +1,229 @@
+{
+  "recorded_at": "2026-10-25T08:09:19.846396+00:00",
+  "base_main": "2ea46ecfb57f7ee9af374b9469b55a5dad96a381",
+  "build_source_commit": "7a1bdda4b2ef59c00346ebe594b16e1f2cd5af00",
+  "source_branch_count": 33,
+  "all_source_branch_heads_included": true,
+  "preserved_asset_branch": "downloads",
+  "integrated_open_pr": 25,
+  "integration_pr": 29,
+  "branches": [
+    {
+      "branch": "agent-a-perf",
+      "head_sha": "48d79603b61576bfb67142fd92b2f4fef65a2514",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "agent-b-ivf",
+      "head_sha": "f24d1d3230ed66d6717715c49294ddbce5cbe95d",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "agent-b-rag",
+      "head_sha": "ce99e3a6e51fd6123321b184cc44dee8e45fb36a",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "chore/repository-layout",
+      "head_sha": "b2ab5a75499fe78da60b6f0fa699fb9cce4cca97",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/burgundy-plum-ui-redesign",
+      "head_sha": "4a724862a7cc43835c65360d01c0b935232d9c3d",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/chat-long-press-actions",
+      "head_sha": "2638df64263e9079b979f0e9bcb34861ed30fc27",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/compact-answer-icons",
+      "head_sha": "184312d5ab972ce19afb33271c32d87cfd1192be",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/detailreicheres-ui",
+      "head_sha": "8aa476dc9fffa4e10d643bcbe2c92e991b20324c",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/embeddinggemma2-android",
+      "head_sha": "bdddacd16e0557c744226c3c2fa35c3dad36ad31",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/fix-android-knowledge-search",
+      "head_sha": "72bbb6bcf50cc469650514680bcd609f08e22376",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/fix-chat-performance",
+      "head_sha": "ab5120cf25622c17f399abba682f781d16adc699",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/fix-pq-inference",
+      "head_sha": "149e385aa6e30ecc1c4854baadfbf68611e04129",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/java-tools-and-memory",
+      "head_sha": "ccee35ae236f472c381071f3f24120f6d60ab3a4",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/minimal-native-glow-ui",
+      "head_sha": "06ed47377990f3d1fd21f24388c3aad664d555e7",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/offline-database-infrastructure",
+      "head_sha": "13382daf1d3698185c08559c708b684e7dba12b8",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/release-0.5.1.1",
+      "head_sha": "bc55fb17dab282dd4c804cd862a66fe0f654b827",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/release-0.5.1.1-evidence",
+      "head_sha": "647a095f9f17a9500daefb49c9892c3205c1af6a",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/skip-startup-cpu-reference",
+      "head_sha": "8a447e7a8ece5759d36b6353940d97358870cd70",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "codex/wikidata-offline-sqlite",
+      "head_sha": "83d8e2f8ba542be29ceaa40ee2bd7059de5fb4a7",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "design/bonsai-icon-family",
+      "head_sha": "e6629977e4e53e97a1eacb0c3355232cc5a6dec2",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "docs/projektanalyse-roadmap",
+      "head_sha": "cca5c706534daff9097babb03c15066ad3e4ece1",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "downloads",
+      "head_sha": "37f99b5703600efaf5c91ef953490797f965272c",
+      "type": "artifact-store",
+      "ancestor_of_release_build_source": false
+    },
+    {
+      "branch": "feat/editable-system-prompt",
+      "head_sha": "269fdd600c601977a50eeb7fbb526714e1fd39c8",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "feat/wikipedia-streaming-pipeline",
+      "head_sha": "1e835f33dd60db83d51dbc94741f78a22b061cfe",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "fix/background-generation-4b",
+      "head_sha": "1bf01d34a9c86ff334e324fac4ede13824950293",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "fix/draft-and-kernel-validation",
+      "head_sha": "a3123671301d61412b97f47d19116005e54d0753",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "fix/strict-utf8-stream",
+      "head_sha": "170a4d5cba9313c30eec8b1360d9c7337d902e92",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "integration/all-main-0.4.4",
+      "head_sha": "5f64c3299ad76ab3ef898928be6cf7019f72450e",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/0.4.2-chat-actions",
+      "head_sha": "9edffea62a94cadf54993abf5c897f3f68622905",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/main-0.4.3",
+      "head_sha": "01d07765b1f09e16d2bb9c651cab723bf8b38aa4",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/main-v0.5",
+      "head_sha": "299168b60964f1f59d9582a1e4f9c0a854fb2668",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/v0.5-evidence",
+      "head_sha": "436ae59181a5f0ea059464ec4b4a9eefa880a091",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/v0.5.1",
+      "head_sha": "4821229662596bc38a523a7ae588c4702283620a",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    },
+    {
+      "branch": "release/v0.5.1-evidence",
+      "head_sha": "88fb257dc3801742581cc175878441423c4ffa4e",
+      "type": "source",
+      "ancestor_of_release_build_source": true
+    }
+  ],
+  "build_input_tree_entries": [
+    "100644 blob d58e1175b7cf25c7443bb370ce8ad5f21f76772c\t.gitmodules",
+    "040000 tree f48c150bb0a204151c429bcc44bdd7e95ede89ff\tapp",
+    "100644 blob ccfe716be26540803e3d162c8fdbd6921ef45d81\tbuild.gradle",
+    "100644 blob 57e2770b5185f2727240fa82d4019c7732cff0fd\tgradle.properties",
+    "040000 tree f4382d80dc0a8a9b01d7010900029620d65bab66\tgradle",
+    "040000 tree ce0ca3c54702582db8c656b9750acff40e4b866b\truntime",
+    "040000 tree 7d64499249b4b4e04d75c3706636abe66bbb1a28\tscripts",
+    "100644 blob a70c4eb9281127feffc735f75e6a5a6c6c4b57a5\tsettings.gradle",
+    "040000 tree 6705a65287bca26a1c3eee9fe20c008cdd20b542\ttests"
+  ],
+  "main_merge_commit": "8aae2dc60b0b4a33cc6a0221058aadf9f5c1352c",
+  "build_inputs_identical_to_main_merge": true
+}

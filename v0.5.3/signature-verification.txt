@@ -1,0 +1,226 @@
+=== CPU ===
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Independent v2 verification for API 24-27:
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: APK Signature Scheme v2 signer #1: APK Signature Scheme v2 signer: 0 references unknown APK signature scheme ID: 3
+
+Verifying alignment of /workspace/release-artifacts/0.5.3/Bonsai-Offline-0.5.3-arm64-CPU.apk (4)...
+      87 META-INF/com/android/build/gradle/app-metadata.properties (OK - compressed)
+     208 META-INF/version-control-info.textproto (OK - compressed)
+     376 classes.dex (OK)
+  311296 lib/arm64-v8a/libbonsai-jni.so (OK)
+ 7864320 lib/arm64-v8a/libc++_shared.so (OK)
+ 9117924 assets/third_party_notices.txt (OK - compressed)
+ 9219261 AndroidManifest.xml (OK - compressed)
+ 9220716 res/2Q.xml (OK - compressed)
+ 9221191 res/2v.xml (OK - compressed)
+ 9221604 res/3G.xml (OK - compressed)
+ 9222130 res/3T.xml (OK - compressed)
+ 9222548 res/4j.xml (OK - compressed)
+ 9223026 res/5x.xml (OK - compressed)
+ 9223513 res/7_.xml (OK - compressed)
+ 9223924 res/8-.xml (OK - compressed)
+ 9224353 res/8s.xml (OK - compressed)
+ 9224768 res/DN.xml (OK - compressed)
+ 9225179 res/Di.xml (OK - compressed)
+ 9225635 res/E4.xml (OK - compressed)
+ 9225917 res/Ef.xml (OK - compressed)
+ 9226337 res/Fd.xml (OK - compressed)
+ 9226745 res/Fi.xml (OK - compressed)
+ 9227228 res/Hf.xml (OK - compressed)
+ 9227676 res/MH.xml (OK - compressed)
+ 9228135 res/MM.xml (OK - compressed)
+ 9228502 res/No.xml (OK - compressed)
+ 9228909 res/OS.xml (OK - compressed)
+ 9229378 res/Q-.xml (OK - compressed)
+ 9229887 res/Qr.xml (OK - compressed)
+ 9231108 res/Rq.xml (OK - compressed)
+ 9231475 res/Vj.xml (OK - compressed)
+ 9231968 res/Vy.xml (OK - compressed)
+ 9233174 res/X5.xml (OK - compressed)
+ 9233601 res/YK.xml (OK - compressed)
+ 9234023 res/ZJ.xml (OK - compressed)
+ 9234495 res/_t.xml (OK - compressed)
+ 9234988 res/aP.xml (OK - compressed)
+ 9235404 res/aU.xml (OK - compressed)
+ 9235884 res/bY.xml (OK - compressed)
+ 9236300 res/df.xml (OK - compressed)
+ 9236768 res/eY.xml (OK - compressed)
+ 9237190 res/fU.xml (OK - compressed)
+ 9237641 res/gv.xml (OK - compressed)
+ 9238848 res/hb.xml (OK - compressed)
+ 9239352 res/iS.xml (OK - compressed)
+ 9239835 res/jH.xml (OK - compressed)
+ 9240247 res/mJ.xml (OK - compressed)
+ 9240668 res/n1.xml (OK - compressed)
+ 9241118 res/oh.xml (OK - compressed)
+ 9241595 res/q-.xml (OK - compressed)
+ 9242078 res/qr.xml (OK - compressed)
+ 9242591 res/wc.xml (OK - compressed)
+ 9243001 res/xb.xml (OK - compressed)
+ 9243479 res/xk.xml (OK - compressed)
+ 9243944 resources.arsc (OK)
+Verification succesful
+
+package: name='de.bonsai.offline.debug' versionCode='19' versionName='0.5.3' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+minSdkVersion:'28'
+targetSdkVersion:'35'
+uses-permission: name='android.permission.FOREGROUND_SERVICE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'
+uses-permission: name='android.permission.WAKE_LOCK'
+uses-permission: name='android.permission.POST_NOTIFICATIONS'
+application-label:'Bonsai'
+application-icon-160:'res/E4.xml'
+application-icon-65534:'res/E4.xml'
+application: label='Bonsai' icon='res/E4.xml'
+property: name='android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE' value='User initiated offline on-device language model inference, model import and benchmarking; no network transfer' 
+launchable-activity: name='de.bonsai.offline.MainActivity'  label='' icon=''
+feature-group: label=''
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+main
+other-activities
+other-services
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--'
+densities: '160' '65534'
+native-code: 'arm64-v8a'
+
+
+=== CPU-Vulkan ===
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Independent v2 verification for API 24-27:
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: APK Signature Scheme v2 signer #1: APK Signature Scheme v2 signer: 0 references unknown APK signature scheme ID: 3
+
+Verifying alignment of /workspace/release-artifacts/0.5.3/Bonsai-Offline-0.5.3-arm64-CPU-Vulkan.apk (4)...
+      87 META-INF/com/android/build/gradle/app-metadata.properties (OK - compressed)
+     208 META-INF/version-control-info.textproto (OK - compressed)
+     376 classes.dex (OK)
+  311296 lib/arm64-v8a/libbonsai-jni.so (OK)
+66846720 lib/arm64-v8a/libc++_shared.so (OK)
+68100324 assets/third_party_notices.txt (OK - compressed)
+68201661 AndroidManifest.xml (OK - compressed)
+68203116 res/2Q.xml (OK - compressed)
+68203591 res/2v.xml (OK - compressed)
+68204004 res/3G.xml (OK - compressed)
+68204530 res/3T.xml (OK - compressed)
+68204948 res/4j.xml (OK - compressed)
+68205426 res/5x.xml (OK - compressed)
+68205913 res/7_.xml (OK - compressed)
+68206324 res/8-.xml (OK - compressed)
+68206753 res/8s.xml (OK - compressed)
+68207168 res/DN.xml (OK - compressed)
+68207579 res/Di.xml (OK - compressed)
+68208035 res/E4.xml (OK - compressed)
+68208317 res/Ef.xml (OK - compressed)
+68208737 res/Fd.xml (OK - compressed)
+68209145 res/Fi.xml (OK - compressed)
+68209628 res/Hf.xml (OK - compressed)
+68210076 res/MH.xml (OK - compressed)
+68210535 res/MM.xml (OK - compressed)
+68210902 res/No.xml (OK - compressed)
+68211309 res/OS.xml (OK - compressed)
+68211778 res/Q-.xml (OK - compressed)
+68212287 res/Qr.xml (OK - compressed)
+68213508 res/Rq.xml (OK - compressed)
+68213875 res/Vj.xml (OK - compressed)
+68214368 res/Vy.xml (OK - compressed)
+68215574 res/X5.xml (OK - compressed)
+68216001 res/YK.xml (OK - compressed)
+68216423 res/ZJ.xml (OK - compressed)
+68216895 res/_t.xml (OK - compressed)
+68217388 res/aP.xml (OK - compressed)
+68217804 res/aU.xml (OK - compressed)
+68218284 res/bY.xml (OK - compressed)
+68218700 res/df.xml (OK - compressed)
+68219168 res/eY.xml (OK - compressed)
+68219590 res/fU.xml (OK - compressed)
+68220041 res/gv.xml (OK - compressed)
+68221248 res/hb.xml (OK - compressed)
+68221752 res/iS.xml (OK - compressed)
+68222235 res/jH.xml (OK - compressed)
+68222647 res/mJ.xml (OK - compressed)
+68223068 res/n1.xml (OK - compressed)
+68223518 res/oh.xml (OK - compressed)
+68223995 res/q-.xml (OK - compressed)
+68224478 res/qr.xml (OK - compressed)
+68224991 res/wc.xml (OK - compressed)
+68225401 res/xb.xml (OK - compressed)
+68225879 res/xk.xml (OK - compressed)
+68226344 resources.arsc (OK)
+Verification succesful
+
+package: name='de.bonsai.offline.debug' versionCode='19' versionName='0.5.3' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+minSdkVersion:'28'
+targetSdkVersion:'35'
+uses-permission: name='android.permission.FOREGROUND_SERVICE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'
+uses-permission: name='android.permission.WAKE_LOCK'
+uses-permission: name='android.permission.POST_NOTIFICATIONS'
+application-label:'Bonsai'
+application-icon-160:'res/E4.xml'
+application-icon-65534:'res/E4.xml'
+application: label='Bonsai' icon='res/E4.xml'
+property: name='android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE' value='User initiated offline on-device language model inference, model import and benchmarking; no network transfer' 
+launchable-activity: name='de.bonsai.offline.MainActivity'  label='' icon=''
+feature-group: label=''
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+main
+other-activities
+other-services
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--'
+densities: '160' '65534'
+native-code: 'arm64-v8a'
