@@ -62,7 +62,7 @@ public final class InferenceService extends Service {
             new Intent(this, InferenceService.class).setAction(CANCEL),
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new Notification.Builder(this, CHANNEL)
-            .setSmallIcon(de.bonsai.offline.R.drawable.ic_bonsai)
+            .setSmallIcon(de.bonsai.offline.R.drawable.ic_notification_bonsai)
             .setContentTitle("Bonsai verarbeitet lokal")
             .setContentText("Die Verarbeitung läuft im Hintergrund weiter.")
             .setContentIntent(open)
