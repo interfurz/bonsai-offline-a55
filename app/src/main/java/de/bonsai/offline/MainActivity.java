@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private ScrollView scroll;
     private EditText input;
     private TextView subtitle, title, state, liveAnswer, liveDetail;
+    private ReasoningPreview liveReasoning;
     private IconButton send, newChat;
     private TextView performanceStatus, performanceResult, performanceStart, performanceCompare, performanceExport;
     private AlertDialog errorDialog;
@@ -110,13 +111,13 @@ public final class MainActivity extends Activity {
             int width=Math.min(r-l,dp(DesignTokens.CONTENT_WIDTH));
             if(page.getLayoutParams().width!=width){page.getLayoutParams().width=width;page.requestLayout();}
         });
-        LinearLayout header=row(); header.setPadding(dp(16),dp(4),dp(8),dp(4));
+        LinearLayout header=row(); header.setPadding(dp(8),dp(4),dp(8),dp(4));
         IconButton menuButton=icon("menu","Menü öffnen",v -> showDrawer());
-        menuButton.setBackground(interactiveBackground(PANEL,24));header.addView(menuButton);
-        LinearLayout heading=column(); heading.setPadding(dp(8),0,0,0);heading.setGravity(Gravity.CENTER);
-        title=text("Bonsai",DesignTokens.TYPE_SUBTITLE,TEXT); title.setTypeface(null,Typeface.BOLD); title.setAccessibilityHeading(true);
+        menuButton.setBackground(interactiveBackground(Color.TRANSPARENT,24));header.addView(menuButton);
+        LinearLayout heading=column(); heading.setPadding(dp(8),0,dp(8),0);heading.setGravity(Gravity.CENTER_VERTICAL);
+        title=text("Bonsai",DesignTokens.TYPE_BODY,TEXT); title.setTypeface(null,Typeface.BOLD); title.setAccessibilityHeading(true);
         subtitle=text("Lokal & privat",DesignTokens.TYPE_META,MUTED);
-        title.setGravity(Gravity.CENTER);subtitle.setGravity(Gravity.CENTER);heading.addView(title); heading.addView(subtitle); header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        title.setGravity(Gravity.START);subtitle.setGravity(Gravity.START);title.setMaxLines(1);title.setEllipsize(android.text.TextUtils.TruncateAt.END);subtitle.setMaxLines(1);subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);heading.addView(title); heading.addView(subtitle); header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         newChat=icon("edit","Neuen Chat starten",v -> {app.newChat();input.setText("");navigate(0);});newChat.setBackground(interactiveBackground(Color.TRANSPARENT,24));
         headerAura=light(LightArea.MAIN,PulsingBorder.Mode.BORDER,24,.5f);headerAura.addView(newChat);
         header.addView(headerAura);page.addView(header);
@@ -137,20 +138,25 @@ public final class MainActivity extends Activity {
     }
     private void createChatPage() {
         chatPage=column();
-        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setPadding(dp(24),dp(16),dp(24),dp(8));scroll.setVerticalScrollBarEnabled(false);
+        scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);scroll.setPadding(dp(16),dp(12),dp(16),dp(12));scroll.setVerticalScrollBarEnabled(false);
         chat=column();scroll.addView(chat,new ScrollView.LayoutParams(-1,-1));chatPage.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         scroll.getViewTreeObserver().addOnScrollChangedListener(()->{
             View content=scroll.getChildAt(0);autoScroll=content==null||content.getHeight()-scroll.getScrollY()-scroll.getHeight()<dp(100);
         });
-        composerGroup=column();composerGroup.setPadding(dp(7),dp(2),dp(7),0);
-        composerAura=light(LightArea.MAIN,PulsingBorder.Mode.BORDER,30,1f);
-        LinearLayout composer=row();composer.setGravity(Gravity.CENTER_VERTICAL);composer.setPadding(dp(4),dp(4),dp(4),dp(4));
-        composer.addView(icon("plus","Modell und Einstellungen öffnen",v->settings()));
+        composerGroup=column();composerGroup.setPadding(dp(3),dp(2),dp(3),0);
+        composerAura=new LiquidComposer(this,tokens);
+        lights.computeIfAbsent(LightArea.MAIN,k->new java.util.ArrayList<>()).add(composerAura);
+        composerAura.setState(glowState);
+        LinearLayout composer=column();composer.setPadding(dp(8),dp(4),dp(8),dp(4));
+        LinearLayout controls=row();
+        controls.addView(icon("plus","Modell und Einstellungen öffnen",v->settings()));
+        controls.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));
         input=new EditText(this);input.setId(View.generateViewId());input.setContentDescription("Deine Nachricht");input.setTextColor(TEXT);input.setHintTextColor(MUTED);input.setTextSize(DesignTokens.TYPE_BODY);
         input.setHint("Frag Bonsai …");input.setBackgroundColor(Color.TRANSPARENT);
-        input.setPadding(dp(4),dp(12),dp(4),dp(12));input.setMaxLines(4);input.setMinLines(1);
+        input.setPadding(dp(12),dp(12),dp(12),dp(8));input.setMaxLines(4);input.setMinLines(1);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        composer.addView(input,new LinearLayout.LayoutParams(0,-2,1));
+        composer.addView(input,new LinearLayout.LayoutParams(-1,-2));
+        input.setOnFocusChangeListener((v,focused)->((LiquidComposer)composerAura).setEditing(focused));
         send=icon("send","Nachricht senden",v->{
             if(app.busy){app.cancel();return;}
             String draft=input.getText().toString(),value=draft.trim();
@@ -159,7 +165,7 @@ public final class MainActivity extends Activity {
                 v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 if(app.send(value)){pendingPrompt=draft;input.setText("");autoScroll=true;}
             }
-        });composer.addView(send);composerAura.addView(composer,new FrameLayout.LayoutParams(-1,-2));composerGroup.addView(composerAura);
+        });controls.addView(send);composer.addView(controls);composerAura.addView(composer,new FrameLayout.LayoutParams(-1,-2));composerGroup.addView(composerAura);
         inputError=text("",DesignTokens.TYPE_LABEL,tokens.error);inputError.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);composerGroup.addView(inputError);
         input.addTextChangedListener(new TextWatcher(){
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}
@@ -286,7 +292,7 @@ public final class MainActivity extends Activity {
         if(renderedCount!=app.messages.size()||renderedChat!=app.currentChat||phaseChanged||modelChanged){
             boolean switched=renderedChat!=-1&&renderedChat!=app.currentChat;
             renderedCount=app.messages.size();renderedChat=app.currentChat;lastBusy=app.busy;lastLoaded=app.loaded;lastModelPresent=app.modelFile().isFile();
-            clearLights(LightArea.CHAT);answerAura=null;chat.removeAllViews();liveAnswer=null;liveDetail=null;
+            clearLights(LightArea.CHAT);answerAura=null;chat.removeAllViews();liveAnswer=null;liveDetail=null;liveReasoning=null;
             if(app.messages.isEmpty())emptyState();else{chat.setGravity(Gravity.TOP);for(ChatStore.Message m:app.messages)addMessage(m);}
             // Existing streamed text never fades or moves for each token or status update.
             if(switched)UiMotion.enter(chat,0,dp(8));
@@ -305,6 +311,7 @@ public final class MainActivity extends Activity {
         if(liveAnswer==null||app.messages.isEmpty())return false;
         ChatStore.Message message=app.messages.get(app.messages.size()-1);
         boolean changed=setAnswerText(liveAnswer,message);
+        if(liveReasoning!=null)changed=liveReasoning.update(app.reasoningPreview,app.busy&&message.text.isEmpty()&&app.prefillFraction<0&&!app.cancelled)||changed;
         if(liveDetail!=null)setAnswerDetail(liveDetail,message.detail);
         return changed;
     }
@@ -398,8 +405,8 @@ public final class MainActivity extends Activity {
             for(PulsingBorder light:entry.getValue())light.setActive(lightAreaVisible(entry.getKey()));
     }
     private void emptyState(){
-        chat.setGravity(Gravity.BOTTOM);
-        LinearLayout hero=column();hero.setPadding(0,dp(24),0,dp(4));
+        chat.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout hero=column();hero.setPadding(dp(8),dp(24),dp(8),dp(24));
         welcomeAura=null;
         if(!app.loaded){
             TextView greeting=text("Gute Gedanken.\nGanz für dich.",DesignTokens.TYPE_HERO,TEXT);
@@ -426,12 +433,16 @@ public final class MainActivity extends Activity {
         t.setOnClickListener(v->{input.setText(prompt);input.setSelection(input.length());input.requestFocus();((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input,InputMethodManager.SHOW_IMPLICIT);});return t;
     }
     private void addMessage(ChatStore.Message m){
-        boolean user=m.role.equals("user");LinearLayout box=column();box.setPadding(user?dp(16):0,dp(16),user?dp(16):0,dp(16));
+        boolean user=m.role.equals("user");LinearLayout box=column();box.setPadding(user?dp(16):0,dp(12),user?dp(16):0,dp(12));
         if(user)box.setBackground(round(PANEL,DesignTokens.RADIUS_CARD));
         TextView author=text(user?"Du":"Bonsai",DesignTokens.TYPE_LABEL,user?MUTED:ACCENT);author.setTypeface(null,Typeface.BOLD);
         author.setCompoundDrawables(UiArtwork.icon(this,user?"chat":"leaf",user?iconColor(R.color.icon_secondary):ACCENT,dp(user?24:20)),null,null,null);author.setCompoundDrawablePadding(dp(8));box.addView(author);
+        if(!user&&m==app.messages.get(app.messages.size()-1)) {
+            liveReasoning=new ReasoningPreview(this);addSpaced(box,liveReasoning,8);
+            liveReasoning.update(app.reasoningPreview,app.busy&&m.text.isEmpty()&&app.prefillFraction<0&&!app.cancelled);
+        }
         TextView body=text("",DesignTokens.TYPE_BODY,TEXT);setAnswerText(body,m);addSpaced(box,body,8);
-        LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user)bounds.leftMargin=dp(24);
+        LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(user?-2:-1,-2);bounds.topMargin=dp(8);bounds.bottomMargin=dp(8);if(user){bounds.leftMargin=dp(48);bounds.gravity=Gravity.END;}
         if(!user){
             TextView detail=text("",DesignTokens.TYPE_META,MUTED);setAnswerDetail(detail,m.detail);addSpaced(box,detail,8);
             if(!m.text.isEmpty()&&!app.busy){
@@ -459,6 +470,7 @@ public final class MainActivity extends Activity {
 
     private boolean setAnswerText(TextView body,ChatStore.Message message) {
         boolean pending=app.busy && message.role.equals("assistant") && message.text.isEmpty();
+        body.setVisibility(pending&&!app.reasoningPreview.trim().isEmpty()&&app.prefillFraction<0?View.GONE:View.VISIBLE);
         if(!Boolean.valueOf(pending).equals(body.getTag())) {
             body.setTag(pending);
             body.setSingleLine(pending);body.setEllipsize(pending?android.text.TextUtils.TruncateAt.START:null);
@@ -478,7 +490,7 @@ public final class MainActivity extends Activity {
         button.setImageDrawable(glyph);button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         button.setPadding(dp(10),dp(10),dp(10),dp(10));button.setLayoutParams(new LinearLayout.LayoutParams(dp(48),dp(48)));
         button.setBackground(interactiveBackground(Color.TRANSPARENT,DesignTokens.RADIUS_SMALL));
-        button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(listener);return button;
+        button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(listener);UiMotion.bindPress(button);return button;
     }
     private void setAnswerDetail(TextView view,String detail) {
         if(detail.equals(view.getTag()))return;
@@ -534,7 +546,7 @@ public final class MainActivity extends Activity {
         drawer=new FrameLayout(this); drawer.setBackgroundColor(0x99000000); drawer.setOnClickListener(v->closeDrawer());
         FrameLayout drawerSurface=new FrameLayout(this);drawerSurface.setBackgroundColor(PANEL);
         drawerSurface.addView(light(LightArea.DRAWER,PulsingBorder.Mode.AMBIENT,0,.85f),new FrameLayout.LayoutParams(-1,-1));
-        LinearLayout panel=column(); panel.setPadding(dp(20),Math.max(dp(24),page.getPaddingTop()),dp(20),Math.max(dp(16),page.getPaddingBottom())); panel.setOnClickListener(v->{});
+        LinearLayout panel=column(); panel.setPadding(dp(12),Math.max(dp(16),page.getPaddingTop()),dp(12),Math.max(dp(16),page.getPaddingBottom())); panel.setOnClickListener(v->{});
         FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(Math.min(dp(340),(int)(getResources().getDisplayMetrics().widthPixels*.84f)),-1);
         drawerSurface.addView(panel,new FrameLayout.LayoutParams(-1,-1));drawer.addView(drawerSurface,bounds);
         LinearLayout drawerHeader=row();
@@ -544,7 +556,7 @@ public final class MainActivity extends Activity {
         TextView fresh=primary("Neuen Chat starten");fresh.setCompoundDrawables(UiArtwork.icon(this,"edit",iconColor(R.color.icon_on_action),dp(24)),null,null,null);fresh.setCompoundDrawablePadding(dp(12));fresh.setEnabled(!app.busy);
         fresh.setOnClickListener(v->{closeDrawer();app.newChat();input.setText("");navigate(0);});
         drawerAura=light(LightArea.DRAWER,PulsingBorder.Mode.BORDER,24,.55f);drawerAura.addView(fresh,new FrameLayout.LayoutParams(-1,-2));
-        panel.addView(drawerAura);
+        menu.addView(drawerAura,0);
         TextView model=menuItem("Modell");decorateAction(model,"model");model.setOnClickListener(v->closeDrawer(()->navigate(1)));addSpaced(menu,model,24);
         TextView knowledge=menuItem("Offline-Wissenspakete");knowledge.setOnClickListener(v->closeDrawer(()->startActivity(new Intent(this,KnowledgePackagesActivity.class))));addSpaced(menu,knowledge,8);
         TextView performance=menuItem("Leistung");decorateAction(performance,"performance");performance.setOnClickListener(v->closeDrawer(()->navigate(2)));menu.addView(performance);
@@ -765,6 +777,12 @@ public final class MainActivity extends Activity {
     private final class ActionText extends TextView{
         ActionText(){super(MainActivity.this);setFocusable(true);setClickable(true);setLineSpacing(0,1.2f);}
         @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
+        private boolean pressedBefore;
+        @Override protected void drawableStateChanged(){
+            super.drawableStateChanged();
+            boolean down=isEnabled()&&isPressed();
+            if(down!=pressedBefore){pressedBefore=down;UiMotion.press(this,down);}
+        }
     }
     private LinearLayout card(){LinearLayout c=column();c.setPadding(dp(24),dp(24),dp(24),dp(24));GradientDrawable background=round(PANEL,DesignTokens.RADIUS_CARD);background.setStroke(dp(1),tokens.subtleBorder);c.setBackground(background);return c;}
     private void decorateAction(TextView view,String glyph){

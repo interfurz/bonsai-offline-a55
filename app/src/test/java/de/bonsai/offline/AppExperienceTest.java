@@ -30,7 +30,13 @@ public class AppExperienceTest {
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){TextView t=find(((ViewGroup)v).getChildAt(i),text);if(t!=null)return t;}
         return null;
     }
-    private static Object field(Object o,String name) throws Exception {Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}
+    private static Object field(Object o,String name) throws Exception {
+        for(Class<?> type=o.getClass();type!=null;type=type.getSuperclass()) {
+            try {Field f=type.getDeclaredField(name);f.setAccessible(true);return f.get(o);}
+            catch(NoSuchFieldException ignored) { }
+        }
+        throw new NoSuchFieldException(name);
+    }
     private static View described(View v,String description) {
         if(description.contentEquals(v.getContentDescription()==null?"":v.getContentDescription()))return v;
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){View found=described(((ViewGroup)v).getChildAt(i),description);if(found!=null)return found;}
@@ -158,6 +164,11 @@ public class AppExperienceTest {
             TextView detail=(TextView)field(activity,"liveDetail");assertEquals(metrics,detail.getContentDescription().toString());
             assertEquals(3,((android.text.Spanned)detail.getText()).getSpans(0,detail.length(),android.text.style.ImageSpan.class).length);
             assertNull(find(root,"Eine neue Variante wird als eigener Chat gespeichert."));
+            View newChat=(View)field(activity,"newChat");
+            android.graphics.Rect newChatBounds=new android.graphics.Rect();
+            assertTrue("New chat remains reachable",newChat.getGlobalVisibleRect(newChatBounds));
+            assertTrue("New chat stays within the screen",newChatBounds.right<=root.getWidth());
+            assertEquals(1f,newChat.getAlpha(),0f);
             screenshot(root,capture);
             app.loaded=false;app.notifyUi();assertFalse(described(root,"Neu generieren – Variante als eigenen Chat speichern").isEnabled());
         }
@@ -223,6 +234,52 @@ public class AppExperienceTest {
                 a.onBackPressed();idleUi();assertNull(field(a,"sectionDialog"));
             }
         } finally { org.robolectric.RuntimeEnvironment.setFontScale(1f); }
+    }
+    private void captureReasoningPreview(String name) throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()) {
+            MainActivity activity=controller.get();BonsaiApp app=(BonsaiApp)activity.getApplication();
+            app.prefs.edit().putBoolean("notificationsAsked",true).apply();app.loaded=true;app.busy=true;app.status="Antwort wird vorbereitet …";
+            app.messages.clear();app.messages.add(new ChatStore.Message(1,"user","Wie speichert ein Wald Wasser?",""));
+            ChatStore.Message answer=new ChatStore.Message(2,"assistant","","");app.messages.add(answer);app.notifyUi();idleUi();
+            var method=BonsaiApp.class.getDeclaredMethod("generationProgress");method.setAccessible(true);
+            NativeEngine.Stream progress=(NativeEngine.Stream)method.invoke(app);
+            progress.onPrefill(1,4,32);idleUi();
+            ReasoningPreview preview=(ReasoningPreview)field(activity,"liveReasoning");
+            assertEquals(View.GONE,preview.getVisibility());
+            progress.onThinking(BonsaiApp.utf8("Zuerst betrachte ich den Waldboden.\nHumus und Wurzeln nehmen Wasser auf; die Kronen bremsen den Regen."));idleUi();
+            assertEquals(View.VISIBLE,preview.getVisibility());
+            assertEquals(View.VISIBLE,((View)field(preview,"excerpt")).getVisibility());
+            assertEquals(View.GONE,((View)field(activity,"liveAnswer")).getVisibility());
+            TextView toggle=(TextView)field(preview,"toggle");
+            assertEquals("Reasoning aufklappen",toggle.getContentDescription());
+            screenshot(activity,name+"-compact");
+            toggle.performClick();assertEquals("Reasoning einklappen",toggle.getContentDescription());
+            assertTrue(((TextView)field(preview,"body")).getText().toString().contains("\nHumus"));
+            progress.onThinking(BonsaiApp.utf8(" Anschließend wird es langsam wieder abgegeben."));idleUi();
+            assertSame(preview,field(activity,"liveReasoning"));
+            assertEquals(View.VISIBLE,((View)field(preview,"expandedBody")).getVisibility());
+            screenshot(activity,name+"-expanded");
+            answer.text="Ein Wald speichert Wasser im Boden, im Humus und in seinen Pflanzen.";app.notifyStreamUi();idleUi();
+            assertEquals(View.VISIBLE,((View)field(activity,"liveAnswer")).getVisibility());
+            assertEquals(View.GONE,((View)field(preview,"expandedBody")).getVisibility());
+            assertEquals(View.GONE,((View)field(preview,"excerpt")).getVisibility());
+            assertEquals("Reasoning aufklappen",toggle.getContentDescription());
+            app.complete("");idleUi();assertFalse(app.reasoningPreview.isEmpty());
+            screenshot(activity,name+"-answer");
+            ReasoningPreview completedPreview=(ReasoningPreview)field(activity,"liveReasoning");
+            ((View)field(completedPreview,"toggle")).performClick();
+            assertEquals(View.VISIBLE,((View)field(completedPreview,"expandedBody")).getVisibility());
+            String completed=app.reasoningPreview;
+            progress.onThinking(BonsaiApp.utf8("Veralteter Callback"));idleUi();assertEquals(completed,app.reasoningPreview);
+            app.newChat();idleUi();assertEquals("",app.reasoningPreview);assertNull(field(activity,"liveReasoning"));
+        }
+    }
+    @Test public void reasoningPreviewStreamsExpandsAndKeepsFinalAnswerSeparate() throws Exception {captureReasoningPreview("reasoning-light");}
+    @Test @Config(qualifiers="w375dp-h812dp-night-mdpi")
+    public void reasoningPreviewFitsNarrowDarkScreenAtLargeFont() throws Exception {
+        org.robolectric.RuntimeEnvironment.setFontScale(1.5f);
+        try {captureReasoningPreview("reasoning-dark-large");}
+        finally {org.robolectric.RuntimeEnvironment.setFontScale(1f);}
     }
     @Test @Config(qualifiers="w1024dp-h900dp-mdpi")
     public void wideLayoutCapsReadingWidth() throws Exception {

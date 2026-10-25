@@ -61,6 +61,21 @@ public class BackgroundInferenceTest {
         }
     }
     private BonsaiApp app;
+    @Test public void cancelledReasoningCannotReappearFromLateCallbacks() throws Exception {
+        assertTrue(app.begin("Antwort wird vorbereitet …"));
+        var method=BonsaiApp.class.getDeclaredMethod("generationProgress");method.setAccessible(true);
+        NativeEngine.Stream progress=(NativeEngine.Stream)method.invoke(app);
+        progress.onThinking(BonsaiApp.utf8("Ich prüfe die Frage."));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertFalse(app.reasoningPreview.isEmpty());
+        app.cancel();progress.onThinking(BonsaiApp.utf8("Veralteter Inhalt"));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertEquals("",app.reasoningPreview);app.complete("");
+        assertTrue(app.begin("Neue Antwort"));
+        progress.onThinking(BonsaiApp.utf8("Inhalt aus dem vorigen Durchlauf"));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertEquals("",app.reasoningPreview);app.complete("");
+    }
     @Before public void prepare() {
         Engine.started=new CountDownLatch(1); Engine.finish=new CountDownLatch(1); Engine.stopped=false; Engine.fail=false; Engine.divergent=false; Engine.referenceMode=false;
         Engine.loads=0; Engine.unloads=0;Engine.referenceProbes=0;Engine.candidateProbes=0;Engine.cancelReference=false;
