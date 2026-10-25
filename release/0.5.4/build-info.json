@@ -1,0 +1,364 @@
+{
+  "version": "0.5.4",
+  "version_code": 20,
+  "package": "de.bonsai.offline.debug",
+  "base_main_commit": "2923cf890e4714155b004ff12057408ca4352502",
+  "source_commit": "f5816d9b53a07bf2547293b378cf3a8e8900a961",
+  "release_source_changes": "versionName 0.5.4 and versionCode 20; application/native/runtime sources unchanged from base_main_commit",
+  "runtime_revision": "e3de715222b2667c54a267441159a5729f11155e",
+  "runtime_patch_sha256": "e4a0a8d772a1af1e7b7697d04a3a81293ad321c77ffaab167cd909557a9ea5f3",
+  "github_actions_used": false,
+  "ci_artifacts_used": false,
+  "build_origin": "local source builds in managed cloud workspace",
+  "signing": "existing user-provided bonsai-release key; signed locally; secrets excluded from Git and release assets",
+  "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+  "debuggable": false,
+  "no_internet_permission": true,
+  "tag_source_inputs_match_source_commit": true,
+  "android": {
+    "platform": 35,
+    "build_tools": "35.0.0",
+    "ndk": "28.2.13676358",
+    "cmake": "3.22.1",
+    "java": "17",
+    "gradle": "8.11.1"
+  },
+  "vulkan_sdk": {
+    "version": "1.4.363.0",
+    "sha256": "197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43",
+    "config_sha256": "5a4d3ee31f3c215fd8a370b90f785325deecd5276d59fa56bef0204dcc6eda8c",
+    "target_loader": "Android NDK AArch64 libvulkan",
+    "configuration_verified": true
+  },
+  "cpu_build": {
+    "origin": "local source build",
+    "junit": {
+      "tests": 203,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "skipped_cases": [
+        "de.bonsai.offline.KnowledgePackagesTest.importsRealHostPilotWhenProvidedAndRunsReadOnlyFts",
+        "de.bonsai.offline.RealStructuredPackagesTest.importsCompleteDictionaryFoodAndSiPackagesAndQueriesReadOnly"
+      ]
+    },
+    "lint": {
+      "Warning": 37
+    }
+  },
+  "cpu_vulkan_build": {
+    "origin": "local source build",
+    "junit": {
+      "tests": 203,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "skipped_cases": [
+        "de.bonsai.offline.KnowledgePackagesTest.importsRealHostPilotWhenProvidedAndRunsReadOnlyFts",
+        "de.bonsai.offline.RealStructuredPackagesTest.importsCompleteDictionaryFoodAndSiPackagesAndQueriesReadOnly"
+      ]
+    },
+    "lint": {
+      "Warning": 37
+    }
+  },
+  "host_checks": {
+    "project_manifest_xml_jni_utf8_prefix_runtime": "passed",
+    "cpu_dense_arithmetic_kernels": "passed",
+    "icon_pairs": 37,
+    "python_tests": 12,
+    "python_test_failures": 0
+  },
+  "artifacts": [
+    {
+      "name": "Bonsai-Offline-0.5.4-arm64-CPU.apk",
+      "bytes": 47081369,
+      "sha256": "413d3b55fc6b7b9e28e34f56c206044fb56b1b627f9af628027d1f7c28f26c75",
+      "unsigned_sha256": "42e6193503f675a546d908e6436780d9d5fb66aee67ddcfe3e76baef170cfe19",
+      "origin": "local source build; no GitHub Actions",
+      "backends": [
+        "CPU"
+      ],
+      "signature_verified": true,
+      "zipalign_16k_verified": true,
+      "elf_load_16k_verified": true,
+      "apk_contents_unchanged_after_signing": true,
+      "metadata": {
+        "package": "de.bonsai.offline.debug",
+        "version": "0.5.4",
+        "version_code": 20,
+        "debuggable": false,
+        "permissions": [
+          "android.permission.FOREGROUND_SERVICE",
+          "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+          "android.permission.WAKE_LOCK",
+          "android.permission.POST_NOTIFICATIONS"
+        ],
+        "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+        "native_libraries": [
+          {
+            "name": "lib/arm64-v8a/libbonsai-jni.so",
+            "sha256": "d3b6e5dae0ea86254746897f693ed74cf01d9736d9eee03b76d7bbb717d32f3a",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libc++_shared.so",
+            "sha256": "cd61762848882a16c8244c964a6f396c0caa0b440588a210ce9cc4ab0e6d9f0c",
+            "load_alignments": [
+              16384,
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libchaquopy_java.so",
+            "sha256": "89e6063d5e1acfb97d11531b2d30b55d50424a1b8c3b595584aef753f5db4547",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libcrypto_chaquopy.so",
+            "sha256": "766c1744b32da624ca78d3996806b43631f28222576ba80bb5688e5c3041f0be",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libcrypto_python.so",
+            "sha256": "e13734377377603cda9c2ea6d6171fc4d639d8a0768050a8a22cdaa3b40f0ece",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libpython3.12.so",
+            "sha256": "0c57a3036f7578e3236ec995ce0931922e708bc108a638a4b27fab5a001f3421",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libpython3.so",
+            "sha256": "025d16ae19208efd5b430491362b3ad84481279af2fcc9394fd9acd3f9dbdeac",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libsqlite3_chaquopy.so",
+            "sha256": "1e348dceef9c46754e6be14f2a58e6d34441afb03974b36fa0710f8ee50ebf2d",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libsqlite3_python.so",
+            "sha256": "e8c9c26012244a175013d17188a65300abedb946bd959b5b59fc19b63dfb92b9",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libssl_chaquopy.so",
+            "sha256": "024d7a7696e789443642645df35929994aa8a4a3cb4d46b2fe7415d64f9a2282",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libssl_python.so",
+            "sha256": "c54e3be0d21c43d908b0891d8c8775785f4045c168d21105b7284f8895383944",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          }
+        ]
+      },
+      "previous_apk_sha256": "ce1a2f88e56816fbff3954b7eff729071fbd2ed27335da6628f48c35bb209970",
+      "update_identity_verified": true
+    },
+    {
+      "name": "Bonsai-Offline-0.5.4-arm64-CPU-Vulkan.apk",
+      "bytes": 106063769,
+      "sha256": "e54e5e60c0027f5ba443180de31544b7587e3c08bb5fdbe9e3eac8ae1fabe987",
+      "unsigned_sha256": "439799075ea792b78876d8d0dd9730eb93254185ab8107561b3e778ae06aafed",
+      "origin": "local source build; no GitHub Actions",
+      "backends": [
+        "CPU",
+        "Vulkan"
+      ],
+      "signature_verified": true,
+      "zipalign_16k_verified": true,
+      "elf_load_16k_verified": true,
+      "apk_contents_unchanged_after_signing": true,
+      "metadata": {
+        "package": "de.bonsai.offline.debug",
+        "version": "0.5.4",
+        "version_code": 20,
+        "debuggable": false,
+        "permissions": [
+          "android.permission.FOREGROUND_SERVICE",
+          "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
+          "android.permission.WAKE_LOCK",
+          "android.permission.POST_NOTIFICATIONS"
+        ],
+        "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+        "native_libraries": [
+          {
+            "name": "lib/arm64-v8a/libbonsai-jni.so",
+            "sha256": "4b4978409c3ac04ac6bbd5fc71f3466ef979e626448ef360f77939099a199c85",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libc++_shared.so",
+            "sha256": "cd61762848882a16c8244c964a6f396c0caa0b440588a210ce9cc4ab0e6d9f0c",
+            "load_alignments": [
+              16384,
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libchaquopy_java.so",
+            "sha256": "89e6063d5e1acfb97d11531b2d30b55d50424a1b8c3b595584aef753f5db4547",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libcrypto_chaquopy.so",
+            "sha256": "766c1744b32da624ca78d3996806b43631f28222576ba80bb5688e5c3041f0be",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libcrypto_python.so",
+            "sha256": "e13734377377603cda9c2ea6d6171fc4d639d8a0768050a8a22cdaa3b40f0ece",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libpython3.12.so",
+            "sha256": "0c57a3036f7578e3236ec995ce0931922e708bc108a638a4b27fab5a001f3421",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libpython3.so",
+            "sha256": "025d16ae19208efd5b430491362b3ad84481279af2fcc9394fd9acd3f9dbdeac",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libsqlite3_chaquopy.so",
+            "sha256": "1e348dceef9c46754e6be14f2a58e6d34441afb03974b36fa0710f8ee50ebf2d",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libsqlite3_python.so",
+            "sha256": "e8c9c26012244a175013d17188a65300abedb946bd959b5b59fc19b63dfb92b9",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libssl_chaquopy.so",
+            "sha256": "024d7a7696e789443642645df35929994aa8a4a3cb4d46b2fe7415d64f9a2282",
+            "load_alignments": [
+              16384,
+              16384
+            ]
+          },
+          {
+            "name": "lib/arm64-v8a/libssl_python.so",
+            "sha256": "c54e3be0d21c43d908b0891d8c8775785f4045c168d21105b7284f8895383944",
+            "load_alignments": [
+              16384,
+              16384,
+              16384
+            ]
+          }
+        ]
+      },
+      "previous_apk_sha256": "43ce8e297ca422b66d972ae0e2b9e893de31dcf2b499d292d2201542ba8fa52a",
+      "update_identity_verified": true
+    }
+  ],
+  "update_compatibility": {
+    "previous_version": "0.5.3",
+    "previous_version_code": 19,
+    "new_version": "0.5.4",
+    "new_version_code": 20,
+    "package": "de.bonsai.offline.debug",
+    "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+    "matching_update_signing_identity": true,
+    "higher_version_code": true,
+    "device_update_tested": false,
+    "variants": [
+      {
+        "backend": [
+          "CPU"
+        ],
+        "previous_apk_sha256": "ce1a2f88e56816fbff3954b7eff729071fbd2ed27335da6628f48c35bb209970",
+        "new_apk_sha256": "413d3b55fc6b7b9e28e34f56c206044fb56b1b627f9af628027d1f7c28f26c75",
+        "verification": "actual downloaded v0.5.3 and locally built/signed v0.5.4 APKs compared with apksigner and aapt2"
+      },
+      {
+        "backend": [
+          "CPU",
+          "Vulkan"
+        ],
+        "previous_apk_sha256": "43ce8e297ca422b66d972ae0e2b9e893de31dcf2b499d292d2201542ba8fa52a",
+        "new_apk_sha256": "e54e5e60c0027f5ba443180de31544b7587e3c08bb5fdbe9e3eac8ae1fabe987",
+        "verification": "actual downloaded v0.5.3 and locally built/signed v0.5.4 APKs compared with apksigner and aapt2"
+      }
+    ]
+  },
+  "physical_a55_tested": false,
+  "device_update_tested": false,
+  "real_model_inference_tested": false,
+  "release_url": "https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.4",
+  "recorded_at": "2026-10-25T15:00:45.141377+00:00"
+}

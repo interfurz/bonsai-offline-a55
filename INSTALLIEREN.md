@@ -1,15 +1,16 @@
 # Bonsai auf dem Galaxy A55 installieren
 
-1. Die signierte **Bonsai-Offline-0.4.5-arm64-CPU-Vulkan.apk** aus den
-   [Release-Downloadlinks](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.4.5)
+1. Die signierte **Bonsai-Offline-0.5.4-arm64-CPU.apk** oder
+   **Bonsai-Offline-0.5.4-arm64-CPU-Vulkan.apk** aus den
+   [Release-Downloadlinks](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.4)
    auf das A55 laden. Bei privatem Repository ist ein berechtigtes GitHub-Login nötig.
-2. **Vor einem Update die Signieridentität beachten:** 0.4.5 nutzt den ausdrücklich
-   bereitgestellten Original-Debug-Keystore. Zertifikat und Paket passen zur
-   ursprünglichen 0.3.0, und der Versionscode ist höher; diese Kriterien wurden
-   anhand ihrer veröffentlichten APK geprüft, eine Geräteinstallation nicht. Die veröffentlichten 0.4.3-/0.4.4-APKs
-   verwenden ein anderes Zertifikat und lassen sich damit nicht direkt aktualisieren.
-   Details und Fingerabdrücke: [SIGNIEREN.md](SIGNIEREN.md). Die vorhandene App
-   nicht vorschnell deinstallieren; dadurch werden lokale Daten gelöscht.
+2. **Vor einem Update die Signieridentität beachten:** 0.5.4 verwendet denselben
+   Release-Schlüssel und dasselbe Paket wie 0.5.3, mit höherem Versionscode 20.
+   Paket, Zertifikat und Versionscode werden an den tatsächlichen APKs geprüft;
+   eine Geräteinstallation wird damit nicht behauptet. 0.4.5 und 0.3.0 verwenden
+   einen anderen Schlüssel und sind nicht direkt aktualisierbar.
+   Details: [SIGNIEREN.md](SIGNIEREN.md). Die vorhandene App nicht vorschnell
+   deinstallieren; dadurch werden lokale Daten gelöscht.
 3. **Eigene Dateien → Downloads → APK** öffnen. Falls Android fragt, dieser
    Dateien-App das Installieren erlauben; eine konkrete Samsung-Blockierung prüfen.
 4. Eine unterstützte lokale GGUF-Datei unter **Modell** importieren und laden.

@@ -1,0 +1,337 @@
+Bonsai-Offline-0.5.4-arm64-CPU.apk
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Additional v2/v3 cryptographic verification with --min-sdk-version 24 (app minSdk remains 28):
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Verifying alignment of /workspace/bonsai-offline-a55/work/release-0.5.4/Bonsai-Offline-0.5.4-arm64-CPU.apk (4)...
+      87 META-INF/com/android/build/gradle/app-metadata.properties (OK - compressed)
+     208 META-INF/version-control-info.textproto (OK - compressed)
+     376 classes.dex (OK)
+  589824 lib/arm64-v8a/libbonsai-jni.so (OK)
+ 8142848 lib/arm64-v8a/libc++_shared.so (OK)
+ 9404416 lib/arm64-v8a/libchaquopy_java.so (OK)
+ 9568256 lib/arm64-v8a/libcrypto_chaquopy.so (OK)
+ 9584640 lib/arm64-v8a/libcrypto_python.so (OK)
+14139392 lib/arm64-v8a/libpython3.12.so (OK)
+20840448 lib/arm64-v8a/libpython3.so (OK)
+20856832 lib/arm64-v8a/libsqlite3_chaquopy.so (OK)
+20873216 lib/arm64-v8a/libsqlite3_python.so (OK)
+22102016 lib/arm64-v8a/libssl_chaquopy.so (OK)
+22118400 lib/arm64-v8a/libssl_python.so (OK)
+23081572 assets/chaquopy/app.imy (OK)
+23101440 assets/chaquopy/bootstrap-native/arm64-v8a/_bz2.cpython-312.so (OK)
+23199744 assets/chaquopy/bootstrap-native/arm64-v8a/_ctypes.cpython-312.so (OK)
+23429120 assets/chaquopy/bootstrap-native/arm64-v8a/_datetime.cpython-312.so (OK)
+23543808 assets/chaquopy/bootstrap-native/arm64-v8a/_lzma.cpython-312.so (OK)
+23789568 assets/chaquopy/bootstrap-native/arm64-v8a/_random.cpython-312.so (OK)
+23805952 assets/chaquopy/bootstrap-native/arm64-v8a/_sha2.cpython-312.so (OK)
+23855104 assets/chaquopy/bootstrap-native/arm64-v8a/_struct.cpython-312.so (OK)
+23904256 assets/chaquopy/bootstrap-native/arm64-v8a/binascii.cpython-312.so (OK)
+23937024 assets/chaquopy/bootstrap-native/arm64-v8a/java/chaquopy.so (OK)
+24739840 assets/chaquopy/bootstrap-native/arm64-v8a/math.cpython-312.so (OK)
+24805376 assets/chaquopy/bootstrap-native/arm64-v8a/mmap.cpython-312.so (OK)
+24838144 assets/chaquopy/bootstrap-native/arm64-v8a/zlib.cpython-312.so (OK)
+24881636 assets/chaquopy/bootstrap.imy (OK)
+25481983 assets/chaquopy/build.json (OK - compressed)
+25482790 assets/chaquopy/cacert.pem (OK - compressed)
+25614696 assets/chaquopy/requirements-arm64-v8a.imy (OK)
+25614796 assets/chaquopy/requirements-common.imy (OK)
+41053116 assets/chaquopy/stdlib-arm64-v8a.imy (OK)
+42553192 assets/chaquopy/stdlib-common.imy (OK)
+46887592 assets/third_party_notices.txt (OK - compressed)
+47025849 org/commonmark/internal/util/entities.properties (OK - compressed)
+47036763 AndroidManifest.xml (OK - compressed)
+47038310 res/2Q.xml (OK - compressed)
+47038785 res/2v.xml (OK - compressed)
+47039198 res/3G.xml (OK - compressed)
+47039724 res/3T.xml (OK - compressed)
+47040142 res/4j.xml (OK - compressed)
+47040620 res/5x.xml (OK - compressed)
+47041107 res/7_.xml (OK - compressed)
+47041518 res/8-.xml (OK - compressed)
+47041947 res/8s.xml (OK - compressed)
+47042362 res/DN.xml (OK - compressed)
+47042773 res/Di.xml (OK - compressed)
+47043229 res/E4.xml (OK - compressed)
+47043511 res/Ef.xml (OK - compressed)
+47043931 res/Fd.xml (OK - compressed)
+47044339 res/Fi.xml (OK - compressed)
+47044822 res/Hf.xml (OK - compressed)
+47045270 res/MH.xml (OK - compressed)
+47045729 res/MM.xml (OK - compressed)
+47046096 res/No.xml (OK - compressed)
+47046503 res/OS.xml (OK - compressed)
+47046972 res/Q-.xml (OK - compressed)
+47047481 res/Qr.xml (OK - compressed)
+47048702 res/Rq.xml (OK - compressed)
+47049069 res/Si.xml (OK - compressed)
+47049482 res/Vj.xml (OK - compressed)
+47049975 res/Vy.xml (OK - compressed)
+47051181 res/X5.xml (OK - compressed)
+47051608 res/YK.xml (OK - compressed)
+47052030 res/ZJ.xml (OK - compressed)
+47052502 res/_t.xml (OK - compressed)
+47052995 res/aP.xml (OK - compressed)
+47053411 res/aU.xml (OK - compressed)
+47053891 res/bY.xml (OK - compressed)
+47054307 res/df.xml (OK - compressed)
+47054775 res/eY.xml (OK - compressed)
+47055197 res/fU.xml (OK - compressed)
+47055648 res/gv.xml (OK - compressed)
+47056855 res/hb.xml (OK - compressed)
+47057359 res/iS.xml (OK - compressed)
+47057842 res/jH.xml (OK - compressed)
+47058254 res/mJ.xml (OK - compressed)
+47058675 res/n1.xml (OK - compressed)
+47059125 res/oh.xml (OK - compressed)
+47059602 res/q-.xml (OK - compressed)
+47060085 res/qr.xml (OK - compressed)
+47060598 res/wc.xml (OK - compressed)
+47061008 res/xb.xml (OK - compressed)
+47061486 res/xk.xml (OK - compressed)
+47061952 resources.arsc (OK)
+Verification succesful
+
+Bonsai-Offline-0.5.3-arm64-CPU.apk
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Additional v2/v3 cryptographic verification with --min-sdk-version 24 (app minSdk remains 28):
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Bonsai-Offline-0.5.4-arm64-CPU-Vulkan.apk
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Additional v2/v3 cryptographic verification with --min-sdk-version 24 (app minSdk remains 28):
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Verifying alignment of /workspace/bonsai-offline-a55/work/release-0.5.4/Bonsai-Offline-0.5.4-arm64-CPU-Vulkan.apk (4)...
+      87 META-INF/com/android/build/gradle/app-metadata.properties (OK - compressed)
+     208 META-INF/version-control-info.textproto (OK - compressed)
+     376 classes.dex (OK)
+  589824 lib/arm64-v8a/libbonsai-jni.so (OK)
+67125248 lib/arm64-v8a/libc++_shared.so (OK)
+68386816 lib/arm64-v8a/libchaquopy_java.so (OK)
+68550656 lib/arm64-v8a/libcrypto_chaquopy.so (OK)
+68567040 lib/arm64-v8a/libcrypto_python.so (OK)
+73121792 lib/arm64-v8a/libpython3.12.so (OK)
+79822848 lib/arm64-v8a/libpython3.so (OK)
+79839232 lib/arm64-v8a/libsqlite3_chaquopy.so (OK)
+79855616 lib/arm64-v8a/libsqlite3_python.so (OK)
+81084416 lib/arm64-v8a/libssl_chaquopy.so (OK)
+81100800 lib/arm64-v8a/libssl_python.so (OK)
+82063972 assets/chaquopy/app.imy (OK)
+82083840 assets/chaquopy/bootstrap-native/arm64-v8a/_bz2.cpython-312.so (OK)
+82182144 assets/chaquopy/bootstrap-native/arm64-v8a/_ctypes.cpython-312.so (OK)
+82411520 assets/chaquopy/bootstrap-native/arm64-v8a/_datetime.cpython-312.so (OK)
+82526208 assets/chaquopy/bootstrap-native/arm64-v8a/_lzma.cpython-312.so (OK)
+82771968 assets/chaquopy/bootstrap-native/arm64-v8a/_random.cpython-312.so (OK)
+82788352 assets/chaquopy/bootstrap-native/arm64-v8a/_sha2.cpython-312.so (OK)
+82837504 assets/chaquopy/bootstrap-native/arm64-v8a/_struct.cpython-312.so (OK)
+82886656 assets/chaquopy/bootstrap-native/arm64-v8a/binascii.cpython-312.so (OK)
+82919424 assets/chaquopy/bootstrap-native/arm64-v8a/java/chaquopy.so (OK)
+83722240 assets/chaquopy/bootstrap-native/arm64-v8a/math.cpython-312.so (OK)
+83787776 assets/chaquopy/bootstrap-native/arm64-v8a/mmap.cpython-312.so (OK)
+83820544 assets/chaquopy/bootstrap-native/arm64-v8a/zlib.cpython-312.so (OK)
+83864036 assets/chaquopy/bootstrap.imy (OK)
+84464383 assets/chaquopy/build.json (OK - compressed)
+84465190 assets/chaquopy/cacert.pem (OK - compressed)
+84597096 assets/chaquopy/requirements-arm64-v8a.imy (OK)
+84597196 assets/chaquopy/requirements-common.imy (OK)
+100035516 assets/chaquopy/stdlib-arm64-v8a.imy (OK)
+101535592 assets/chaquopy/stdlib-common.imy (OK)
+105869992 assets/third_party_notices.txt (OK - compressed)
+106008249 org/commonmark/internal/util/entities.properties (OK - compressed)
+106019163 AndroidManifest.xml (OK - compressed)
+106020710 res/2Q.xml (OK - compressed)
+106021185 res/2v.xml (OK - compressed)
+106021598 res/3G.xml (OK - compressed)
+106022124 res/3T.xml (OK - compressed)
+106022542 res/4j.xml (OK - compressed)
+106023020 res/5x.xml (OK - compressed)
+106023507 res/7_.xml (OK - compressed)
+106023918 res/8-.xml (OK - compressed)
+106024347 res/8s.xml (OK - compressed)
+106024762 res/DN.xml (OK - compressed)
+106025173 res/Di.xml (OK - compressed)
+106025629 res/E4.xml (OK - compressed)
+106025911 res/Ef.xml (OK - compressed)
+106026331 res/Fd.xml (OK - compressed)
+106026739 res/Fi.xml (OK - compressed)
+106027222 res/Hf.xml (OK - compressed)
+106027670 res/MH.xml (OK - compressed)
+106028129 res/MM.xml (OK - compressed)
+106028496 res/No.xml (OK - compressed)
+106028903 res/OS.xml (OK - compressed)
+106029372 res/Q-.xml (OK - compressed)
+106029881 res/Qr.xml (OK - compressed)
+106031102 res/Rq.xml (OK - compressed)
+106031469 res/Si.xml (OK - compressed)
+106031882 res/Vj.xml (OK - compressed)
+106032375 res/Vy.xml (OK - compressed)
+106033581 res/X5.xml (OK - compressed)
+106034008 res/YK.xml (OK - compressed)
+106034430 res/ZJ.xml (OK - compressed)
+106034902 res/_t.xml (OK - compressed)
+106035395 res/aP.xml (OK - compressed)
+106035811 res/aU.xml (OK - compressed)
+106036291 res/bY.xml (OK - compressed)
+106036707 res/df.xml (OK - compressed)
+106037175 res/eY.xml (OK - compressed)
+106037597 res/fU.xml (OK - compressed)
+106038048 res/gv.xml (OK - compressed)
+106039255 res/hb.xml (OK - compressed)
+106039759 res/iS.xml (OK - compressed)
+106040242 res/jH.xml (OK - compressed)
+106040654 res/mJ.xml (OK - compressed)
+106041075 res/n1.xml (OK - compressed)
+106041525 res/oh.xml (OK - compressed)
+106042002 res/q-.xml (OK - compressed)
+106042485 res/qr.xml (OK - compressed)
+106042998 res/wc.xml (OK - compressed)
+106043408 res/xb.xml (OK - compressed)
+106043886 res/xk.xml (OK - compressed)
+106044352 resources.arsc (OK)
+Verification succesful
+
+Bonsai-Offline-0.5.3-arm64-CPU-Vulkan.apk
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078
+
+Additional v2/v3 cryptographic verification with --min-sdk-version 24 (app minSdk remains 28):
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Duser.home=/workspace/java-home -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts=localhost|127.*|[::1]
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Bonsai Offline Release, OU=Android, O=interfurz, C=DE
+Signer #1 certificate SHA-256 digest: d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d
+Signer #1 certificate SHA-1 digest: 4a0c1888f663e66880512aee46700364678cc6f4
+Signer #1 certificate MD5 digest: f02d889465f279c83a787b639e09b11a
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 4096
+Signer #1 public key SHA-256 digest: ed4a9f4506b011edfe9b7973cf5c5acb8aed40bb870a37f7f69ec5770e256f43
+Signer #1 public key SHA-1 digest: e52e3cb1755cd7ee31177871027e513e8af14fd8
+Signer #1 public key MD5 digest: efe350ec7d48ee9c3a9b017cb316a078

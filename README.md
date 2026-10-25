@@ -3,15 +3,15 @@
 Eigene native Android-App für das Samsung Galaxy A55 (ARM64), mit einer neu gestalteten nativen Oberfläche und lokalem Kernel-Autotuner. Keine OpenAI-Anbindung. Die App fordert **keine Internetberechtigung** an.
 
 [CPU/Vulkan-Releases herunterladen](https://github.com/interfurz/bonsai-offline-a55/releases).
-Version **0.5.3** führt die offenen Quellbranches und Release-Nachweise zusammen
-und ergänzt ein neues adaptives Bonsai-App-Icon passend zum violetten App-Design.
-Android 13+ erhält eine einfarbige Ebene für Design-Icons; Benachrichtigungen
-verwenden eine eigene transparente Silhouette. Der Suchtool-Hotfix aus 0.5.2.1,
-der Offline-Wissenspaketimport und die bestehenden Modell-/Chatfunktionen bleiben
-enthalten. Modellgewichte und Wissenspakete werden separat importiert.
-Die Release-APKs verwenden den bisherigen Release-Schlüssel; Hinweise zur
-Updateidentität: [SIGNIEREN.md](SIGNIEREN.md).
-[Releasehinweise](release/0.5.3/RELEASE-NOTES.md),
+Version **0.5.4** veröffentlicht den integrierten `main`-Stand mit weiterverwendetem
+KV-Cache, CPU-Repacking, 512-Token-Prefill, überarbeiteter Chatoberfläche,
+Reasoning-Vorschau, Markdown-Antworten und lokal eingebettetem SymPy.
+Persönliche Erinnerungen und Chats lassen sich lokal verwalten und sichern.
+Modellgewichte und Wissenspakete werden separat importiert.
+CPU- und CPU/Vulkan-APKs werden lokal gebaut, geprüft und mit dem bisherigen
+Release-Schlüssel signiert; für diesen Release werden keine GitHub Actions verwendet.
+Hinweise zur Updateidentität: [SIGNIEREN.md](SIGNIEREN.md).
+[Releasehinweise](release/0.5.4/RELEASE-NOTES.md),
 [technische Roadmap](ROADMAP.md) und
 [A55-Echtwelttestplan](A55-ECHTWELT-TESTPLAN.md).
 
