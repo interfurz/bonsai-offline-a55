@@ -58,8 +58,8 @@ final class BenchmarkControls implements Application.ActivityLifecycleCallbacks 
         CheckBox q8=check(activity,pane,"Experiment: Q8_0 für K und V (benötigt Flash Attention)",app.prefs.getBoolean("kvQ8",false));
         q8.setOnCheckedChangeListener((v,on)->{if(on)flash.setChecked(true);});
         flash.setOnCheckedChangeListener((v,on)->{if(!on)q8.setChecked(false);});
-        TextView label=new TextView(activity);label.setText("Microbatch (Vulkan-Standard 1, CPU-Standard 32)");pane.addView(label);
-        Integer[] values={1,2,4,8,16,32,64,128,256};Spinner micro=new Spinner(activity);
+        TextView label=new TextView(activity);label.setText("Microbatch (Vulkan-Standard 1, CPU-Standard 512)");pane.addView(label);
+        Integer[] values={1,2,4,8,16,32,64,128,256,512};Spinner micro=new Spinner(activity);
         micro.setAdapter(new ArrayAdapter<>(activity,android.R.layout.simple_spinner_dropdown_item,values));
         for(int i=0;i<values.length;i++)if(values[i]==app.microBatch())micro.setSelection(i);
         pane.addView(micro);

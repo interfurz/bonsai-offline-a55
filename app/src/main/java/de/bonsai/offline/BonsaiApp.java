@@ -52,6 +52,7 @@ public final class BonsaiApp extends Application {
     boolean busy, loaded;
     String status = "Modell auswählen", error = "", backend = "CPU", benchmarkProgress = "";
     String generationLine="";
+    String reasoningPreview="";
     double prefillFraction=-1;
     private volatile long progressEpoch;
     JSONObject benchmark, optimizerReport, cpuReference, prefixWarmupStats;
@@ -76,7 +77,10 @@ public final class BonsaiApp extends Application {
 
     @Override public void onCreate() {
         super.onCreate();
+        // The disposable CAS process must never initialize inference or recover chat state.
+        if(Application.getProcessName().endsWith(":sympy"))return;
         prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        migratePrefillSettings(prefs);
         if(!prefs.contains("cpuCompatibility")) {
             prefs.edit().putBoolean("cpuCompatibility",false).remove("optimizedFor").apply();
         }
@@ -102,13 +106,19 @@ public final class BonsaiApp extends Application {
     int context() { return prefs.getInt("context", 4096); }
     int threads() { return prefs.getInt("threads", 4); }
     int batchThreads() { return prefs.getInt("batchThreads",threads()); }
-    int microBatch() { return prefs.getInt("microBatch",gpu()?1:32); }
+    static void migratePrefillSettings(SharedPreferences prefs) {
+        if(prefs.getBoolean("cpuPrefill512",false))return;
+        SharedPreferences.Editor editor=prefs.edit().putBoolean("cpuPrefill512",true).remove("optimizedFor");
+        if(!prefs.getBoolean("gpu",false) && !prefs.getBoolean("cpuCompatibility",false))editor.putInt("microBatch",512);
+        editor.apply();
+    }
+    int microBatch() { return prefs.getInt("microBatch",gpu()?1:512); }
     String profileIdentity() { return profileIdentity(gpu(),threads(),batchThreads(),microBatch()); }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch) {
         return profileIdentity(gpu,threads,batchThreads,microBatch,prefs.getBoolean("flashAttention",false),prefs.getBoolean("kvQ8",false));
     }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch,boolean flash,boolean q8) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION;
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":repack-v1";
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {
@@ -140,12 +150,12 @@ public final class BonsaiApp extends Application {
     void newChat() {
         if (busy) return;
         resetConversationCache();
-        currentChat=0; messages.clear(); prefs.edit().putLong("chat",0).apply(); error=""; notifyUi();
+        currentChat=0; messages.clear();reasoningPreview=""; prefs.edit().putLong("chat",0).apply(); error=""; notifyUi();
     }
     void selectChat(long id) {
         if (busy) return;
         resetConversationCache();
-        currentChat=id; messages.clear(); messages.addAll(store.messages(id));
+        currentChat=id; messages.clear();reasoningPreview=""; messages.addAll(store.messages(id));
         prefs.edit().putLong("chat",id).apply(); error=""; notifyUi();
     }
     void deleteCurrentChat() {
@@ -180,7 +190,7 @@ public final class BonsaiApp extends Application {
         discardModelApproval();
         NativeEngine.resetStop(handle);
         cancelled=false; busy=true; status=label; error=""; backgroundError="";
-        progressEpoch++;generationLine="";prefillFraction=-1;
+        progressEpoch++;generationLine="";reasoningPreview="";prefillFraction=-1;
         try { startForegroundService(new Intent(this,InferenceService.class)); }
         catch(RuntimeException e) {
             busy=false; error="Hintergrundverarbeitung konnte nicht gestartet werden: "+reason(e); notifyUi(); return false;
@@ -189,11 +199,12 @@ public final class BonsaiApp extends Application {
     }
     void cancel() {
         if (!busy) return;
-        cancelled=true;progressEpoch++;generationLine="Wird abgebrochen …";prefillFraction=-1; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
+        cancelled=true;progressEpoch++;generationLine="Wird abgebrochen …";reasoningPreview="";prefillFraction=-1; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
     }
     private String reason(Throwable e) { return e.getMessage() == null ? e.toString() : e.getMessage(); }
     void complete(String issue) {
         progressEpoch++;generationLine="";prefillFraction=-1;
+        if(cancelled||!issue.isEmpty()||!backgroundError.isEmpty())reasoningPreview="";
         busy=false;
         if(inferenceService!=null) inferenceService.finishIfIdle();
         error = !backgroundError.isEmpty() ? backgroundError : cancelled ? "" : issue;
@@ -228,6 +239,8 @@ public final class BonsaiApp extends Application {
         final long epoch=progressEpoch;
         return new InferenceProgress((line,fraction)->main.post(()->{
             if(busy && !cancelled && epoch==progressEpoch) { generationLine=line;prefillFraction=fraction;notifyStreamUi(); }
+        }),preview->main.post(()->{
+            if(busy && !cancelled && epoch==progressEpoch)reasoningPreview=preview;
         }));
     }
     private void verifyModel(String name,long bytes,String sha) {
@@ -517,7 +530,7 @@ public final class BonsaiApp extends Application {
                     .put("model_metadata",readReport("model-metadata.json"))
                     .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)
                     .put("context_tokens",selectedContext).put("threads",selectedThreads).put("max_output_tokens",128)
-                    .put("batch_tokens",256).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention_requested",prefs.getBoolean("flashAttention",false)).put("kv_q8_requested",prefs.getBoolean("kvQ8",false))
+                    .put("batch_tokens",512).put("batch_threads",batchThreads()).put("microbatch_tokens",microBatch()).put("flash_attention_requested",prefs.getBoolean("flashAttention",false)).put("kv_q8_requested",prefs.getBoolean("kvQ8",false))
                     .put("thinking",false).put("seed",42).put("prompt",prompt).put("runs",runs)
                     .put("thermal_before",thermalStatus()).put("battery_celsius_before",batteryTemperature())
                     .put("rss_baseline_kb",baseline).put("rss_sample_interval_ms",250)

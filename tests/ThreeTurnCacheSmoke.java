@@ -7,7 +7,7 @@ public final class ThreeTurnCacheSmoke {
         try {
             NativeEngine.load(handle,CacheSmoke.bytes(args[0]),1024,2,false);
             CacheSmoke.incremental(handle);
-            System.out.println("Three uninterrupted JNI turns passed; only new prompt tokens decoded, no reasoning in KV/history.");
+            System.out.println("Three uninterrupted JNI turns passed; valid prefix reused, no completion decode or reasoning in KV/history.");
         } finally {NativeEngine.unload(handle);}
     }
 }

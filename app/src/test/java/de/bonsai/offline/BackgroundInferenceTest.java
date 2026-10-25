@@ -61,6 +61,21 @@ public class BackgroundInferenceTest {
         }
     }
     private BonsaiApp app;
+    @Test public void cancelledReasoningCannotReappearFromLateCallbacks() throws Exception {
+        assertTrue(app.begin("Antwort wird vorbereitet …"));
+        var method=BonsaiApp.class.getDeclaredMethod("generationProgress");method.setAccessible(true);
+        NativeEngine.Stream progress=(NativeEngine.Stream)method.invoke(app);
+        progress.onThinking(BonsaiApp.utf8("Ich prüfe die Frage."));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertFalse(app.reasoningPreview.isEmpty());
+        app.cancel();progress.onThinking(BonsaiApp.utf8("Veralteter Inhalt"));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertEquals("",app.reasoningPreview);app.complete("");
+        assertTrue(app.begin("Neue Antwort"));
+        progress.onThinking(BonsaiApp.utf8("Inhalt aus dem vorigen Durchlauf"));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        assertEquals("",app.reasoningPreview);app.complete("");
+    }
     @Before public void prepare() {
         Engine.started=new CountDownLatch(1); Engine.finish=new CountDownLatch(1); Engine.stopped=false; Engine.fail=false; Engine.divergent=false; Engine.referenceMode=false;
         Engine.loads=0; Engine.unloads=0;Engine.referenceProbes=0;Engine.candidateProbes=0;Engine.cancelReference=false;
@@ -118,11 +133,26 @@ public class BackgroundInferenceTest {
         assertEquals("CPU",BackendGuard.load(app,1));
         assertFalse(app.cpuCompatibility); assertFalse(Engine.referenceMode);
         assertFalse(app.prefs.getBoolean("cpuCompatibility",false));
-        assertEquals(32,app.microBatch());assertEquals(1,Engine.loads);
+        assertEquals(512,app.microBatch());assertEquals(1,Engine.loads);
         assertEquals(0,Engine.referenceProbes);assertEquals(0,Engine.candidateProbes);
         assertNull(app.cpuReference);assertNull(app.readReport("cpu-reference.json"));
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertEquals("",app.backendNotice);
+    }
+    @Test public void prefillUpgradeReplacesOldCpuProfileOnlyOnce() {
+        app.prefs.edit().remove("cpuPrefill512").putInt("microBatch",32).putString("optimizedFor","old-profile").apply();
+        BonsaiApp.migratePrefillSettings(app.prefs);
+        assertEquals(512,app.microBatch());assertFalse(app.prefs.contains("optimizedFor"));
+        app.prefs.edit().putInt("microBatch",128).putString("optimizedFor","new-profile").apply();
+        BonsaiApp.migratePrefillSettings(app.prefs);
+        assertEquals(128,app.microBatch());assertEquals("new-profile",app.prefs.getString("optimizedFor",""));
+    }
+    @Test public void prefillUpgradePreservesCompatibilityAndGpuProfiles() {
+        for(String mode:new String[]{"cpuCompatibility","gpu"}) {
+            app.prefs.edit().clear().putBoolean(mode,true).putInt("microBatch",1).apply();
+            BonsaiApp.migratePrefillSettings(app.prefs);
+            assertEquals(1,app.microBatch());
+        }
     }
     @Test public void compatibleOptimizedCpuRemainsAvailable() throws Exception {
         app.prefs.edit().putBoolean("cpuCompatibility",false).apply();

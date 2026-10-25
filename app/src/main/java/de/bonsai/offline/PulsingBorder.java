@@ -21,7 +21,7 @@ import java.util.ArrayList;
 /** Native, offline interpretation of Paper's PulsingBorder; no WebView or GL context.
  * Cached shaders follow the rounded perimeter. Drawing never changes child layout.
  */
-final class PulsingBorder extends FrameLayout {
+class PulsingBorder extends FrameLayout {
     private static final float[] BLOOM_WIDTHS={13f,8.2f,3.4f};
     private static final float[] BLOOM_WEIGHTS={.3f,.9f,1.8f};
     enum Mode { BORDER, AMBIENT, RAIL }

@@ -21,10 +21,16 @@ final class EmbeddingGemma2Encoder implements KnowledgeSearch.QueryEncoder {
     public String model(){return MODEL;}
     public float[] encode(String query) throws Exception {return encode(query,()->false);}
     @Override public float[] encode(String query,BooleanSupplier cancelled) throws Exception {
+        return encodePrompt(QUERY_PREFIX+query,cancelled);
+    }
+    float[] encodeDocument(String title,String text,BooleanSupplier cancelled) throws Exception {
+        return encodePrompt("title: "+title+" | text: "+text,cancelled);
+    }
+    private float[] encodePrompt(String prompt,BooleanSupplier cancelled) throws Exception {
         if(cancelled.getAsBoolean())throw new CancellationException("Abgebrochen.");
         if(!weights.isFile())throw new IOException("EmbeddingGemma-2-GGUF fehlt: "+weights.getName());
         float[] output=Native.encode(weights.getPath().getBytes(StandardCharsets.UTF_8),
-            (QUERY_PREFIX+query).getBytes(StandardCharsets.UTF_8),threads,cancelled);
+            prompt.getBytes(StandardCharsets.UTF_8),threads,cancelled);
         if(cancelled.getAsBoolean())throw new CancellationException("Abgebrochen.");
         if(output==null || output.length!=768)throw new IOException("EmbeddingGemma 2 muss 768 Dimensionen liefern.");
         return reduce(output);

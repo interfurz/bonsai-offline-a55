@@ -1,23 +1,44 @@
-# Native Oberfläche: ruhige Flächen, lebendiger Lichtsaum
+# Native Oberfläche: PocketPal-Layout und Liquid-Interaktionen
 
 Bonsai bleibt eine vollständig offline arbeitende Android-App. Die Kernaufgabe:
 ein lokales GGUF-Modell laden, eine Frage stellen und die gestreamte Antwort lesen.
-Das Redesign orientiert sich an den bereitgestellten mobilen Chat-/Sidebar-Screenshots.
+Das Layout orientiert sich an [PocketPal AI](https://github.com/a-ghorbani/pocketpal-ai), insbesondere dessen Chat-Screenshot und der Anordnung im aktuellen `ChatInput/styles.ts`. Übernommen werden ausschließlich Anordnung und Abstände. Funktionen, Buttons, Inhalte, Bonsai-Icons und Farbrollen bleiben erhalten. Keine Pals-, Sprach-, Kamera- oder zusätzlichen Menüaktionen.
 Ein Chat/Work-Umschalter ist ausdrücklich nicht vorgesehen.
 
 ## Aufbau
 
-- Zentrierter Bonsai-Titel, runder Menüknopf links und neuer Chat rechts.
+- Kompakte Kopfzeile: Menü links, Bonsai-Titel und Status links ausgerichtet untereinander, neuer Chat rechts.
 - Viel freier Raum; bei geladenem Modell stehen zwei bearbeitbare Prompt-Einstiege
-  direkt über der Chatbar. Das bisherige große Bonsai-Motiv und die Vorschlagskarten entfallen.
-- Die Chatbar ist auch vor dem Modellimport sichtbar. Entwürfe lassen sich vorbereiten;
+  im vertikal zentrierten Inhaltsbereich. Der Einstieg ohne Modell behält seine Texte und seine Import-/Ladeaktion.
+- Die breite Chatbar hat einen Textbereich oben und eine Kontrollzeile mit dem vorhandenen Plus links und Senden/Stop rechts. Sie ist auch vor dem Modellimport sichtbar. Entwürfe lassen sich vorbereiten;
   Senden bleibt ohne geladenes Modell gesperrt. Das Plus öffnet Modell und Einstellungen.
 - Die Seitenleiste enthält Modell, Leistung, Chats und Archiv. Ein neuer Chat ist
-  am unteren Rand erreichbar. Löschen erscheint nur bei vorhandenem aktuellem Chat.
+  oben im scrollbaren Menü erreichbar, auch bei großer Schrift. Löschen erscheint nur bei vorhandenem aktuellem Chat.
 - Modell und Leistung öffnen weiterhin native Pop-ups. Chat, Entwurf, lokale Tools,
   SQLite-Verlauf, Antwortvarianten und laufende Inferenz behalten ihre Abläufe.
 - Touch-Ziele bleiben mindestens 48 dp groß. Eingabe und Texte können wachsen;
   Inhaltsbreite auf Tablets höchstens 720 dp. Tastatur- und Systemleisten-Inset bleiben erhalten.
+- Nutzerblasen passen sich der Textbreite an und stehen rechts; Antworten nutzen die offene Lesefläche links. Autoren, Metadaten, Kopieren und Regenerieren bleiben erhalten.
+
+## Liquid-Bewegung
+
+`LiquidComposer` ergänzt die vorhandene `PulsingBorder`-Chatbar. Beim Berühren gibt die Fläche leicht nach (99,2 % Breite, 96,5 % Höhe), beim Loslassen federt sie in 460 ms zurück. Beim Eingabefokus hebt sie sich um 2 dp. Neue Berührungen unterbrechen den laufenden Übergang. Touch-Ereignisse werden an die bisherigen Kinder weitergereicht; Textauswahl, Scrollen, Plus, Senden und Abbrechen behalten ihre Verarbeitung. Beim Abhängen wird die Transformation zurückgesetzt.
+
+Vorhandene Icon- und Textaktionen erhalten ein kurzes Nachgeben und eine federnde Rückkehr; Seitenleiste und Pop-up-Inhalte öffnen ebenfalls weich. Keine Animation pro Streaming-Token, kein neuer Dauer-Timer. Systemweit ausgeschaltete Animationen und Energiesparen überspringen die Bewegung.
+
+## Reasoning-Vorschau
+
+Eine dezente Inline-Fläche sitzt direkt unter dem Autor der aktuellen Antwort. Während das Modell denkt, zeigt sie eine Zeile aus dem echten `onThinking`-Stream. Die gesamte Kopfzeile ist ein mindestens 48 dp hohes Touch-Ziel; ein Chevron kennzeichnet das Aufklappen. Ausgeklappt ist der Reasoning-Text separat scrollbar und auswählbar, mit höchstens 160 dp Höhe. Die Fläche nutzt die bestehenden neutralen Farbrollen und 14-sp-Typografie.
+
+Sobald Antworttext eintrifft, klappt die Vorschau automatisch auf die Kopfzeile „Reasoning“ zusammen. Sie lässt sich weiterhin öffnen. Streaming ersetzt die Fläche nicht und startet keine Animation pro Token; nur das manuelle Aufklappen erhält den bestehenden weichen Übergang. Ohne Reasoning bleibt die Fläche verborgen. Vorverarbeitung und eigentliche Antwort bleiben getrennt.
+
+Die Vorschau enthält höchstens die letzten 8.000 UTF-16-Zeichen, erhält Zeilenumbrüche und verarbeitet auch über mehrere Chunks verteiltes UTF-8 korrekt. Sie bleibt ausschließlich im Arbeitsspeicher für die aktuelle Antwort und wird bei neuer Generierung, Chatwechsel, Abbruch oder Fehler geleert. Sie wird weder als Chatantwort gespeichert noch an den Modellkontext angehängt. Späte Callbacks eines abgeschlossenen oder abgebrochenen Durchlaufs werden verworfen.
+
+Prüfungen: Unicode-Chunkgrenzen und Puffergrenze in `InferenceProgressTest`; Ein-/Aufklappen, stabiles Streaming, Übergang zur Antwort und helle/dunkle Renderaufnahmen in `AppExperienceTest`; Abbruch und verspätete Callbacks in `BackgroundInferenceTest`.
+
+Validierung der Erweiterung: 181 Tests, 0 Fehler, 2 übersprungen; ARM64-CPU-Debug-APK und Lint erfolgreich. Native Renderaufnahmen verwenden Testdaten. Das Bewegungsgefühl auf einem physischen A55 ist weiterhin ungeprüft.
+
+Vorschauen: [Live-Auszug hell](ui/reasoning-light-compact.png), [aufgeklappt bei großer Schrift](ui/reasoning-dark-large-expanded.png), [eingeklappt über der Antwort](ui/reasoning-light-answer.png).
 
 ## Farben
 
@@ -128,8 +149,6 @@ Weitere Ansichten: [Seitenleiste](ui/sidebar-dark.png), [Modell](ui/model-light.
 [laufende Leistungsmessung](ui/app-light-performance-dark.png) und
 [aktueller Chat in der Seitenleiste](ui/app-light-sidebar-dark.png).
 
-Validierung: `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug`
-erfolgreich: **135 Tests, 0 Fehler**, ARM64-CPU-Debug-APK und Lint ohne Fehler
-(acht bestehende Warnungen zu Konfiguration und deutschen Inline-Texten).
+Validierung des aktuellen Layouts und der Interaktionen siehe [PocketPal-Layoutprüfung](validation/POCKETPAL-LAYOUT.md). `LiquidComposerTest` prüft die Weiterleitung von Klicks, Touch-Abbruch und unmittelbar neutrale Transformationen bei ausgeschalteten Systemanimationen.
 Ein physischer A55-Test für Bildrate, Tastatur, TalkBack und parallele echte
 Modellinferenz bleibt erforderlich. Es ist kein Gerät angeschlossen.

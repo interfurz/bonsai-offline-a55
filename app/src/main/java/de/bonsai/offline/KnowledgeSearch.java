@@ -87,7 +87,12 @@ final class KnowledgeSearch {
         List<KnowledgePackages.Installed> packages=KnowledgePackages.active(files,"rag");
         boolean installedRag=false;
         for(KnowledgePackages.Installed item:KnowledgePackages.installed(files))if(item.type().equals("rag"))installedRag=true;
-        if(packages.isEmpty() && !installedRag && (corpus.equals("all") || corpus.equals("wikipedia")))return forStore(store).search(query,cancelled);
+        boolean rerank=store.context.getSharedPreferences("settings",0).getBoolean("titleReranking",false);
+        if(packages.isEmpty() && !installedRag && (corpus.equals("all") || corpus.equals("wikipedia"))) {
+            JSONObject result=forStore(store).search(query,cancelled,rerank?CANDIDATES:MAX_HITS,false);
+            if(rerank)result.put("hits",TitleReranker.rank(result.getJSONArray("hits"),query,MAX_HITS));
+            return result;
+        }
         List<JSONObject> candidates=new ArrayList<>();JSONArray warnings=new JSONArray();
         EmbeddingGemma2Encoder baseEncoder=new EmbeddingGemma2Encoder(KnowledgePackages.encoder(files),4);
         QueryEncoder sharedEncoder=new QueryEncoder() {
@@ -108,7 +113,8 @@ final class KnowledgeSearch {
             if(result.has("warning"))warnings.put(item.id()+": "+result.getString("warning"));
             for(int i=0;i<hits.length();i++)candidates.add(hits.getJSONObject(i).put("package_id",item.id()));
         }
-        JSONArray hits=fusePackages(candidates);
+        JSONArray hits=fusePackages(candidates,rerank?CANDIDATES:MAX_HITS);
+        if(rerank)hits=TitleReranker.rank(hits,query,MAX_HITS);
         JSONObject result=new JSONObject().put("hits",hits);
         if(warnings.length()>0)result.put("warning",warnings.toString());
         if(packages.isEmpty())result.put("warning","Keine Textpakete aktiviert.");
@@ -116,6 +122,9 @@ final class KnowledgeSearch {
     }
     private static String identity(JSONObject hit){return hit.optString("package_id")+":"+hit.optLong("chunk_id");}
     static JSONArray fusePackages(List<JSONObject> candidates) throws Exception {
+        return fusePackages(candidates,MAX_HITS);
+    }
+    private static JSONArray fusePackages(List<JSONObject> candidates,int maximum) throws Exception {
         List<JSONObject> lexical=new ArrayList<>(),semantic=new ArrayList<>();
         for(JSONObject hit:candidates){if(hit.optInt("_lexical_rank")>0)lexical.add(hit);if(hit.has("_semantic_score"))semantic.add(hit);}
         Comparator<JSONObject> stable=Comparator.comparing(KnowledgeSearch::identity);
@@ -129,7 +138,7 @@ final class KnowledgeSearch {
         List<JSONObject> ordered=new ArrayList<>(candidates);
         ordered.sort(Comparator.<JSONObject>comparingDouble(hit->-scores.getOrDefault(identity(hit),0.)).thenComparing(cosine));
         JSONArray result=new JSONArray();
-        for(int i=0;i<Math.min(MAX_HITS,ordered.size());i++) {
+        for(int i=0;i<Math.min(maximum,ordered.size());i++) {
             JSONObject hit=new JSONObject(ordered.get(i).toString());hit.remove("_lexical_rank");hit.remove("_semantic_score");result.put(hit);
         }
         return result;

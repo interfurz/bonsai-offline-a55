@@ -17,6 +17,10 @@
         android:enableOnBackInvokedCallback="false"
         android:supportsRtl="true">
         <service
+            android:name=".SympyService"
+            android:process=":sympy"
+            android:exported="false" />
+        <service
             android:name=".InferenceService"
             android:exported="false"
             android:stopWithTask="false"
@@ -25,6 +29,9 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User initiated offline on-device language model inference, model import and benchmarking; no network transfer" />
         </service>
+        <activity
+            android:name=".PersonalDataActivity"
+            android:exported="false" />
         <activity
             android:name=".KnowledgePackagesActivity"
             android:exported="false" />

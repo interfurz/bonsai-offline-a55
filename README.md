@@ -17,6 +17,35 @@ Updateidentität: [SIGNIEREN.md](SIGNIEREN.md).
 
 ## Offline-Dateninfrastruktur
 
+Aktueller Abgleich der Roadmap mit dem Quellcode, neuen Funktionen und noch
+fehlenden Abnahmen: [Roadmap-Status](docs/ROADMAP-STATUS.md). TTS und STT sind
+aus dem aktuellen Arbeitsumfang ausgeschlossen; auf Nutzerwunsch werden auch
+Echtwelt-/Gerätetests ausgelassen.
+
+Unter **Menü → Gedächtnis und Sicherung** lassen sich Erinnerungen mit Herkunft
+und Änderungsdatum anzeigen, nach Text durchsuchen, hinzufügen, bearbeiten und
+nach Bestätigung löschen. Bestehende Daten werden auf Schema 4 migriert.
+Die Herkunft unterscheidet manuelle Einträge, das Chat-Tool und ältere Bestände;
+sie ist kein Nachweis eines bestimmten Ursprungschats. Die optionale semantische
+Suche nutzt das importierte EmbeddingGemma-Modell und einen persistenten lokalen
+Index. Änderungen und Löschen invalidieren die zugehörigen Vektoren. Ohne Modell
+bleibt die Textsuche verfügbar. Teilindizes werden ausdrücklich angezeigt.
+
+Dort werden Chats einschließlich Archive und Erinnerungen als lesbare lokale
+JSON-Sicherung exportiert und importiert (bis 16 MiB, 10.000 Chats/Erinnerungen,
+100.000 Nachrichten). Import ergänzt Chats und behält bei gleichen
+Erinnerungsschlüsseln den vorhandenen Wert. Wiederholter Import erzeugt zusätzliche
+Chats. Fehler brechen den gesamten Datenbankimport ab. Modelle, Pakete und
+Einstellungen sind nicht enthalten; Sicherungsdateien sind nicht verschlüsselt.
+
+Unter **Offline-Wissenspakete → Version wählen** können vollständig installierte
+ältere Generationen erneut aktiviert werden. Hashes, Schema, Datenbank und
+gegebenenfalls Index werden vorher erneut geprüft; Abbruch oder Fehler lassen
+die aktive Zuordnung unverändert. Der Ein-/Aus-Schalter bleibt erhalten. Ältere, nicht registrierte Generationen
+können nach Bestätigung entfernt werden. Die aktuelle Generation ist auch bei
+deaktiviertem Paket geschützt. Optionales Titel-/Abschnittsreranking lässt sich
+in derselben Ansicht einschalten; es ist standardmäßig aus.
+
 Version 0.5.2 ergänzt wiederaufnehmbare
 Embedding-Shards, begrenzten IVF-Bau, echte Wikimedia-/Stack-Exchange-Adapter,
 strukturierte Wörterbuch-/Tabellendaten und einen SAF-Paketimport mit atomarer
@@ -28,9 +57,46 @@ läuft weiter; die physische A55-Abnahme ist noch offen.
 
 ## UI-Überarbeitung im aktuellen Quellcode
 
-Die Oberfläche verwendet ruhige neutrale Flächen, einen nahezu schwarzen Dark Mode und violette Aktionen. Der Chat ist die Hauptansicht, ohne Chat/Work-Umschalter. Modell, Leistung und Verlauf sind über das Menü links oben erreichbar. Eine native Java-Umsetzung des gewünschten Pulsing-Border-Effekts beleuchtet Chatbar, Bildschirmränder, neueste Antwort, Seitenleiste sowie Modell-/Leistungskarten und Hauptaktionen: Blau/Violett im Leerlauf, mehrfarbig beim Generieren und kurz Grün nach erfolgreichem Abschluss. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
+KI-Antworten unterstützen Markdown: Überschriften, Fett/Kursiv, Durchstreichungen,
+Listen, Zitate, Inline-Code, Codeblöcke, Links und Tabellen. Die Formatierung wird
+auch beim Streaming und beim erneuten Öffnen gespeicherter Chats lokal gerendert.
+Eigene Nachrichten und die vorübergehende Thinking-/Statuszeile bleiben Klartext.
+„Antwort kopieren“ übernimmt den ursprünglichen Markdown-Text. Bilder werden nicht
+aus dem Netz geladen; HTTP-/HTTPS- und E-Mail-Links öffnen sich erst beim Antippen
+in einer passenden externen App. HTML und Syntax-Highlighting werden nicht unterstützt.
+
+Das Layout orientiert sich an PocketPal: kompakte links ausgerichtete Kopfzeile, rechts stehende Nutzerblasen und breite Chatbar mit Textbereich über den vorhandenen Aktionen. Es werden keine zusätzlichen PocketPal-Buttons übernommen. Liquid-Interaktionen lassen die Chatbar beim Berühren nachgeben und weich zurückfedern; vorhandene Aktionen und Panels reagieren ebenfalls federnd. Die Oberfläche verwendet ruhige neutrale Flächen, einen nahezu schwarzen Dark Mode und violette Aktionen. Der Chat ist die Hauptansicht, ohne Chat/Work-Umschalter. Modell, Leistung und Verlauf sind über das Menü links oben erreichbar. Eine native Java-Umsetzung des gewünschten Pulsing-Border-Effekts beleuchtet Chatbar, Bildschirmränder, neueste Antwort, Seitenleiste sowie Modell-/Leistungskarten und Hauptaktionen: Blau/Violett im Leerlauf, mehrfarbig beim Generieren und kurz Grün nach erfolgreichem Abschluss. [Design-System, Abläufe und Prüfung](docs/UI-REDESIGN.md).
 
 Die Lichteffekte bleiben auch während Berechnungen animiert. Ein gemeinsamer, an die Bildsynchronisation gebundener Taktgeber, weniger Zeichenschichten und begrenzte Highlightbereiche senken den Aufwand. Animationen berücksichtigen Systemanimationen, Energiesparmodus und den Activity-Lebenszyklus. „Neu generieren“ speichert eine Antwortvariante als eigenen Chat und erhält den ursprünglichen Verlauf. [Performance-Korrektur und Prüfnachweise](docs/validation/PERFORMANCE-UI.md).
+
+## Lokale Mathematik und Erinnerungssuche
+
+Das Tool `mathe` verwendet ausschließlich **SymPy 1.14.0**, lokal eingebettet
+über Chaquopy 17.1.0 und CPython 3.12. Die frühere Java-Polynomengine ist entfernt.
+Der numerische Rechner `calc` bleibt unabhängig verfügbar. SymPy und mpmath werden
+beim APK-Bau eingebettet; zur Nutzung ist kein Python-/Modell-Download nötig.
+
+Unterstützt werden Vereinfachen, Expandieren, Faktorisieren, rationale und
+trigonometrische Umformungen, Ableitungen, bestimmte/unbestimmte Integrale,
+Gleichungen und Gleichungssysteme, numerische Nullstellen, gewöhnliche
+Differentialgleichungen, Grenzwerte, Reihen, Summen/Produkte, Matrizen und
+Zahlentheorie. Beispiele und vollständiger Argumentvertrag:
+[SymPy-Engine](docs/SYMPY.md).
+
+Die Berechnung läuft in einem privaten separaten Android-Prozess. Abbruch oder
+20 Sekunden Gesamtzeit beenden ihn; der Inferenzprozess bleibt getrennt.
+Mathematische AST-Verarbeitung erlaubt keine Python-Anweisungen, Attribute,
+Imports oder Dateizugriffe. Eine nicht ausgewertete Lösung oder numerische
+Näherung wird ausdrücklich gekennzeichnet. Annahmen, Definitionsbedingungen
+und Integrationskonstanten bleiben Teil der mathematischen Interpretation.
+
+Das Tool `erinnern` mit `args.query` sucht tatsächlich gespeicherte Erinnerungen,
+auch ohne bekannten Schlüssel. Textsuche funktioniert ohne Modell; die optionale
+semantische Suche wird unter **Gedächtnis und Sicherung** aktiviert. Pro Suche
+werden höchstens 8 neue Vektoren für bis zu 200 aktuelle Einträge aufgebaut;
+Warnungen kennzeichnen Teilindizes. Textsuche berücksichtigt alle Einträge.
+Nach diesem Abruf sperrt die Tool-Schleife weitere Speicheränderungen derselben
+Antwort gegen Anweisungen aus Erinnerungstexten.
 
 ## Stand
 
@@ -49,23 +115,24 @@ Implementiert:
 - Import einer lokalen GGUF-Datei über den Android-Dateiauswahldialog. Die App erstellt eine private Kopie; ein abgebrochener Import ersetzt das alte Modell nicht.
 - JNI-Anbindung an den originalen PrismML-Fork mit PQ2_0/PTQ1_0 und Bonsai-2-Transformationen.
 - CPU als Ausgangspunkt, 4 Threads, 4.096 Tokens Kontext, maximal 512 Antworttokens. Thinking deaktiviert.
+- CPU-Prefill verwendet Batch und Microbatch 512. Unterstützte Tensorformate dürfen optimierte Repack-Kernel nutzen; der skalare CPU-Kompatibilitätsmodus bleibt davon ausgenommen. Bestehende normale CPU-Profile werden einmalig auf Microbatch 512 umgestellt. Der Standard-Systemprompt erklärt die lokalen Tools in kompakter Form. Ein Geschwindigkeitsgewinn auf dem A55 muss am Gerät gemessen werden.
 - Modell laden/entladen, Kontext-/Thread-Einstellungen und Anzeige des Prozess-RAM.
 - Benchmark mit einem Aufwärmdurchlauf, drei Messläufen und JSON-Export.
 - Kernel-Optimierung ohne app-eigene Temperatursperre: Start und Fortsetzung bei jedem Android-Thermalstatus. Androids Geräteschutz bleibt aktiv; Temperaturstatus vor/nach der Messung und pro Profil stehen im JSON-Bericht. Ergebnisse sind temperaturabhängig, Rechen- und Stabilitätsprüfungen bleiben aktiv.
 
-Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Die RAG-/IVF-Suchschnittstelle ist enthalten; Wissensdatenbank und Index werden nicht mit der APK ausgeliefert. Python läuft für die Vorbereitung auf dem Laptop, nicht in der App. SymPy, STT und TTS sind nicht enthalten. Das Gedächtnis ist keine semantische Suche. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
+Lokale Tool-Aufrufe für Rechner und ein schlüsselbasiertes Langzeitgedächtnis sind im Java-Chatpfad implementiert (siehe unten). Die RAG-/IVF-Suchschnittstelle ist enthalten; Wissensdatenbank und Index werden nicht mit der APK ausgeliefert. Python dient der Datenvorbereitung auf dem Laptop und läuft für SymPy zusätzlich in einem privaten Android-Prozess. STT und TTS sind nicht enthalten. Die optionale semantische Gedächtnissuche nutzt einen eigenen abgeleiteten Index. Generierung läuft beim App-Wechsel und bei ausgeschaltetem Bildschirm weiter. Ein Android-Zwangsstopp oder Prozessabbruch beendet die Berechnung; sie wird nicht automatisch erneut gestartet. Die App benötigt Berechtigungen für Vordergrunddienst und CPU-Wachhaltung sowie optional sichtbare Benachrichtigungen, weiterhin keine Internetberechtigung.
 
 ## Inkrementeller Kontext und Reasoning
 
 Der normale Chat behält denselben KV-Cache über mehrere Turns. Bei jeder Generierung wird der Prompt neu gerendert und tokenisiert, das gemeinsame Token-Präfix mit dem tatsächlich dekodierten Cache bestimmt und nur der abweichende Suffix entfernt und neu dekodiert. Bei einem vollständig vorhandenen Prompt wird nötigenfalls das letzte Token wiederholt, um passende Logits zu erhalten. Der System-Prompt bleibt zwischen Turns unverändert, bis im Prompt-Editor neue Vorgaben gespeichert werden. Datum/Uhrzeit, falls das Modell-Template sie verwendet, werden pro Modellladung fixiert und ändern den Prompt nicht bei jeder Nachricht.
 
-`<think>…</think>` bleibt nur während der aktuellen Generierung im Kontext. Die native Streaming-Filterung verarbeitet auch über Token-/Chunkgrenzen geteilte Tags. Die endgültige Antwort enthält ausschließlich Text außerhalb des Reasonings. Ab v0.5.1 zeigt die bisherige Zeile „Bonsai denkt nach …“ den aktuellen Thinking-Text separat und einzeilig; sichtbar ist das Ende eines auf 240 Zeichen begrenzten Ausschnitts. Er wird weder als Antwort gespeichert noch in Logs oder Benchmarkantworten übernommen. Wenn das Modell kein Thinking ausgibt, wird keines erfunden. Während Prompt-Prefill und aktivem Prefix-Vorwärmen zeigt dieselbe Zeile Fortschritt in Prozent und gemessene neue Prompt-Tokens pro Sekunde. Der Fortschritt umfasst wiederverwendete Cache-Tokens; die Rate zählt nur frisch dekodierte Tokens und wird nach jedem abgeschlossenen Decode-Batch aktualisiert. Bis zur ersten Messung steht dort „… Tok/s“. Sobald Antworttext eintrifft, wechselt die Anzeige zum normalen mehrzeiligen Antworttext. Für eine Nutzerfrage stehen über alle Tool-Runden zusammen ungefähr **600 Reasoning-Tokens** zur Verfügung. Beim Erreichen des Budgets wird `</think>` in den laufenden Kontext eingefügt und mit der Endantwort fortgefahren. Die eingestellte maximale Antwortlänge begrenzt den sichtbaren Antwortteil; Platz für Reasoning und Abschluss wird zusätzlich innerhalb des bestehenden `n_ctx` reserviert. Thinking bleibt im Template standardmäßig deaktiviert; das Budget begrenzt trotzdem auftretendes Reasoning. GBNF-Tool-Grammatiken erlauben keine Thinking-Blöcke und benötigen dafür keine Reserve.
+`<think>…</think>` bleibt nur während der aktuellen Generierung im Kontext. Die native Streaming-Filterung verarbeitet auch über Token-/Chunkgrenzen geteilte Tags. Die endgültige Antwort enthält ausschließlich Text außerhalb des Reasonings. Der aktuelle Quellstand zeigt Thinking getrennt von der Antwort in einer aufklappbaren Vorschau. Der Live-Auszug ist auf 240 Zeichen, der vorübergehende Vorschautext auf 8.000 Zeichen begrenzt. Sobald Antworttext eintrifft, klappt die Vorschau zusammen; bei neuer Generierung, Chatwechsel, Abbruch oder Fehler wird sie geleert. Thinking wird weder als Antwort gespeichert noch in Logs oder Benchmarkantworten übernommen. Wenn das Modell kein Thinking ausgibt, wird keines erfunden. Während Prompt-Prefill und aktivem Prefix-Vorwärmen zeigt dieselbe Zeile Fortschritt in Prozent und gemessene neue Prompt-Tokens pro Sekunde. Der Fortschritt umfasst wiederverwendete Cache-Tokens; die Rate zählt nur frisch dekodierte Tokens und wird nach jedem abgeschlossenen Decode-Batch aktualisiert. Bis zur ersten Messung steht dort „… Tok/s“. Sobald Antworttext eintrifft, wechselt die Anzeige zum normalen mehrzeiligen Antworttext. Für eine Nutzerfrage stehen über alle Tool-Runden zusammen ungefähr **600 Reasoning-Tokens** zur Verfügung. Beim Erreichen des Budgets wird `</think>` in den laufenden Kontext eingefügt und mit der Endantwort fortgefahren. Die eingestellte maximale Antwortlänge begrenzt den sichtbaren Antwortteil; Platz für Reasoning und Abschluss wird zusätzlich innerhalb des bestehenden `n_ctx` reserviert. Thinking bleibt im Template standardmäßig deaktiviert; das Budget begrenzt trotzdem auftretendes Reasoning. GBNF-Tool-Grammatiken erlauben keine Thinking-Blöcke und benötigen dafür keine Reserve.
 
-Nach Ende der Generierung wird der Cache auf den kanonisch gerenderten Verlauf mit ausschließlich finalem Assistant-Text abgeglichen. Dadurch muss nach einem Thinking-Block dessen ersetzter Suffix einmal mit dem finalen Text dekodiert werden; das unveränderte Präfix bleibt erhalten. Nach Tool-Runden entfernt ein abschließender Abgleich auch die internen Aufrufe/Ergebnisse aus dem Cache des sichtbaren Chats. Neue Assistant-Nachrichten werden ohne Reasoning gespeichert; ältere Assistant-Zeilen werden beim Lesen bereinigt. Wörtliche Tags in User-Nachrichten werden erhalten.
+Nach Ende der Generierung wird der Cache auf das gültige Präfix des kanonisch gerenderten Verlaufs mit ausschließlich finalem Assistant-Text gekürzt. Dabei findet keine erneute Modellberechnung statt: Der Stoppbutton bleibt nach der fertigen Antwort nicht für ein erneutes Prefill gesperrt. Nach Tool-Runden entfernt ein abschließender Abgleich auch die internen Aufrufe/Ergebnisse aus dem Cache des sichtbaren Chats. Ein fehlender finaler Suffix wird erst bei der nächsten Anfrage zusammen mit deren Prompt dekodiert; dies kann deren Prefill verlängern. Das unveränderte Präfix bleibt erhalten. Neue Assistant-Nachrichten werden ohne Reasoning gespeichert; ältere Assistant-Zeilen werden beim Lesen bereinigt. Wörtliche Tags in User-Nachrichten werden erhalten.
 
 Passt der Verlauf einschließlich Antwortbudget nicht mehr in den Kontext, werden die ältesten vollständigen Turns aus dem **Modellkontext** entfernt. System-Prompt, aktuelle Frage und ihre Tool-Runden bleiben erhalten. SQLite-Verläufe werden dabei nicht gelöscht. Nach dem einmaligen Neuaufbau des geänderten Suffixes arbeitet das verbleibende Fenster wieder inkrementell. Eine einzelne zu große aktuelle Frage wird mit einer Fehlermeldung abgewiesen. **Neuer Chat**, Chatwechsel und neue Antwortvarianten leeren den Cache auf dem Inferenz-Worker. Abbruch und Decode-Fehler verwerfen den Cache ebenfalls, damit keine unvollständigen Reasoning-Zustände weiterverwendet werden. Benchmarks und Modellprüfungen starten weiterhin ausdrücklich mit kaltem Cache.
 
-Es gibt weiterhin nur einen Modellkontext/KV-Cache mit unveränderter Standard-Kontextlänge und standardmäßig F16-K/V. Die neu ergänzten FA-/Q8-Optionen sind ausdrücklich optional und geräteseitig zu prüfen. Zusätzlich wird eine auf die Kontextlänge begrenzte Liste von Token-IDs geführt (bei 4096 Tokens etwa 16 KiB); es werden keine KV-Snapshots und keine Reasoning-Transkripte gespeichert. Native Statistiken enthalten unter anderem `reused_prompt_tokens`, `decoded_prompt_tokens`, `dropped_turns`, `reasoning_tokens`, `reasoning_capped`, `cached_tokens`, `kv_positions` und `cleanup_ms`. Die UI verwendet die Zeit bis zum ersten sichtbaren Texttoken.
+Es gibt weiterhin nur einen Modellkontext/KV-Cache mit unveränderter Standard-Kontextlänge und standardmäßig F16-K/V. Die neu ergänzten FA-/Q8-Optionen sind ausdrücklich optional und geräteseitig zu prüfen. Zusätzlich wird eine auf die Kontextlänge begrenzte Liste von Token-IDs geführt (bei 4096 Tokens etwa 16 KiB); es werden keine KV-Snapshots und keine Reasoning-Transkripte gespeichert. Native Statistiken enthalten unter anderem `reused_prompt_tokens`, `decoded_prompt_tokens`, `dropped_turns`, `reasoning_tokens`, `reasoning_capped`, `cached_tokens`, `kv_positions` und `cleanup_ms`. `cleanup_decoded_tokens` und `commit_decoded_tokens` bleiben null; `cleanup_pending_tokens` und `commit_pending_tokens` zählen den beim jeweiligen Abgleich noch fehlenden Suffix. Die UI verwendet die Zeit bis zum ersten sichtbaren Texttoken.
 
 [Prüfungen und Grenzen der KV-Änderung](VALIDATION-KV-CACHE.md). Cache-Wiederverwendung reduziert erneutes Prefill; gleichbleibende Tokens/s auf dem A55 sind damit nicht zugesichert. Längere Aufmerksamkeit und thermische Drosselung bleiben mögliche Ursachen für langsameren Decode.
 
@@ -103,7 +170,7 @@ Der System-Prompt beschreibt ein einzelnes, vollständiges Tool-Format:
 
 Nach jeder Generierung prüft Java die komplette Antwort per Regex und validiert Name und Argumente. Ein eigener Java-Parser berechnet `+ - * / % ^`, Klammern, Dezimalzahlen, wissenschaftliche Schreibweise, `pi`, `e` und die Funktionen `sqrt`, `abs`, `sin`, `cos`, `tan`, `log` und `log10`. Winkel sind in Radiant; Division durch null, nicht endliche Ergebnisse und übermäßig lange oder tiefe Ausdrücke werden abgewiesen. Es gibt keine zusätzliche Bibliothek oder Netzwerkverbindung.
 
-`merken` speichert auf Wunsch der Person einen Text unter einem Schlüssel oder ersetzt dessen bisherigen Wert. `abrufen` liest genau diesen Schlüssel und meldet fehlende Einträge ausdrücklich. Beispiel: „Merke dir unter dem Schlüssel name: Ich heiße Alex.“ In einem neuen Chat: „Rufe den Schlüssel name ab. Wie heiße ich?“ Die Tabelle `memory` ist chatübergreifend und bleibt beim Löschen eines Chats erhalten. Schlüssel sind auf 128, Werte auf 4000 Zeichen begrenzt. Es gibt keine automatische Suche nach unbekannten Schlüsseln. Die SQLite-Migration von Version 1 oder 2 auf 3 erhält bestehende Chats und Archive. Eine Deinstallation löscht auch das Gedächtnis.
+`merken` speichert auf Wunsch der Person einen Text unter einem Schlüssel oder ersetzt dessen bisherigen Wert. `abrufen` liest genau diesen Schlüssel und meldet fehlende Einträge ausdrücklich. Beispiel: „Merke dir unter dem Schlüssel name: Ich heiße Alex.“ In einem neuen Chat: „Rufe den Schlüssel name ab. Wie heiße ich?“ Die Tabelle `memory` ist chatübergreifend und bleibt beim Löschen eines Chats erhalten. Schlüssel sind auf 128, Werte auf 4000 Zeichen begrenzt. Das Tool `erinnern` sucht auch ohne bekannten Schlüssel per Text und optional über einen lokalen semantischen Index. Die SQLite-Migration von Version 1, 2 oder 3 auf 4 erhält bestehende Chats, Archive und Erinnerungen und ergänzt deren Herkunft. Eine Deinstallation löscht auch das Gedächtnis.
 
 Eine Antwort verwendet maximal **drei Modellgenerierungen**, also höchstens zwei Tool-Ausführungen und eine abschließende Antwort. Tool-Aufruf und JSON-Ergebnis werden nur für diesen Durchlauf intern an den Modellverlauf angehängt; Ergebnisse verwenden für kompatible Chat-Templates die Rolle `user`. Im UI und gespeicherten Chat stehen nur Frage und Endantwort. Die Endantwort wird live gestreamt, sobald ihr Format erkannt ist; Tool-Aufrufe und interne GBNF-Markierungen erscheinen dabei nicht im UI. Fehler der Tools gehen an das Modell zurück; gemischte oder unvollständige Tool-Tags, abgeschnittene Aufrufe und weitere Aufrufe nach dem Limit führen zu einer sichtbaren Fehlermeldung statt einer Tool-Ausgabe im Chat. Abbrechen verhindert weitere Runden; bereits ausgeführte Speicheroperationen bleiben bestehen.
 
@@ -123,7 +190,7 @@ Die PrismML-Runtime ist als Submodul auf den exakten Release-Commit gebunden. Al
 
 ## APK auf dem XMG-Laptop bauen
 
-Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3. Die Downloads erfolgen beim Bauen auf dem Laptop. Der Betrieb der installierten App ist davon unabhängig und offline.
+Du brauchst Android Studio mit JDK 17 oder neuer, Git und Python 3.12 (für den Chaquopy-Build). Bei abweichendem Python-Pfad: `-PbonsaiBuildPython=/pfad/zu/python3.12`. Die Downloads erfolgen beim Bauen auf dem Laptop. Der Betrieb der installierten App ist davon unabhängig und offline.
 
 1. Dieses Projekt entpacken. Im Projektordner ein Terminal öffnen.
 2. Den passenden Runtime-Quellcode herunterladen:
