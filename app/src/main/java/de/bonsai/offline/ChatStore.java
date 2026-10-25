@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class ChatStore extends SQLiteOpenHelper {
+    final Context context;
     static final class Message {
         final long id;
         final String role;
@@ -23,8 +24,9 @@ final class ChatStore extends SQLiteOpenHelper {
         final String title;
         Chat(long id, String title) { this.id=id; this.title=title; }
     }
-    ChatStore(Context c) { super(c, "chats.sqlite", null, 3); }
+    ChatStore(Context c) { super(c, "chats.sqlite", null, 4);context=c.getApplicationContext(); }
     @Override public void onConfigure(SQLiteDatabase db) { db.setForeignKeyConstraintsEnabled(true); }
+    @Override public void onOpen(SQLiteDatabase db){super.onOpen(db);if(!db.isReadOnly())createVectors(db);}
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE chats(id INTEGER PRIMARY KEY, title TEXT NOT NULL, updated INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE TABLE messages(id INTEGER PRIMARY KEY, chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE, role TEXT NOT NULL, text TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '')");
@@ -32,19 +34,40 @@ final class ChatStore extends SQLiteOpenHelper {
         createMemory(db);
     }
     @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
-        if(oldVersion<1 || newVersion>3) throw new IllegalStateException("Unbekannte Datenbankversion");
+        if(oldVersion<1 || newVersion>4) throw new IllegalStateException("Unbekannte Datenbankversion");
         if(oldVersion<2) db.execSQL("ALTER TABLE chats ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
         if(oldVersion<3) createMemory(db);
+        else if(oldVersion<4) db.execSQL("ALTER TABLE memory ADD COLUMN source TEXT NOT NULL DEFAULT 'Bestand vor Version 4'");
+        createVectors(db);
     }
     private static void createMemory(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE memory(key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE memory(key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated INTEGER NOT NULL, source TEXT NOT NULL DEFAULT 'Chat-Tool')");
+        createVectors(db);
     }
+    private static void createVectors(SQLiteDatabase db){db.execSQL("CREATE TABLE IF NOT EXISTS memory_vectors(key TEXT PRIMARY KEY NOT NULL REFERENCES memory(key) ON DELETE CASCADE, profile TEXT NOT NULL, vector BLOB NOT NULL)");}
     void remember(String key,String value) {
+        remember(key,value,"Chat-Tool");
+    }
+    void remember(String key,String value,String source) {
+        if(key==null || key.trim().isEmpty() || key.length()>128 || value==null || value.trim().isEmpty() || value.length()>4000)
+            throw new IllegalArgumentException("Schlüssel: 1–128 Zeichen; Inhalt: 1–4000 Zeichen.");
         ContentValues v=new ContentValues();
-        v.put("key",key); v.put("value",value); v.put("updated",System.currentTimeMillis());
+        v.put("key",key); v.put("value",value); v.put("updated",System.currentTimeMillis());v.put("source",source);
         if(getWritableDatabase().insertWithOnConflict("memory",null,v,SQLiteDatabase.CONFLICT_REPLACE)==-1)
             throw new IllegalStateException("Erinnerung konnte nicht gespeichert werden.");
     }
+    static final class Memory {
+        final String key,value,source;final long updated;
+        Memory(String key,String value,long updated,String source){this.key=key;this.value=value;this.updated=updated;this.source=source;}
+    }
+    List<Memory> memories(String query) {
+        List<Memory> result=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT key,value,updated,source FROM memory WHERE instr(lower(key || char(10) || value),lower(?))>0 ORDER BY updated DESC,key",new String[]{query})) {
+            while(c.moveToNext())result.add(new Memory(c.getString(0),c.getString(1),c.getLong(2),c.getString(3)));
+        }
+        return result;
+    }
+    void forget(String key) {getWritableDatabase().delete("memory","key=?",new String[]{key});}
     String recall(String key) {
         try(Cursor c=getReadableDatabase().rawQuery("SELECT value FROM memory WHERE key=?",new String[]{key})) {
             return c.moveToFirst()?c.getString(0):null;

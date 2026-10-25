@@ -7,12 +7,14 @@ final class ToolGrammar {
         +"Gib ausschließlich <final>deine Antwort als normalen Text</final> aus. "
         +"Kein JSON und keine Anführungszeichen um die Endantwort. Die Markierungen werden von der App entfernt.";
     private static final String RULES="""
-        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | remember | recall | search | wikidata | dictionary | tables) ws "}" ws "</tool>"
+        tool ::= "<tool>" ws "{" ws "\\"name\\"" ws ":" ws (calc | math | memory-search | remember | recall | search | wikidata | dictionary | tables) ws "}" ws "</tool>"
         dictionary ::= "\\"woerterbuch\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"word\\"" ws ":" ws json-string (ws "," ws "\\"language\\"" ws ":" ws json-string)? ws "}"
         tables ::= "\\"tabellen\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"op\\"" ws ":" ws (table-name | table-convert) ws "}"
         table-name ::= ("\\"constant\\"" | "\\"food\\"") ws "," ws "\\"name\\"" ws ":" ws json-string
         table-convert ::= "\\"convert\\"" ws "," ws "\\"value\\"" ws ":" ws json-string ws "," ws "\\"from\\"" ws ":" ws json-string ws "," ws "\\"to\\"" ws ":" ws json-string
         calc ::= "\\"calc\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"expr\\"" ws ":" ws json-string ws "}"
+        math ::= "\\"mathe\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"op\\"" ws ":" ws json-string ws "," ws "\\"expr\\"" ws ":" ws json-string ( ws "," ws "\\"var\\"" ws ":" ws json-string  | ws "," ws "\\"vars\\"" ws ":" ws json-string  | ws "," ws "\\"order\\"" ws ":" ws json-string  | ws "," ws "\\"lower\\"" ws ":" ws json-string  | ws "," ws "\\"upper\\"" ws ":" ws json-string  | ws "," ws "\\"point\\"" ws ":" ws json-string  | ws "," ws "\\"direction\\"" ws ":" ws json-string  | ws "," ws "\\"precision\\"" ws ":" ws json-string  | ws "," ws "\\"domain\\"" ws ":" ws json-string  | ws "," ws "\\"assumptions\\"" ws ":" ws json-string  )* ws "}"
+        memory-search ::= "\\"erinnern\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"query\\"" ws ":" ws json-string ws "}"
         remember ::= "\\"merken\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "," ws "\\"value\\"" ws ":" ws json-string ws "}"
         recall ::= "\\"abrufen\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"key\\"" ws ":" ws json-string ws "}"
         search ::= "\\"suche\\"" ws "," ws "\\"args\\"" ws ":" ws "{" ws "\\"query\\"" ws ":" ws json-string (ws "," ws "\\"corpus\\"" ws ":" ws ("\\"all\\"" | "\\"wikipedia\\"" | "\\"wikibooks\\"" | "\\"stackexchange\\""))? ws "}"

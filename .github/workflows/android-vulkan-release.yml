@@ -43,6 +43,13 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test packaged SymPy module
+        run: |
+          python3 -m pip install -r tests/requirements-sympy.txt
+          python3 -m unittest discover -s tests -p test_sympy_engine.py -v
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -38,6 +38,10 @@ int main(int argc,char ** argv) {
             require(matches(final,response),std::string("Rejected final answer: ")+response);
         }
         for(const auto & call:{R"GBNF(<tool>{"name":"calc","args":{"expr":"2*(3+4)"}}</tool>)GBNF",
+                              R"GBNF(<tool>{"name":"mathe","args":{"op":"differentiate","expr":"x^2"}}</tool>)GBNF",
+                              R"GBNF(<tool>{"name":"mathe","args":{"op":"integrate","expr":"sin(t)","var":"t","lower":"0","upper":"pi"}}</tool>)GBNF",
+                              R"GBNF(<tool>{"name":"mathe","args":{"op":"solve","expr":"[Eq(x+y,3),Eq(x-y,1)]","vars":"x,y","domain":"real","assumptions":"{\"x\":{\"positive\":true}}"}}</tool>)GBNF",
+                              R"GBNF(<tool>{"name":"erinnern","args":{"query":"Arbeitsweg"}}</tool>)GBNF",
                               R"GBNF(<tool>{"name":"merken","args":{"key":"name","value":"Alex 🪴\n\"Test\""}}</tool>)GBNF",
                               R"GBNF(<tool>{"name":"abrufen","args":{"key":"name"}}</tool>)GBNF"}) {
             require(matches(tools,call),std::string("Rejected valid tool: ")+call);
