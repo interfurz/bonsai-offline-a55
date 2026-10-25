@@ -22,6 +22,18 @@ Der eigenständige `downloads`-Branch ist eine Ablage bereits signierter
 Release-Dateien mit unabhängiger Git-Historie und bleibt als Downloadablage
 bestehen. Alle Quellbranches werden in `main` aufgenommen.
 
-Build-, Test-, Signatur- und Update-Nachweise werden mit den Release-Dateien
-veröffentlicht. Host-/Robolectric-Tests ersetzen keine physische A55-Prüfung,
+Die Veröffentlichung enthält beide signierten APKs, SHA256-Prüfsummen,
+Signaturprotokoll, Updatevergleich und vollständigen Buildnachweis.
+
+Prüfung: je 175 Release-Testfälle für CPU und Vulkan, keine Fehler; zwei Tests
+mit externen realen Datenpaketen wurden jeweils übersprungen. Release-Lint ohne
+Fehler, Host-/Java-/Icon- und Kernelprüfungen bestanden. Signaturen v2/v3,
+16-KiB-ZIP-/ELF-Ausrichtung, unveränderte APK-Nutzdaten nach dem Signieren sowie
+Paket, Zertifikat und höherer Versionscode gegenüber den tatsächlich
+heruntergeladenen 0.5.2.1-APKs sind geprüft.
+
+[CPU/Vulkan-Build und Prüfungen](https://github.com/interfurz/bonsai-offline-a55/actions/runs/40175307043)
+und [Integrations-PR #29](https://github.com/interfurz/bonsai-offline-a55/pull/29).
+Die Bauinputs sind bytegleich mit dem gemergten `main`-Stand; Quellcommit,
+Branch-Spitzen und genaue Artefakthashes stehen in den JSON-Nachweisen. Host-/Robolectric-Tests ersetzen keine physische A55-Prüfung,
 keinen Geräteupdateversuch und keine echte Modellinferenz auf dem Zielgerät.

@@ -1,0 +1,25 @@
+{
+  "previous_version": "0.5.2.1",
+  "previous_version_code": 18,
+  "new_version": "0.5.3",
+  "new_version_code": 19,
+  "package": "de.bonsai.offline.debug",
+  "signing_certificate_sha256": "d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d",
+  "matching_update_signing_identity": true,
+  "higher_version_code": true,
+  "device_update_tested": false,
+  "variants": [
+    {
+      "backend": "CPU",
+      "previous_apk_sha256": "6aa0fa6b426c782bbde2da71ef6e024e54e9066b1c8f1ff0ea31ef7919e1b3a1",
+      "new_apk_sha256": "ce1a2f88e56816fbff3954b7eff729071fbd2ed27335da6628f48c35bb209970",
+      "verification": "actual downloaded v0.5.2.1 and signed v0.5.3 APKs compared with apksigner and aapt2"
+    },
+    {
+      "backend": "CPU-Vulkan",
+      "previous_apk_sha256": "b751678f29727be983e40dcdb24b4fedb6980e8423547e7bd311c092f01fcba6",
+      "new_apk_sha256": "43ce8e297ca422b66d972ae0e2b9e893de31dcf2b499d292d2201542ba8fa52a",
+      "verification": "actual downloaded v0.5.2.1 and signed v0.5.3 APKs compared with apksigner and aapt2"
+    }
+  ]
+}

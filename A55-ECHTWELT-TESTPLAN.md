@@ -1,8 +1,8 @@
 # A55-Echtwelttest: Debugausgaben und persönliche Nutzererfahrung
 
-Stand: 23. Oktober 2026, ergänzt für v0.5.1.1 nach Merge von #23/#24. Dieser Plan folgt auf die
+Stand: 25. Oktober 2026, ergänzt für v0.5.3 nach Merge von #25/#29. Dieser Plan folgt auf die
 [Projektanalyse/Roadmap](ROADMAP.md). Aktueller Release-Quellstand auf `main`:
-`29fb2099b0518a4c11033f9f96ce7eb15a728c3c` (v0.5.1.1, nach #23/#24). Neben Encoder (#12), Wikipedia (#13)
+`8aae2dc60b0b4a33cc6a0221058aadf9f5c1352c` (v0.5.3, nach #29). Neben Encoder (#12), Wikipedia (#13)
 und Wikidata (#14) sind jetzt die Chatoberfläche mit appweiten Lichtzuständen
 (#15) und optischen 16-dp-Iconvarianten (#17) integriert.
 **Ein physischer A55-Test wurde hier noch nicht ausgeführt.**
@@ -15,9 +15,10 @@ Das ist ein konkreter UX-Befund zur Warteanzeige, aber ohne APK-/Modellhash,
 Zeitmessung oder Antwortabschluss kein Leistungs- oder Geräteabnahmebeleg.
 Die Renderaufnahmen/138 Tests aus der Iconvalidierung
 sind Hostbelege mit Testinhalten; sie ersetzen deinen Durchlauf nicht.
-Die v0.5.1.1-CPU/Vulkan-APK ist lokal gebaut, signiert und binär geprüft;
-[Buildnachweis](release/0.5.1.1/build-info.json) und
-[Updatevergleich mit v0.5.1](release/0.5.1.1/update-compatibility.json) identifizieren genau das
+Die v0.5.3-CPU-APK ist lokal gebaut; CPU/Vulkan stammt aus dem vollständigen
+CI-Release-Bau. Beide APKs werden lokal signiert und binär geprüft.
+[Buildnachweis](release/0.5.3/build-info.json) und
+[Updatevergleich mit v0.5.2.1](release/0.5.3/update-compatibility.json) identifizieren genau das
 Artefakt. Der lokale Build ist kein physischer A55-Test.
 
 Ziel ist ein gemeinsamer Befund aus **deinen echten Aufgaben, deinem Eindruck
@@ -69,11 +70,11 @@ gemäß [SIGNIEREN.md](SIGNIEREN.md) durchführen. Keine Deinstallation und kein
 Für ein inkompatibles Zertifikat zuerst einen geprüften Export-/Migrationsweg
 bereitstellen; ein beliebiges neu signiertes Debug-APK ist kein Ersatz.
 
-Für den aktuellen Folgerelease gilt Appversion **0.5.1.1**, Versionscode **15**.
-Die Signieridentität entspricht auch dem tatsächlichen v0.5.1-/v0.5-Release.
+Für den aktuellen Folgerelease gilt Appversion **0.5.3**, Versionscode **19**.
+Die Signieridentität entspricht auch dem tatsächlichen v0.5.2.1-Release.
 Der bereitgestellte Release-Keystore entspricht der geprüften 0.4.4-Signatur
 (`d45ceaf8…`), nicht der 0.4.5-/0.3.0-Signatur (`ce1a585c…`). Den tatsächlichen
-APK-/Buildhash des veröffentlichten v0.5.1.1-Artefakts in das Sitzungsmanifest
+APK-/Buildhash des veröffentlichten v0.5.3-Artefakts in das Sitzungsmanifest
 übernehmen; die neue Versionsnummer allein ist weiterhin kein Gerätebeleg.
 
 ### Drei ausführbare Teststufen

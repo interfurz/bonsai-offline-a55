@@ -1,5 +1,17 @@
 # Bonsai Offline – technische Roadmap
 
+## Release v0.5.3, 25. Oktober 2026
+
+Alle geprüften Quellbranch-Spitzen sowie der offene Nachweis-PR #25 sind über
+Integrations-PR #29 in `main` zusammengeführt. Ein neues adaptives Bonsai-App-Icon
+übernimmt Violett/Lavendel und die dunkle Fläche der bestehenden Oberfläche;
+Android-Designfarben und die Benachrichtigungsmaske sind getrennt unterstützt.
+Version 0.5.3 verwendet Versionscode 19 und den bisherigen Release-Schlüssel.
+[Releasehinweise](release/0.5.3/RELEASE-NOTES.md) und
+[Build-/Signaturnachweis](release/0.5.3/build-info.json) identifizieren die APKs.
+Die nachfolgende Dateninfrastruktur-Planung bleibt erhalten; eine physische
+A55-, Modell- oder Geräteupdateabnahme wird dadurch nicht ersetzt.
+
 ## Umsetzungsstand Dateninfrastruktur, 24. Oktober 2026
 
 Basis `main` 29fb2099b0518a4c11033f9f96ce7eb15a728c3c, Featurebranch
