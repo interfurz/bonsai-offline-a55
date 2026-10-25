@@ -14,6 +14,25 @@ Ausgeführt am 25.10.2026:
 - `./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`: erfolgreich; 173 Tests bestanden, zwei übersprungen. Lint: null Fehler, 20 Warnungen. ARM64-Debug-APK gebaut.
 - `CacheSmoke` gegen die echte Host-JNI-Bibliothek und dasselbe unten beschriebene SmolLM2-GGUF: erfolgreich, einschließlich warmer/kalter Folgeantworten nach Tool-Bereinigung und Kontextfensterwechsel. Nach 600 Reasoning-Tokens: 32 gültige KV-Positionen, null beim Abschluss dekodierte Tokens, drei ausstehende kanonische Tokens und etwa 2,6 ms `cleanup_ms`. Im Folgeturn des Warm/Kalt-Vergleichs wurden 23 von 43 Prompt-Tokens wiederverwendet und 20 neu dekodiert. Diese Host-Zeit ist keine A55-Messung.
 
+## Gemeinsame Prüfung mit CPU-Repacking
+
+Repacking und verzögerte Cache-Bereinigung werden gemeinsam mit Microbatch 512
+geprüft. Bei SmolLM2 Q4_K_M kann die Aufteilung des Prefills in Matrixblöcke die
+Rundung und damit gesampelte Texte verändern: Ein warmer Tool-Folgeturn dekodiert
+16 Tokens nach einem 23-Token-Präfix, der kalte Lauf 39 Tokens am Stück. Bei
+Microbatch 32 und 512 entstanden dieselben unterschiedlichen Antworten. Eine
+Gegenprobe mit identischen 23-Token-Decodeblöcken lieferte dagegen identische
+warme und kalte Antworten bei aktiviertem Repacking; auch die skalare Referenz
+stimmte überein. Die Diagnoseänderung an der Blockgröße ist nicht Teil der App.
+
+`CacheSmoke` prüft im optimierten 512er-Modus weiterhin Präfixwiederverwendung,
+kanonische Promptlänge, KV-Positionen und Abschluss ohne Decode. Die zusätzliche
+bytegleiche warme/kalte Tool-Folgeantwort wird mit optimiertem tokenweisem Prefill
+und separat mit skalaren Referenzkerneln bei Microbatch 512 verlangt. Damit wird
+Cache-Korrektheit geprüft, ohne identische Zufallsantworten über unterschiedliche
+optimierte Batch-Aufteilungen vorauszusetzen. Der bestehende warme/kalte
+Vergleich der einfachen Chatfolge bleibt ebenfalls enthalten.
+
 ## Frühere Prüfung vom 22.10.2026
 
 Geprüft am 22.10.2026 in einer Linux-Build-Umgebung. Kein Galaxy-A55-Benchmark und kein Bonsai-PQ2_0-Gerätetest.
