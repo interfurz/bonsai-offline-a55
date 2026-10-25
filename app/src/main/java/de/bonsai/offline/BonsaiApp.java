@@ -52,6 +52,7 @@ public final class BonsaiApp extends Application {
     boolean busy, loaded;
     String status = "Modell auswählen", error = "", backend = "CPU", benchmarkProgress = "";
     String generationLine="";
+    String reasoningPreview="";
     double prefillFraction=-1;
     private volatile long progressEpoch;
     JSONObject benchmark, optimizerReport, cpuReference, prefixWarmupStats;
@@ -140,12 +141,12 @@ public final class BonsaiApp extends Application {
     void newChat() {
         if (busy) return;
         resetConversationCache();
-        currentChat=0; messages.clear(); prefs.edit().putLong("chat",0).apply(); error=""; notifyUi();
+        currentChat=0; messages.clear();reasoningPreview=""; prefs.edit().putLong("chat",0).apply(); error=""; notifyUi();
     }
     void selectChat(long id) {
         if (busy) return;
         resetConversationCache();
-        currentChat=id; messages.clear(); messages.addAll(store.messages(id));
+        currentChat=id; messages.clear();reasoningPreview=""; messages.addAll(store.messages(id));
         prefs.edit().putLong("chat",id).apply(); error=""; notifyUi();
     }
     void deleteCurrentChat() {
@@ -180,7 +181,7 @@ public final class BonsaiApp extends Application {
         discardModelApproval();
         NativeEngine.resetStop(handle);
         cancelled=false; busy=true; status=label; error=""; backgroundError="";
-        progressEpoch++;generationLine="";prefillFraction=-1;
+        progressEpoch++;generationLine="";reasoningPreview="";prefillFraction=-1;
         try { startForegroundService(new Intent(this,InferenceService.class)); }
         catch(RuntimeException e) {
             busy=false; error="Hintergrundverarbeitung konnte nicht gestartet werden: "+reason(e); notifyUi(); return false;
@@ -189,11 +190,12 @@ public final class BonsaiApp extends Application {
     }
     void cancel() {
         if (!busy) return;
-        cancelled=true;progressEpoch++;generationLine="Wird abgebrochen …";prefillFraction=-1; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
+        cancelled=true;progressEpoch++;generationLine="Wird abgebrochen …";reasoningPreview="";prefillFraction=-1; NativeEngine.stop(handle); status="Wird abgebrochen …"; notifyUi();
     }
     private String reason(Throwable e) { return e.getMessage() == null ? e.toString() : e.getMessage(); }
     void complete(String issue) {
         progressEpoch++;generationLine="";prefillFraction=-1;
+        if(cancelled||!issue.isEmpty()||!backgroundError.isEmpty())reasoningPreview="";
         busy=false;
         if(inferenceService!=null) inferenceService.finishIfIdle();
         error = !backgroundError.isEmpty() ? backgroundError : cancelled ? "" : issue;
@@ -228,6 +230,8 @@ public final class BonsaiApp extends Application {
         final long epoch=progressEpoch;
         return new InferenceProgress((line,fraction)->main.post(()->{
             if(busy && !cancelled && epoch==progressEpoch) { generationLine=line;prefillFraction=fraction;notifyStreamUi(); }
+        }),preview->main.post(()->{
+            if(busy && !cancelled && epoch==progressEpoch)reasoningPreview=preview;
         }));
     }
     private void verifyModel(String name,long bytes,String sha) {

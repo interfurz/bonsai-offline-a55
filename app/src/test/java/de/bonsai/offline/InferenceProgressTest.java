@@ -19,4 +19,16 @@ public class InferenceProgressTest {
         progress.onPrefill(0,1024,0);assertEquals("Prompt-Cache 0 % · … Tok/s",line[0]);
         progress.onPrefill(1024,1024,Double.NaN);assertEquals(1,fraction[0],0);assertFalse(line[0].contains("NaN"));
     }
+    @Test public void previewPreservesFormattingAndSplitUtf8WhileKeepingASeparateStatusTail() {
+        String[] line={""},preview={""};
+        InferenceProgress progress=new InferenceProgress((text,value)->line[0]=text,text->preview[0]=text);
+        byte[] bytes=BonsaiApp.utf8("Prüfen 🪴\nDann rechnen.");
+        for(byte value:bytes)progress.onThinking(new byte[]{value});
+        assertEquals("Prüfen 🪴\nDann rechnen.",preview[0]);
+        assertEquals("Prüfen 🪴 Dann rechnen.",line[0]);
+        progress.onPrefill(1,2,10);assertEquals("Prüfen 🪴\nDann rechnen.",preview[0]);
+        progress.onBytes(BonsaiApp.utf8("Antwort"));assertFalse(preview[0].contains("Antwort"));
+        progress.onThinking(BonsaiApp.utf8("🪴".repeat(5000)));
+        assertTrue(preview[0].length()<=8000);assertFalse(Character.isLowSurrogate(preview[0].charAt(0)));
+    }
 }
