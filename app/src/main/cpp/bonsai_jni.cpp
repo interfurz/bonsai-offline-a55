@@ -107,13 +107,19 @@ void decode_tokens(Engine & e,const llama_token * tokens,size_t count,const Deco
     }
 }
 using PrefillProgress=std::function<void(size_t,size_t,double)>;
-size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits,const PrefillProgress & progress={}) {
+// Keep only the valid prefix. Finishing a reply must never trigger another
+// model decode; the next request will prefill any missing canonical suffix.
+size_t trim_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits=false) {
     auto keep=conversation_prefix(e.cached,tokens,logits);
     if(keep<e.cached.size()) {
         if(!llama_memory_seq_rm(llama_get_memory(e.context.get()),0,static_cast<llama_pos>(keep),-1)) {
             e.clear_cache("suffix_removal_failed");keep=0;
         } else e.cached.resize(keep);
     }
+    return keep;
+}
+size_t sync_cache(Engine & e,const std::vector<llama_token> & tokens,bool logits,const PrefillProgress & progress={}) {
+    const auto keep=trim_cache(e,tokens,logits);
     const auto start=Clock::now();
     if(progress)progress(keep,tokens.size(),0);
     DecodeProgress decoded;
@@ -212,10 +218,10 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
         }
         retain_window(e,input);
         auto start=Clock::now();
-        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);auto reused=sync_cache(e,tokens,false);
+        int dropped=0;auto tokens=fit_prompt(e,input,0,dropped);auto reused=trim_cache(e,tokens);
         return result_bytes(env,common_json({{"cached_tokens",e.cached.size()},
             {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
-            {"commit_decoded_tokens",tokens.size()-reused},{"commit_native_ms",elapsed(start)},
+            {"commit_decoded_tokens",0},{"commit_pending_tokens",tokens.size()-reused},{"commit_native_ms",elapsed(start)},
             {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason}}).dump());
     } catch(const std::exception & ex) {
         if(handle)engine(handle).clear_cache("commit_error");
@@ -546,9 +552,9 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
         }
         output.finish();emit_thinking();emit();
         const double generation_ms = elapsed(generation_start);
-        // Remove reasoning now, not only when the next user message arrives.
+        // Discard reasoning immediately, without replaying the final answer.
         auto cleanup_start=Clock::now();
-        size_t cleanup_decoded=0;
+        size_t cleanup_pending=0;
         if(e.stop)e.clear_cache("stopped");
         else {
             std::string final=output.visible;
@@ -556,7 +562,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
                 final=final.substr(7,final.size()-15);
             common_chat_msg answer;answer.role="assistant";answer.content=final;
             input.messages.push_back(std::move(answer));input.add_generation_prompt=false;
-            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_decoded=clean.size()-sync_cache(e,clean,false);
+            int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_pending=clean.size()-trim_cache(e,clean);
         }
         return result_bytes(env, common_json({{"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
             {"prompt_tokens",tokens.size()}, {"output_tokens",generated},
@@ -564,7 +570,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},
             {"first_visible_token_ms",first_visible_token_ms},{"reasoning_tokens",reasoning_tokens},{"reasoning_capped",reasoning_capped},{"injected_tokens",injected},
             {"cache_resets",e.cache_resets},{"cache_reset_reason",e.reset_reason},{"cached_before",cached_before},
-            {"cleanup_decoded_tokens",cleanup_decoded},{"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
+            {"cleanup_decoded_tokens",0},{"cleanup_pending_tokens",cleanup_pending},{"cleanup_ms",elapsed(cleanup_start)},{"cached_tokens",e.cached.size()},
             {"kv_positions",llama_memory_seq_pos_max(llama_get_memory(e.context.get()),0)+1},
             {"generation_ms",generation_ms}, {"tokens_per_second", generation_ms > 0 ? generated*1000.0/generation_ms : 0},
             {"stopped",e.stop.load()}, {"limit_reached",!eos && (answer_tokens>=limit || generated>=hard_limit)}}).dump());

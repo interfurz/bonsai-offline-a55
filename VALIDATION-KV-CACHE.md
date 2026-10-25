@@ -1,5 +1,21 @@
 # KV-Cache und begrenztes Reasoning
 
+## Änderung am 25.10.2026: Abschluss ohne erneutes Prefill
+
+Die Generierung und das abschließende `commitTurn` kürzen den KV-Cache jetzt nur auf das gemeinsame Präfix mit dem bereinigten Verlauf. Sie dekodieren nach der Antwort keine Tokens mehr. Reasoning, interne Tool-Runden und GBNF-Markierungen werden dabei weiterhin aus dem Cache des sichtbaren Chats entfernt. Ein fehlender kanonischer Suffix wird erst beim Prefill der nächsten Anfrage verarbeitet. Damit entfällt die Modellberechnung, während der nach der sichtbaren Antwort noch der Stoppbutton aktiv blieb; die nächste Anfrage kann entsprechend mehr Prefill benötigen.
+
+`cleanup_decoded_tokens` und `commit_decoded_tokens` sind null. `cleanup_pending_tokens` und `commit_pending_tokens` geben an, wie viele Tokens beim jeweiligen Abgleich noch fehlen. `cached_tokens` und `kv_positions` beschreiben ausschließlich das tatsächlich erhaltene Präfix. Die unten dokumentierten vollständigen KV-Größen und Tokenzahlen stammen aus dem älteren Verfahren vom 22.10.
+
+Der bestehende JNI-Test `CacheSmoke` prüft zusätzlich den Abschluss ohne Decode, ein kaltes Commit ohne Modellberechnung und identische warme/kalte Folgeantworten nach dem Entfernen interner Tool-Runden. Die Prüfung des 600-Token-Reasoning-Budgets und drei aufeinanderfolgender Turns bleibt enthalten. Ein A55-Nachtest mit Bonsai ist weiterhin erforderlich, um die konkrete Wartezeit auf dem Gerät zu bestätigen.
+
+Ausgeführt am 25.10.2026:
+
+- `python3 scripts/check_project.py` und `java scripts/ParseJava.java`: erfolgreich.
+- `./gradlew --no-daemon --max-workers=2 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`: erfolgreich; 173 Tests bestanden, zwei übersprungen. Lint: null Fehler, 20 Warnungen. ARM64-Debug-APK gebaut.
+- `CacheSmoke` gegen die echte Host-JNI-Bibliothek und dasselbe unten beschriebene SmolLM2-GGUF: erfolgreich, einschließlich warmer/kalter Folgeantworten nach Tool-Bereinigung und Kontextfensterwechsel. Nach 600 Reasoning-Tokens: 32 gültige KV-Positionen, null beim Abschluss dekodierte Tokens, drei ausstehende kanonische Tokens und etwa 2,6 ms `cleanup_ms`. Im Folgeturn des Warm/Kalt-Vergleichs wurden 23 von 43 Prompt-Tokens wiederverwendet und 20 neu dekodiert. Diese Host-Zeit ist keine A55-Messung.
+
+## Frühere Prüfung vom 22.10.2026
+
 Geprüft am 22.10.2026 in einer Linux-Build-Umgebung. Kein Galaxy-A55-Benchmark und kein Bonsai-PQ2_0-Gerätetest.
 
 ## Ausgeführte Prüfungen
