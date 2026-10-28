@@ -94,3 +94,30 @@ Flash Attention aus und Vulkan-Microbatch 1 sind die Standardwerte. Im normalen
 Betrieb sind CPU-Repack-Kernel für unterstützte Tensorformate erlaubt; der
 skalare Referenzmodus deaktiviert sie weiterhin. Ein Geschwindigkeitsgewinn auf
 dem Galaxy A55 ist damit nicht gemessen.
+
+## Experimentelle Decode-Kernel
+
+Der native Festtoken-Replay, die optionalen PQ2-/PTQ1-Kernel und ihre tatsächlich
+ausgeführten Prüfungen sind unter [DECODE-EXPERIMENT.md](DECODE-EXPERIMENT.md)
+dokumentiert. Die Kernel sind standardmäßig deaktiviert; ein 2×-Gewinn ist
+**nicht nachgewiesen**. Messdaten: [decode-validation.json](decode-validation.json).
+Der zusätzliche verlustfreie PTQ-Ladecache erreicht im vollständigen Host-A–B–B–A
+**1.919128×**, benötigt mehr Speicher und längeres Laden und bleibt ebenfalls
+opt-in (`-PbonsaiPtqRecode=true`). Ergebnisse und vollständige Logitprüfung:
+[ptq-recode-validation.json](ptq-recode-validation.json).
+Weitere ARM-/Spekulationsansätze, Original-ARM-Korrektheitstests und tatsächliche
+Mehrtoken-/Rollback-Prüfungen stehen in [RESEARCH-NEXT.md](RESEARCH-NEXT.md).
+Auch diese Folgevergleiche belegen keinen zusätzlichen allgemeinen Decode-Gewinn.
+Der feste ARM-Shift-Kernel ist nun als **zusätzliche experimentelle Cachevariante**
+angeschlossen: `-PbonsaiPtqRecode=true -PbonsaiPtqPlanar=true`, standardmäßig aus.
+Produktions-Upload/Kerneldispatch und Hostmodell-Logits sind geprüft; der kleine
+Host-A/B-Abstand von 1.046179× ist kein A55-Nachweis. Daten:
+[planar-validation.json](planar-validation.json).
+Ein weiterer nativer x86-Butterfly-Entpackversuch bleibt ebenfalls aus:
+bitgleiche Modelllogits, aber A–B–B–A **0.980765×** gegenüber dem bisherigen
+VNNI-Cache. Daten: [butterfly-validation.json](butterfly-validation.json).
+Ein Diagnosecollector trennt nun Quantisierung/Vorbarriere/Dot-Arbeit innerhalb des
+Recode-Pfads: [recode-profile-validation.json](recode-profile-validation.json).
+Die gemessenen Workeranteile sind keine Gesamt-Wandzeitanteile. Der daraus geprüfte
+Achtzeilen-VNNI-Versuch bleibt aus: **0.906826×** im vollständigen Host-A–B–B–A,
+bei bitgleichen Modelllogits: [dot8-validation.json](dot8-validation.json).

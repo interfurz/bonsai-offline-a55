@@ -8,6 +8,7 @@
 #include "chat_sampler.h"
 #include "conversation_state.h"
 #include "runtime_init.h"
+#include "cpu_threadpool.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -32,6 +33,7 @@ using Sampler = std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)>;
 struct Engine {
     std::atomic<bool> stop{false};
     Model model{nullptr, llama_model_free};
+    BonsaiCpuThreadpool cpu_pool; // Context must be destroyed before its workers.
     Context context{nullptr, llama_free};
     common_chat_templates_ptr templates;
     std::string backend = "CPU";
@@ -48,7 +50,7 @@ struct Engine {
         evicted_turns=0;cached.clear();
         if(context)llama_memory_clear(llama_get_memory(context.get()),true);
     }
-    void unload() { ++cache_resets;reset_reason="unload";evicted_turns=0;cached.clear();templates.reset(); context.reset(); model.reset(); }
+    void unload() { ++cache_resets;reset_reason="unload";evicted_turns=0;cached.clear();templates.reset(); context.reset();cpu_pool.reset();model.reset(); }
 };
 Engine & engine(jlong handle) {
     if (!handle) throw std::runtime_error("Native Engine fehlt.");
@@ -234,6 +236,7 @@ Java_de_bonsai_offline_NativeEngine_commitTurn(JNIEnv * env,jclass,jlong handle,
 static jbyteArray warm_prefix(JNIEnv * env,jlong handle,jbyteArray system,jobject progress) {
     try {
         auto & e=engine(handle);
+        BonsaiCpuIdle idle(e.cpu_pool);
         if(!e.context || !e.model)throw std::runtime_error("Kein Kontext geladen.");
         common_chat_templates_inputs input;stable_input(e,input);input.add_generation_prompt=false;
         common_chat_msg message;message.role="system";message.content=bytes(env,system);input.messages.push_back(message);
@@ -326,8 +329,12 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         cp.no_perf = false;
         cp.abort_callback = abort_compute;
         cp.abort_callback_data = &e;
+        BonsaiCpuThreadpool cpu_pool;
         Context context(llama_init_from_model(model.get(), cp), llama_free);
         if (!context) throw std::runtime_error("Kontext konnte nicht angelegt werden. Kleineren Kontext oder CPU versuchen.");
+        #if BONSAI_PERSISTENT_CPU_POOL
+        cpu_pool.attach(context.get(),threads,threads);
+        #endif
         auto templates = common_chat_templates_init(model.get(), "");
         if (!templates) throw std::runtime_error("Chat-Template fehlt im Modell.");
         if (e.stop) throw std::runtime_error("Abgebrochen.");
@@ -342,11 +349,13 @@ Java_de_bonsai_offline_NativeEngine_load(JNIEnv * env, jclass, jlong handle, jby
         e.backend = gpu ? std::string("Vulkan - ") + ggml_backend_dev_description(devices[0]) : "CPU";
         e.templates = std::move(templates);
         e.model = std::move(model);
+        e.cpu_pool = std::move(cpu_pool);
         e.context = std::move(context);
         e.template_now=std::chrono::system_clock::now();
         e.cached.reserve(llama_n_ctx(e.context.get()));
         return result_bytes(env, common_json({{"backend",e.backend},{"context",llama_n_ctx(e.context.get())},{"metadata",metadata},
-            {"reference_cpu",bonsai_reference_cpu.load()}}).dump());
+            {"reference_cpu",bonsai_reference_cpu.load()},{"persistent_cpu_pool",e.cpu_pool.capacity()>0},{"cpu_pool_capacity",e.cpu_pool.capacity()},
+            {"ptq_recode",bool(BONSAI_PTQ_RECODE)},{"ptq_planar",bool(BONSAI_PTQ_PLANAR)}}).dump());
     } catch (const std::exception & e) { fail(env, e); return nullptr; }
 }
 
@@ -361,7 +370,12 @@ static void configure_context(JNIEnv * env,jlong handle,jint threads,jint batch_
         if(q8 && !flash)throw std::runtime_error("Q8 KV benoetigt Flash Attention.");
         // Thread counts can change without reallocating KV; identical profiles are a no-op.
         if(e.context && e.flash_attention==flash && e.kv_q8==q8 && llama_n_ubatch(e.context.get())==static_cast<uint32_t>(micro_batch)) {
-            llama_set_n_threads(e.context.get(),threads,batch_threads);return;
+            #if BONSAI_PERSISTENT_CPU_POOL
+            e.cpu_pool.attach(e.context.get(),threads,batch_threads);
+            #else
+            llama_set_n_threads(e.context.get(),threads,batch_threads);
+            #endif
+            return;
         }
         auto cp = llama_context_default_params();
         cp.n_ctx = e.context_size;
@@ -380,9 +394,14 @@ static void configure_context(JNIEnv * env,jlong handle,jint threads,jint batch_
         cp.abort_callback_data = &e;
         e.clear_cache("configure_context");
         e.context.reset(); // Release the previous KV allocation before creating another.
+        e.cpu_pool.reset();
         e.context.reset(llama_init_from_model(e.model.get(), cp));
         e.flash_attention=flash;e.kv_q8=q8;
         if (!e.context) throw std::runtime_error("Optimierungsprofil konnte keinen Kontext anlegen.");
+        #if BONSAI_PERSISTENT_CPU_POOL
+        try { e.cpu_pool.attach(e.context.get(),threads,batch_threads); }
+        catch (...) { e.context.reset(); throw; }
+        #endif
     } catch (const std::exception & e) { fail(env, e); }
 }
 
@@ -399,6 +418,7 @@ extern "C" JNIEXPORT jbyteArray JNICALL
 Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, jint steps) {
     try {
         auto & e = engine(handle);
+        BonsaiCpuIdle idle(e.cpu_pool);
         if (!e.context || !e.model) throw std::runtime_error("Kein Kontext geladen.");
         if (steps < 4 || steps > 128) throw std::runtime_error("Ungueltige Messlaenge.");
         auto vocab = llama_model_get_vocab(e.model.get());
@@ -440,6 +460,9 @@ Java_de_bonsai_offline_NativeEngine_probe(JNIEnv * env, jclass, jlong handle, ji
         const double decode = elapsed(start);
         e.clear_cache("probe_end");
         return result_bytes(env, common_json({{"prefill_ms",prefill}, {"decode_ms",decode},
+            {"persistent_cpu_pool",e.cpu_pool.capacity()>0},{"cpu_pool_capacity",e.cpu_pool.capacity()},
+            {"ptq_planar",bool(BONSAI_PTQ_PLANAR)},
+            {"ptq_recode",bool(BONSAI_PTQ_RECODE)},{"ptq_recode_graph_calls_total",bonsai_ptq_recode_graph_calls()},
             {"decode_tokens",steps}, {"prompt_tokens",tokens.size()},
             {"tokens_per_second",steps * 1000.0 / std::max(decode, 0.001)},
             {"score_ms",prefill + decode * 128.0 / steps},
@@ -453,6 +476,7 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
                                             jobjectArray contents, jint limit, jint seed, jobject callback, jbyteArray grammar,jint reasoning_budget) {
     try {
         auto & e = engine(handle);
+        BonsaiCpuIdle idle(e.cpu_pool);
         if (!e.context || !e.model) throw std::runtime_error("Bitte zuerst ein Modell laden.");
         if (limit < 16 || limit > 2048) throw std::runtime_error("Ungueltiges Antwortlimit.");
         if(e.stop) {
@@ -565,6 +589,9 @@ Java_de_bonsai_offline_NativeEngine_generate(JNIEnv * env, jclass, jlong handle,
             int cleanup_dropped=0;auto clean=fit_prompt(e,input,0,cleanup_dropped);cleanup_pending=clean.size()-trim_cache(e,clean);
         }
         return result_bytes(env, common_json({{"micro_batch",llama_n_ubatch(e.context.get())},{"flash_attention_requested",e.flash_attention},{"kv_cache_type",e.kv_q8?"q8_0":"f16"},
+            {"persistent_cpu_pool",e.cpu_pool.capacity()>0},{"cpu_pool_capacity",e.cpu_pool.capacity()},
+            {"ptq_planar",bool(BONSAI_PTQ_PLANAR)},
+            {"ptq_recode",bool(BONSAI_PTQ_RECODE)},{"ptq_recode_graph_calls_total",bonsai_ptq_recode_graph_calls()},
             {"prompt_tokens",tokens.size()}, {"output_tokens",generated},
             {"prefill_ms",prefill_ms}, {"first_token_ms",first_token_ms},
             {"reused_prompt_tokens",reused},{"decoded_prompt_tokens",tokens.size()-reused},{"dropped_turns",dropped},

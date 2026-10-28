@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "status": "Experimental opt-in; small overlapping host difference, no A55 speedup established",
+  "platform": "Windows x86_64; SIMD reference implementation, not ARM performance",
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "comparison": "Canonical four-row PTQ cache versus planar four-row PTQ cache; both lossless, not original PTQ baseline",
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2"
+  ],
+  "configuration": {
+    "model_bytes": 1986447360,
+    "model_parameters": 8953803264,
+    "context": 4096,
+    "threads": 4,
+    "batch_threads": 4,
+    "micro_batch": 512,
+    "flash_attention": false,
+    "kv_type": "f16",
+    "repack": true,
+    "decode_tokens": 32,
+    "warmup_steps": 4,
+    "persistent_cpu_pool": false,
+    "app_cpu_wrappers": false,
+    "ptq_recode_column_tile": false
+  },
+  "prompt_tokens": 64,
+  "aggregate": {
+    "baseline_median_tokens_per_second": 8.217106984880601,
+    "candidate_median_tokens_per_second": 8.596568344973825,
+    "speedup": 1.046179435267355,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      7.338639092953382,
+      8.982446054797412
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      7.62728545053827,
+      8.845383851237008
+    ]
+  },
+  "full_logits": {
+    "a1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "a2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    }
+  },
+  "raw_reports": [
+    {
+      "path": "build/planar-a1.json",
+      "report_sha256": "5accd1f88edb29735cf70f3b4b3c17814c9f495b22feeb32bb696a3c57cb6ae5",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_planar": false,
+      "selected_kernel": "avx512-vnni",
+      "graph_calls": 20904,
+      "rates": [
+        7.338639092953382,
+        8.206308440616498,
+        8.226795263474044
+      ],
+      "load_ms": 5704.0874,
+      "prefill_ms": [
+        5940.1098,
+        5321.573,
+        5410.7778
+      ]
+    },
+    {
+      "path": "build/planar-b1.json",
+      "report_sha256": "5b0b4b965100456ab26012444e26d9e30891695a0386f3e8b2be6cca05bdcb12",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_planar": true,
+      "selected_kernel": "avx512-vnni-planar",
+      "graph_calls": 20904,
+      "rates": [
+        8.382044361760233,
+        8.845383851237008,
+        8.275359697560429
+      ],
+      "load_ms": 5409.2356,
+      "prefill_ms": [
+        5408.4024,
+        5779.5697,
+        5424.8049
+      ]
+    },
+    {
+      "path": "build/planar-b2.json",
+      "report_sha256": "bcfaf091932f22a715613e36e51a44d047853b174effff0d9d19d9ed23c1ec7d",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_planar": true,
+      "selected_kernel": "avx512-vnni-planar",
+      "graph_calls": 20904,
+      "rates": [
+        8.811092328187417,
+        8.821848963053682,
+        7.62728545053827
+      ],
+      "load_ms": 4614.7462,
+      "prefill_ms": [
+        5054.1633,
+        4973.5271,
+        5567.5745
+      ]
+    },
+    {
+      "path": "build/planar-a2.json",
+      "report_sha256": "2409d3c6f58395e472eb352609a4ecb6eae92e79b94d02410bccf1cf7032f284",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_planar": false,
+      "selected_kernel": "avx512-vnni",
+      "graph_calls": 20904,
+      "rates": [
+        8.207418706287159,
+        8.982446054797412,
+        8.801478472353786
+      ],
+      "load_ms": 2849.6814,
+      "prefill_ms": [
+        5336.8045,
+        4839.4893,
+        5210.424
+      ]
+    }
+  ],
+  "executables": {
+    "baseline": "0548a882ab9e48a28975e7a59c871c128c22ce0422b05cdac29d7ea2699572e7",
+    "candidate": "7e094744d3001e27c31e5ad6daa8f6373dd8f176f85556bce93edb90b37290a1"
+  },
+  "cache_bytes_per_128_weights": 34,
+  "cache_bytes_per_four_rows_per_128_weights": 136,
+  "test_evidence": {
+    "upload_and_graph_red_green_observed": true,
+    "actual_ARM_upload_to_selected_kernel_compared_bitwise_to_pinned_original": true,
+    "scalar_planar_reference_and_AVX2_VNNI_VBMI_graphs_passed": true,
+    "separate_ARM_production_translation_units_linked": true,
+    "non_DOTPROD_compile_and_scalar_label_red_green_observed": true,
+    "invalid_planar_without_recode_rejected_by_both_CMake_entries": true
+  },
+  "limitations": [
+    "Only first trial full logits saved per process; signatures and top tokens checked for all trials",
+    "Host ranges overlap; no confidence interval or repeat-day stability established",
+    "ARM machine code/codec/dispatch tested, but full ARM graph/model and A55 performance remain unverified",
+    "Android Gradle unit-test attempt blocked by SDK location not found; no APK build",
+    "Requested perf/inference-ttft-v6 baseline remains unavailable",
+    "Do not multiply this ratio by historical ratios from separately timed experiments"
+  ],
+  "default": "BONSAI_PTQ_PLANAR OFF; Android opt-in requires both bonsaiPtqRecode=true and bonsaiPtqPlanar=true"
+}

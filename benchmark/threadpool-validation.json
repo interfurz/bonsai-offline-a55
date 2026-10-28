@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "status": "experimental; no speedup established; disabled by default",
+  "platform": "Windows x86_64",
+  "model": "Ternary-Bonsai-2-9B-PQ2_0.gguf",
+  "model_sha256": "7a89ab48f5038c704480f60781f9b8d4035351f5f6beb7d11fad80001fde23f9",
+  "a55_measurement": false,
+  "order": ["A1 disposable", "B1 persistent", "B2 persistent", "A2 disposable"],
+  "configuration": {
+    "threads": 4,
+    "batch_threads": 4,
+    "context": 4096,
+    "micro_batch": 512,
+    "kv_type": "f16",
+    "flash_attention": false,
+    "repack": true,
+    "experimental_ternary_kernels": false,
+    "prompt_tokens": 64,
+    "decode_tokens_per_trial": 32,
+    "trials_per_process": 3,
+    "processes_per_experiment": 4,
+    "baseline_trials": 6,
+    "candidate_trials": 6
+  },
+  "default_poll_50_experiment": {
+    "baseline_median_tokens_per_second": 11.132228704098987,
+    "candidate_median_tokens_per_second": 9.93714697740539,
+    "speedup": 0.8926466785349499,
+    "target_met": false,
+    "full_logit_values_per_comparison": 7946240,
+    "all_comparisons_bitwise_equal": true,
+    "max_abs_error": 0.0,
+    "raw_reports": ["build/pool-a1.json", "build/pool-b1.json", "build/pool-b2.json", "build/pool-a2.json"]
+  },
+  "poll_0_experiment": {
+    "baseline_median_tokens_per_second": 10.475145636998985,
+    "candidate_median_tokens_per_second": 9.997597948405108,
+    "speedup": 0.9544113556849135,
+    "target_met": false,
+    "full_logit_values_per_comparison": 7946240,
+    "all_comparisons_bitwise_equal": true,
+    "max_abs_error": 0.0,
+    "raw_reports": ["build/pool0-a1.json", "build/pool0-b1.json", "build/pool0-b2.json", "build/pool0-a2.json"]
+  },
+  "correctness": {
+    "native_pool_ownership_test_passed": true,
+    "real_model_thread_count_changes_passed": true,
+    "real_model_kv_position_preservation_passed": true,
+    "real_model_pause_resume_passed": true,
+    "real_model_abort_and_recovery_passed": true,
+    "real_model_max_logit_error": 0.0
+  },
+  "decision": "Keep the reusable pool as an opt-in experiment with poll=0. Do not enable by default or claim a decode speedup from these host results."
+}

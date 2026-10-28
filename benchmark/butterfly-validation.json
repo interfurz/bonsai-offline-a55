@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "platform": "Windows x86_64; not Galaxy A55",
+  "comparison": "Butterfly two-bit expansion against current VNNI lossless PTQ cache, not original PTQ baseline",
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2"
+  ],
+  "aggregate": {
+    "baseline_median_tokens_per_second": 8.546948803399342,
+    "candidate_median_tokens_per_second": 8.3825513177616,
+    "speedup": 0.9807653597302048,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      7.472291110000437,
+      8.780446231606716
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      8.352562280293354,
+      9.615089922123781
+    ]
+  },
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "full_logits": {
+    "a1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "a2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    }
+  },
+  "raw_reports": [
+    {
+      "report": "build/butterfly-a1.json",
+      "report_sha256": "81918cfffba57592cef13fafdab4fbea12697a8afdebc0e60d8326567f17a2ce",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "kernel": "avx512-vnni",
+      "graph_calls": 20904,
+      "rates": [
+        7.472291110000437,
+        8.411976551615362,
+        7.6634011956246955
+      ],
+      "load_ms": 3258.9757,
+      "prefill_ms": [
+        5637.4432,
+        5717.1681,
+        5696.8413
+      ]
+    },
+    {
+      "report": "build/butterfly-b1.json",
+      "report_sha256": "21e45a03fb9c7717f79944ea6ff04773f2b8336c3c0f2e1fc7900f2d341e502b",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "kernel": "avx512-vnni-butterfly",
+      "graph_calls": 20904,
+      "rates": [
+        8.352562280293354,
+        8.363086319647717,
+        9.01373132111922
+      ],
+      "load_ms": 2941.9104,
+      "prefill_ms": [
+        5200.4226,
+        5297.2025,
+        5206.5141
+      ]
+    },
+    {
+      "report": "build/butterfly-b2.json",
+      "report_sha256": "be2fa08433bad35e5115bd8746d4b1e1905934bf15702795e1249042f3b670d9",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "kernel": "avx512-vnni-butterfly",
+      "graph_calls": 20904,
+      "rates": [
+        8.402016315875484,
+        8.362951903539832,
+        9.615089922123781
+      ],
+      "load_ms": 2897.4559,
+      "prefill_ms": [
+        5273.3479,
+        4852.7966,
+        4609.1264
+      ]
+    },
+    {
+      "report": "build/butterfly-a2.json",
+      "report_sha256": "908119321d7324482a714203d00e2f9d1968864620f4ac5fb3eff0c170a36901",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "kernel": "avx512-vnni",
+      "graph_calls": 20904,
+      "rates": [
+        8.68192105518332,
+        8.780446231606716,
+        8.735678196833721
+      ],
+      "load_ms": 2854.0162,
+      "prefill_ms": [
+        5220.1523,
+        4972.8944,
+        5013.3616
+      ]
+    }
+  ],
+  "configuration": {
+    "context": 4096,
+    "threads": 4,
+    "batch_threads": 4,
+    "micro_batch": 512,
+    "flash_attention": false,
+    "kv_type": "f16",
+    "repack": true,
+    "decode_tokens": 32,
+    "warmup_steps": 4,
+    "persistent_cpu_pool": false,
+    "app_cpu_wrappers": false,
+    "ptq_planar": false,
+    "ptq_recode_column_tile": false
+  },
+  "prompt_tokens": 64,
+  "executables": {
+    "baseline": "fa645bceef21484c59d9559ea621625d378d5b03a419b1fdfbfe2f863f7aada9",
+    "candidate": "0bc887ddb705444336b9d427640e9220a1078c0c06e12a2b872a3a7de648741e"
+  },
+  "decision": "No additional throughput improvement established; native-only opt-in BONSAI_RECODE_BUTTERFLY remains OFF; no Android integration",
+  "correctness": {
+    "direct_comparisons_per_layout": 8696,
+    "layouts": [
+      "canonical",
+      "planar"
+    ],
+    "reference_candidate_flag_explicitly_off": true,
+    "independent_scalar_hardware_fma_oracle": true,
+    "dispatch_and_variant_metadata_red_green": true,
+    "actual_9B_logits_bitwise_equal_to_original_PTQ_baseline": true
+  },
+  "limitations": [
+    "Full logits saved for the first measured trial per process; all trial signatures and top tokens checked",
+    "Overlapping host ranges; no target-device or repeat-day stability evidence",
+    "No speedup factor multiplication with historical independent experiments",
+    "ARM/Android candidate is not provided; unchanged default remains in use"
+  ]
+}

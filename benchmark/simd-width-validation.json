@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "platform": "Windows, AMD Ryzen 7 8845HS, eight physical cores, sixteen logical processors; not A55",
+  "comparison": "Existing AVX2 recode kernel versus existing automatically selected AVX512-VNNI recode kernel, not original PTQ baseline",
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2"
+  ],
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "configuration": {
+    "context": 4096,
+    "threads": 4,
+    "batch_threads": 4,
+    "micro_batch": 512,
+    "flash_attention": false,
+    "kv_type": "f16",
+    "repack": true,
+    "decode_tokens": 32,
+    "warmup_steps": 4,
+    "persistent_cpu_pool": false,
+    "app_cpu_wrappers": false,
+    "ptq_planar": false,
+    "ptq_recode_column_tile": false,
+    "ptq_recode_butterfly": false,
+    "ptq_profile_compiled": false,
+    "ptq_profile_enabled": false
+  },
+  "prompt_tokens": 64,
+  "aggregate": {
+    "baseline_median_tokens_per_second": 8.106811063912353,
+    "candidate_median_tokens_per_second": 5.516792463286149,
+    "speedup": 0.6805132646848365,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      7.439617852869561,
+      8.488924486957922
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      4.746880602246236,
+      5.681677451348639
+    ]
+  },
+  "full_logits": {
+    "a1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "a2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    }
+  },
+  "raw_reports": [
+    {
+      "report": "build/simd-a1.json",
+      "report_sha256": "da86f743a329166caec1c601760c20c86ec1698e48193a1686c2013860374ef4",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "selected_kernel": "avx512-vnni",
+      "rates": [
+        8.098311681695657,
+        8.488924486957922,
+        8.380615719646615
+      ],
+      "load_ms": 3225.7408,
+      "prefill_ms": [
+        5329.4626,
+        5018.421,
+        5120.6076
+      ]
+    },
+    {
+      "report": "build/simd-b1.json",
+      "report_sha256": "ab0ae9ea37b7d48d7573b52c2ac51f1a148d676f6fa700ca8966cc9fe9e962cf",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "selected_kernel": "avx2",
+      "rates": [
+        5.186434827843427,
+        5.4798765575607264,
+        5.643980662875652
+      ],
+      "load_ms": 4133.4378,
+      "prefill_ms": [
+        8415.1456,
+        7921.204,
+        7817.8187
+      ]
+    },
+    {
+      "report": "build/simd-b2.json",
+      "report_sha256": "7ad8d02b667c277ab15ce2d56da7a0d24120df51a41ca829a73456dde75b6b80",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "selected_kernel": "avx2",
+      "rates": [
+        5.681677451348639,
+        5.553708369011571,
+        4.746880602246236
+      ],
+      "load_ms": 3591.6142,
+      "prefill_ms": [
+        8140.2669,
+        7886.7898,
+        9226.4859
+      ]
+    },
+    {
+      "report": "build/simd-a2.json",
+      "report_sha256": "3207fcdc7162e5c129e8edc72a5229170dcdfd114b12ee6fc2f3791b0e1684f3",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "selected_kernel": "avx512-vnni",
+      "rates": [
+        8.115310446129048,
+        7.439617852869561,
+        8.076792731855758
+      ],
+      "load_ms": 4545.1851,
+      "prefill_ms": [
+        5202.2129,
+        5382.6107,
+        5203.1909
+      ]
+    }
+  ],
+  "executables": {
+    "baseline": "292ef4bee0ea4a22d5765067f5afad6b612144b10400ef0fe87674d809c9557d",
+    "candidate": "97f4c5deb36b092b6cb4a98f4ca7c29e95b99ed78295d83e91bb2f3d67940606"
+  },
+  "correctness": {
+    "real_model_dispatch_integration_red_green": true,
+    "variant_metadata_red_green": true,
+    "all_saved_full_logits_bitwise_equal_to_original_PTQ": true
+  },
+  "decision": "Existing AVX2 kernel is slower in this controlled host batch; keep automatic VNNI dispatch, AVX2-only native experiment OFF",
+  "limitations": [
+    "AVX2 implementation differs in operations/reduction as well as SIMD width; does not isolate width or prove frequency throttling",
+    "Only recode dot kernel selection changed; other GGML operations still use native CPU dispatch and may use AVX512",
+    "No measured clock-frequency, cache-miss or bandwidth counters",
+    "Full logits saved for first measured trial of each process; every trial signature/top-token checked",
+    "Host comparison does not predict ARM/A55 performance; no multiplication with previous independent ratios"
+  ]
+}
