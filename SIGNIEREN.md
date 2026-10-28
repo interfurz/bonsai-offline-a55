@@ -1,15 +1,15 @@
 # Bonsai-Release signieren
 
-Release **0.5.4**, Versionscode **20**, verwendet den bereitgestellten
+Release **0.5.5**, Versionscode **21**, verwendet den bereitgestellten
 Release-Schlüssel (Alias `bonsai-release`) und das Paket
-`de.bonsai.offline.debug` wie 0.5.3. CPU- und CPU/Vulkan-APKs werden lokal
-gebaut, geprüft und signiert, ohne GitHub Actions. Keystore und Passwort bleiben
+`de.bonsai.offline.debug` wie 0.5.4. CPU- und CPU/Vulkan-APKs werden in GitHub
+Actions unsigniert gebaut und geprüft, anschließend lokal signiert. Keystore und Passwort bleiben
 außerhalb von Git und Release-Assets.
 Zertifikat SHA256: `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d`.
 Die Veröffentlichungsnachweise liegen bei den
-[Release-Downloads](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.4).
+[Release-Downloads](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.5).
 Ein höherer Versionscode bei gleichem Paket und Zertifikat ermöglicht ein
-Update über 0.5.3; ein physischer A55-Updateversuch steht weiterhin aus.
+Update über 0.5.4; ein physischer A55-Updateversuch steht weiterhin aus.
 
 Release **0.5.1.1** wird auf ausdrücklichen Wunsch mit dem hochgeladenen
 `bonsai-release.keystore` signiert (Alias `bonsai-release`, PKCS12).
@@ -20,7 +20,7 @@ Release**; der Paket-Suffix `.debug` ändert dieses Buildflag nicht.
 | Veröffentlichungen | Zertifikat SHA256 |
 | --- | --- |
 | 0.3.0 / 0.4.5, Original-Debug-Keystore | `ce1a585cbd3b51dcb446c50814122d5c68832a6a052f2c6f139cf2e0c44208db` |
-| 0.4.3 / 0.4.4 / 0.5 / 0.5.1 / 0.5.1.1 / 0.5.2 / 0.5.2.1 / 0.5.3 / 0.5.4, Release-Schlüssel | `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d` |
+| 0.4.3 / 0.4.4 / 0.5 / 0.5.1 / 0.5.1.1 / 0.5.2 / 0.5.2.1 / 0.5.3 / 0.5.4 / 0.5.5, Release-Schlüssel | `d45ceaf8f512e9a1e774a8278480a83ead37f693add7ffa342064556d317720d` |
 | 0.4.0 / 0.4.1, historischer Schlüssel | `933bc216a40682ce964cb0a2db03fb7ab511ae1916a7ea3bd0d0328c153bc462` |
 
 **0.5.1.1 ist signaturkompatibel mit 0.5.1, 0.5 und 0.4.3/0.4.4:** Paket und Signatur bleiben

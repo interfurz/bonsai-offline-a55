@@ -1,11 +1,11 @@
 # Bonsai auf dem Galaxy A55 installieren
 
-1. Die signierte **Bonsai-Offline-0.5.4-arm64-CPU.apk** oder
-   **Bonsai-Offline-0.5.4-arm64-CPU-Vulkan.apk** aus den
-   [Release-Downloadlinks](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.4)
+1. Die signierte **Bonsai-Offline-0.5.5-arm64-CPU.apk** oder
+   **Bonsai-Offline-0.5.5-arm64-CPU-Vulkan.apk** aus den
+   [Release-Downloadlinks](https://github.com/interfurz/bonsai-offline-a55/releases/tag/v0.5.5)
    auf das A55 laden. Bei privatem Repository ist ein berechtigtes GitHub-Login nötig.
-2. **Vor einem Update die Signieridentität beachten:** 0.5.4 verwendet denselben
-   Release-Schlüssel und dasselbe Paket wie 0.5.3, mit höherem Versionscode 20.
+2. **Vor einem Update die Signieridentität beachten:** 0.5.5 verwendet denselben
+   Release-Schlüssel und dasselbe Paket wie 0.5.4, mit höherem Versionscode 21.
    Paket, Zertifikat und Versionscode werden an den tatsächlichen APKs geprüft;
    eine Geräteinstallation wird damit nicht behauptet. 0.4.5 und 0.3.0 verwenden
    einen anderen Schlüssel und sind nicht direkt aktualisierbar.

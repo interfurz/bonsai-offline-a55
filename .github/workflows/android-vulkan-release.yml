@@ -1,7 +1,7 @@
-name: Android CPU + Vulkan unsigned release
+name: Android CPU and CPU + Vulkan unsigned release
 
 # Deliberately opt-in: this builds an unsigned update for LOCAL signing only.
-# No signing key, signing secret, publishing permission, or CPU-only fallback.
+# No signing key, signing secret, publishing permission, or silent backend fallback.
 on:
   workflow_dispatch:
   push:
@@ -25,6 +25,14 @@ jobs:
   full-release:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: CPU
+            vulkan: 'false'
+          - backend: CPU-Vulkan
+            vulkan: 'true'
     defaults:
       run:
         shell: bash
@@ -37,6 +45,8 @@ jobs:
       VULKAN_SDK_VERSION: '1.4.363.0'
       VULKAN_SDK_SHA256: 197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43
       VULKAN_CONFIG_SHA256: 5a4d3ee31f3c215fd8a370b90f785325deecd5276d59fa56bef0204dcc6eda8c
+      BONSAI_RELEASE_BACKEND: ${{ matrix.backend }}
+      BONSAI_RELEASE_VULKAN: ${{ matrix.vulkan }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,6 +78,7 @@ jobs:
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
 
       - name: Install checksum-pinned official Linux Vulkan SDK
+        if: matrix.vulkan == 'true'
         run: |
           set -euo pipefail
           mkdir -p ci-evidence "$RUNNER_TEMP/vulkan-sdk"
@@ -101,6 +112,7 @@ jobs:
           # ggml/src/ggml-vulkan/CMakeLists.txt requires Vulkan COMPONENTS glslc,
           # SPIRV-Headers CONFIG, plus a native C++17 ExternalProject shader generator.
           command -v gcc g++ ninja python3
+          mkdir -p ci-evidence
           python3 scripts/fetch_runtime.py
           test "$(git -C vendor/llama.cpp rev-parse HEAD)" = "$RUNTIME_REVISION"
           python3 scripts/check_project.py 2>&1 | tee ci-evidence/host-checks.log
@@ -113,28 +125,28 @@ jobs:
           cmake --build build/kernel-check --target bonsai-reference-test --parallel 2
           ./build/kernel-check/bonsai-reference-test 2>&1 | tee ci-evidence/reference-kernel-tests.log
 
-      - name: Release Robolectric tests (Vulkan build configuration)
+      - name: Release Robolectric tests
         id: tests
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan="$BONSAI_RELEASE_VULKAN" \
             :app:testReleaseUnitTest 2>&1 | tee ci-evidence/release-unit-tests.log
 
-      - name: Release lint (Vulkan build configuration)
+      - name: Release lint
         id: lint
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan="$BONSAI_RELEASE_VULKAN" \
             :app:lintRelease 2>&1 | tee ci-evidence/release-lint.log
 
-      - name: Build full CPU + Vulkan unsigned release APK
+      - name: Build unsigned release APK
         id: build
         if: ${{ !cancelled() && steps.ready.outcome == 'success' }}
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan=true \
+          ./gradlew --no-daemon --max-workers=2 --stacktrace -PbonsaiVulkan="$BONSAI_RELEASE_VULKAN" \
             :app:assembleRelease 2>&1 | tee ci-evidence/release-build.log
 
       - name: Verify unsigned APK and native configuration
@@ -162,14 +174,16 @@ jobs:
               values = {key.split(':', 1)[0]: value for key, value in
                         (line.split('=', 1) for line in cache.read_text().splitlines()
                          if '=' in line and not line.startswith(('#', '//')))}
-              assert values.get('BONSAI_VULKAN') == 'ON', cache
-              assert values.get('GGML_VULKAN') == 'ON', cache
+              expected_vulkan = 'ON' if os.environ['BONSAI_RELEASE_VULKAN'] == 'true' else 'OFF'
+              assert values.get('BONSAI_VULKAN') == expected_vulkan, cache
+              assert values.get('GGML_VULKAN') == expected_vulkan, cache
               assert values.get('GGML_CPU') == 'ON', cache
-              assert values.get('Vulkan_INCLUDE_DIR') == os.environ['BONSAI_VULKAN_SDK'] + '/include', cache
-              assert values.get('Vulkan_GLSLC_EXECUTABLE') == os.environ['BONSAI_GLSLC'], cache
-              loader = values.get('Vulkan_LIBRARY', '')
-              assert '/ndk/28.2.13676358/' in loader and 'aarch64-linux-android' in loader, loader
-          print(f'Unsigned arm64 APK and CPU + Vulkan CMake configuration verified: {apks[0]}')
+              if expected_vulkan == 'ON':
+                  assert values.get('Vulkan_INCLUDE_DIR') == os.environ['BONSAI_VULKAN_SDK'] + '/include', cache
+                  assert values.get('Vulkan_GLSLC_EXECUTABLE') == os.environ['BONSAI_GLSLC'], cache
+                  loader = values.get('Vulkan_LIBRARY', '')
+                  assert '/ndk/28.2.13676358/' in loader and 'aarch64-linux-android' in loader, loader
+          print(f'Unsigned arm64 APK and {os.environ["BONSAI_RELEASE_BACKEND"]} CMake configuration verified: {apks[0]}')
           PY
           apk=(app/build/outputs/apk/release/*-unsigned.apk)
           "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "${apk[0]}" | tee ci-evidence/apk-badging.txt
@@ -199,12 +213,14 @@ jobs:
           data = {
               'source_sha': os.environ['SOURCE_SHA'],
               'runtime_revision': os.environ['RUNTIME_REVISION'],
-              'vulkan_sdk_version': os.environ['VULKAN_SDK_VERSION'],
-              'vulkan_sdk_sha256': os.environ['VULKAN_SDK_SHA256'],
-              'vulkan_config_sha256': os.environ['VULKAN_CONFIG_SHA256'],
+              'vulkan_sdk_version': os.environ['VULKAN_SDK_VERSION'] if os.environ['BONSAI_RELEASE_VULKAN'] == 'true' else None,
+              'vulkan_sdk_sha256': os.environ['VULKAN_SDK_SHA256'] if os.environ['BONSAI_RELEASE_VULKAN'] == 'true' else None,
+              'vulkan_config_sha256': os.environ['VULKAN_CONFIG_SHA256'] if os.environ['BONSAI_RELEASE_VULKAN'] == 'true' else None,
               'android': {'platform': 35, 'build_tools': '35.0.0', 'ndk': '28.2.13676358',
                           'cmake': '3.22.1', 'java': '17', 'gradle': '8.11.1'},
-              'variant': 'release', 'bonsaiVulkan': True, 'signing': 'unsigned; local signing only',
+              'variant': 'release', 'backend': os.environ['BONSAI_RELEASE_BACKEND'],
+              'bonsaiVulkan': os.environ['BONSAI_RELEASE_VULKAN'] == 'true',
+              'signing': 'unsigned; local signing only',
               'physical_device_test': 'not performed',
               'robolectric_scope': 'release JVM tests; no device JNI/Vulkan execution',
               'steps': json.loads(os.environ['STEP_RESULTS']),
@@ -216,7 +232,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bonsai-offline-full-release-tests-${{ github.run_id }}-${{ github.run_attempt }}
+          name: bonsai-offline-full-release-tests-${{ matrix.backend }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             app/build/test-results/testReleaseUnitTest/**/*.xml
             app/build/reports/tests/testReleaseUnitTest/**
@@ -226,7 +242,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bonsai-offline-full-release-lint-${{ github.run_id }}-${{ github.run_attempt }}
+          name: bonsai-offline-full-release-lint-${{ matrix.backend }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: app/build/reports/lint-results-release.*
           if-no-files-found: warn
 
@@ -234,7 +250,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bonsai-offline-cpu-vulkan-release-unsigned-${{ github.run_id }}-${{ github.run_attempt }}
+          name: bonsai-offline-release-unsigned-${{ matrix.backend }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/release/output-metadata.json
@@ -244,7 +260,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bonsai-offline-full-release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: bonsai-offline-full-release-evidence-${{ matrix.backend }}-${{ github.run_id }}-${{ github.run_attempt }}
           include-hidden-files: true
           path: |
             ci-evidence/**
