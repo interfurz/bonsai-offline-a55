@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "status": "experimental; 2x aggregate target not met; disabled by default",
+  "platform": "Windows x86_64; not Galaxy A55",
+  "requested_baseline_available": false,
+  "requested_baseline": "perf/inference-ttft-v6",
+  "source_baseline": "main c8d99884a5de0a8e849b503f1d05690c7c0b9eec",
+  "runtime_revision": "e3de715222b2667c54a267441159a5729f11155e",
+  "model_file": "Ternary-Bonsai-2-9B-PTQ1_0.gguf",
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "configuration": {
+    "context": 4096,
+    "threads": 4,
+    "batch_threads": 4,
+    "micro_batch": 512,
+    "flash_attention": false,
+    "kv_type": "f16",
+    "repack": true,
+    "persistent_cpu_pool": false,
+    "app_cpu_wrappers": false,
+    "decode_tokens": 32,
+    "warmup_steps": 4,
+    "vocab_size": 248320
+  },
+  "prompt_tokens_count": 64,
+  "order": [
+    "A2 baseline",
+    "B5 recode",
+    "B6 recode",
+    "A3 baseline"
+  ],
+  "aggregate": {
+    "baseline_median_tokens_per_second": 3.3287374667051135,
+    "candidate_median_tokens_per_second": 6.388274202954749,
+    "speedup": 1.9191282781690977,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      2.93768125091682,
+      3.775171189856568
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      6.235006878673917,
+      6.8253081573310315
+    ]
+  },
+  "prefill_ms_median_all_ABBA_trials": {
+    "baseline": 15143.091550000001,
+    "candidate": 6085.0224
+  },
+  "correctness": {
+    "a2": {
+      "signatures": 0.0,
+      "full_logits": {
+        "compared_values": 7946240,
+        "bitwise_equal": true,
+        "max_abs_error": 0.0
+      }
+    },
+    "b5": {
+      "signatures": 0.0,
+      "full_logits": {
+        "compared_values": 7946240,
+        "bitwise_equal": true,
+        "max_abs_error": 0.0
+      }
+    },
+    "b6": {
+      "signatures": 0.0,
+      "full_logits": {
+        "compared_values": 7946240,
+        "bitwise_equal": true,
+        "max_abs_error": 0.0
+      }
+    },
+    "a3": {
+      "signatures": 0.0,
+      "full_logits": {
+        "compared_values": 7946240,
+        "bitwise_equal": true,
+        "max_abs_error": 0.0
+      }
+    },
+    "hardened": {
+      "signatures": 0.0,
+      "full_logits": {
+        "compared_values": 7946240,
+        "bitwise_equal": true,
+        "max_abs_error": 0.0
+      }
+    }
+  },
+  "raw_reports": [
+    {
+      "path": "build/recode-a2.json",
+      "sha256": "f78f352a71b5cc34310c305d865b7b54d83b1176e528d41c3530f88812345ca4",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_recode": false,
+      "graph_calls": 0,
+      "trial_tokens_per_second": [
+        3.086196622975638,
+        3.0906975431987282,
+        3.5667773902114988
+      ],
+      "prefill_ms": [
+        14481.0011,
+        15290.0561,
+        16069.6529
+      ],
+      "load_ms": 1001.5003,
+      "model_buffers_MiB_rounded_from_log": {
+        "CPU_Mapped": 1894.42
+      },
+      "purpose": "ABBA"
+    },
+    {
+      "path": "build/recode-b5.json",
+      "sha256": "67af7c19388e8b1820d9dd6cfd97f8b0cf867d3b590dc3ac704928d907426782",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_recode": true,
+      "graph_calls": 20904,
+      "trial_tokens_per_second": [
+        6.284223488353606,
+        6.8253081573310315,
+        6.400536492968841
+      ],
+      "prefill_ms": [
+        7100.4105,
+        6166.5809,
+        6005.8714
+      ],
+      "load_ms": 5689.9464,
+      "model_buffers_MiB_rounded_from_log": {
+        "BONSAI_PTQ2_CACHE": 2008.66,
+        "CPU_Mapped": 1682.24
+      },
+      "purpose": "ABBA"
+    },
+    {
+      "path": "build/recode-b6.json",
+      "sha256": "06063036f5f52fbf960eca707310495819bb9b0f3aff3537bc650100f311428c",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_recode": true,
+      "graph_calls": 20904,
+      "trial_tokens_per_second": [
+        6.235006878673917,
+        6.376011912940658,
+        6.7527084111081805
+      ],
+      "prefill_ms": [
+        5803.4708,
+        6164.1734,
+        5829.7995
+      ],
+      "load_ms": 5685.1879,
+      "model_buffers_MiB_rounded_from_log": {
+        "BONSAI_PTQ2_CACHE": 2008.66,
+        "CPU_Mapped": 1682.24
+      },
+      "purpose": "ABBA"
+    },
+    {
+      "path": "build/recode-a3.json",
+      "sha256": "f2d1d67004f97bc34fe86169a99608b171ef49c4a3a78d06b310ace0cc3c6546",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_recode": false,
+      "graph_calls": 0,
+      "trial_tokens_per_second": [
+        2.93768125091682,
+        3.7659829050031868,
+        3.775171189856568
+      ],
+      "prefill_ms": [
+        13002.5995,
+        16440.3636,
+        14996.127
+      ],
+      "load_ms": 989.7613,
+      "model_buffers_MiB_rounded_from_log": {
+        "CPU_Mapped": 1894.42
+      },
+      "purpose": "ABBA"
+    },
+    {
+      "path": "build/recode-hardened.json",
+      "sha256": "e96b3fdc2a0546d732e945ac96e2588b52fb5ea99a83a6d80b308e054c56339d",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "ptq_recode": true,
+      "graph_calls": 20904,
+      "trial_tokens_per_second": [
+        9.497635059190152,
+        5.597241301672748,
+        5.004676244365829
+      ],
+      "prefill_ms": [
+        5151.8386,
+        5462.4326,
+        6941.5818
+      ],
+      "load_ms": 5536.7403,
+      "model_buffers_MiB_rounded_from_log": {
+        "BONSAI_PTQ2_CACHE": 2008.66,
+        "CPU_Mapped": 1682.24
+      },
+      "purpose": "post-hardening correctness validation; not part of ABBA"
+    }
+  ],
+  "memory_caveat": "Cache allocation expands each selected 28-byte block to 34 bytes. Buffer allocations and mapped file ranges are not RSS; process peak RSS was not measured.",
+  "verification_limits": [
+    "Android SDK unavailable; no APK build",
+    "No A55/device measurement",
+    "ARM kernel machine code executed in emulator; not full ARM model logits or ARM graph/backend validation",
+    "Only first trial full logits saved per process; signatures/top tokens checked in every trial"
+  ]
+}

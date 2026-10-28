@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "platform": "Windows x86_64; not A55",
+  "purpose": "Fixed-token prerequisites only, no speculative sampler or accepted-token speedup",
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "raw_report": "build/speculation-ptq-anchor.json",
+  "report_sha256": "69d1a4add927eae4e34c38c78980cf095a1895921d2706c80c6edf789c705117",
+  "configuration": {
+    "device": "CPU",
+    "threads": 4,
+    "batch_threads": 4,
+    "context": 4096,
+    "batch": 512,
+    "micro_batch": 512,
+    "n_seq_max": 1,
+    "n_rs_seq_requested": 8,
+    "prefix_tokens": 64,
+    "steps": 16,
+    "trials": 1,
+    "kv_type": "f16",
+    "flash_attention": false,
+    "extra_bufts": true,
+    "ptq_recode": true,
+    "app_cpu_wrappers": false,
+    "persistent_cpu_pool": false,
+    "n_rs_seq_actual": 8
+  },
+  "numeric_gate_passed": true,
+  "rollback_gate_passed": true,
+  "timing_summary": [
+    {
+      "verify_width": 1,
+      "samples": 2,
+      "median_decode_ms": 1911.3643,
+      "min_decode_ms": 1814.9123,
+      "max_decode_ms": 2007.8163,
+      "median_tokens_per_second": 8.392354744396131
+    },
+    {
+      "verify_width": 2,
+      "samples": 1,
+      "median_decode_ms": 1859.4063999999998,
+      "min_decode_ms": 1859.4063999999998,
+      "max_decode_ms": 1859.4063999999998,
+      "median_tokens_per_second": 8.604896702517536
+    },
+    {
+      "verify_width": 4,
+      "samples": 1,
+      "median_decode_ms": 1789.1305,
+      "min_decode_ms": 1789.1305,
+      "max_decode_ms": 1789.1305,
+      "median_tokens_per_second": 8.942891533065922
+    },
+    {
+      "verify_width": 8,
+      "samples": 1,
+      "median_decode_ms": 1709.4537,
+      "min_decode_ms": 1709.4537,
+      "max_decode_ms": 1709.4537,
+      "median_tokens_per_second": 9.359715328938128
+    }
+  ],
+  "serial_vs_verify": [
+    {
+      "width": 1,
+      "values_compared": 3973120,
+      "max_abs_error": 0.0,
+      "top_mismatches": 0
+    },
+    {
+      "width": 2,
+      "values_compared": 3973120,
+      "max_abs_error": 0.0,
+      "top_mismatches": 0
+    },
+    {
+      "width": 4,
+      "values_compared": 3973120,
+      "max_abs_error": 0.0,
+      "top_mismatches": 0
+    },
+    {
+      "width": 8,
+      "values_compared": 3973120,
+      "max_abs_error": 0.0,
+      "top_mismatches": 0
+    }
+  ],
+  "rollback": [
+    {
+      "draft_tokens": 1,
+      "batch_tokens_including_anchor": 2,
+      "pass": true,
+      "direct_max_abs_error": 0.0,
+      "restored_max_abs_error": 0.0,
+      "serialized_snapshot_bytes": 54822976
+    },
+    {
+      "draft_tokens": 2,
+      "batch_tokens_including_anchor": 3,
+      "pass": true,
+      "direct_max_abs_error": 0.0,
+      "restored_max_abs_error": 0.0,
+      "serialized_snapshot_bytes": 54822976
+    },
+    {
+      "draft_tokens": 4,
+      "batch_tokens_including_anchor": 5,
+      "pass": true,
+      "direct_max_abs_error": 0.0,
+      "restored_max_abs_error": 0.0,
+      "serialized_snapshot_bytes": 54822976
+    },
+    {
+      "draft_tokens": 8,
+      "batch_tokens_including_anchor": 9,
+      "pass": true,
+      "direct_max_abs_error": 0.0,
+      "restored_max_abs_error": 0.0,
+      "serialized_snapshot_bytes": 54822976
+    }
+  ],
+  "limitations": [
+    "Fixed-token replay, no draft source, acceptance rate or stochastic rejection/resampling.",
+    "No change to production penalties/top-k/top-p/temperature; matching argmax is not sampling equivalence.",
+    "Logits row i predicts the token AFTER fixed input i; no speculative proposal alignment is implemented.",
+    "Serial-vs-multirow numerical failures block prerequisites, not automatically a rollback defect.",
+    "Rollback tests reject 1/2/4/8 draft tokens after an accepted anchor in each verify batch; partial draft acceptance is not tested.",
+    "No n_rs_seq=0 timing baseline; snapshot allocation/update costs remain enabled in both paths.",
+    "No multisequence, ubatch-split, context-shift, long-context or A55 validation.",
+    "Sequence snapshot byte count is serialized payload, not total context allocation or process RSS.",
+    "Verify timings exclude prefill, batch preparation, logit comparison, checkpoint and sampling overhead.",
+    "Fast verification alone is not an end-to-end speculative speedup; timings remain diagnostic if gates fail."
+  ],
+  "superseded_invalid_probe": {
+    "path": "build/speculation-ptq-recode.json",
+    "explanation": "Rejected every token without an accepted anchor. Runtime stores only post-token snapshots; it cannot recover the preceding batch input state from an unwritten snapshot. This invalid test is not evidence of a runtime/model rollback defect."
+  }
+}

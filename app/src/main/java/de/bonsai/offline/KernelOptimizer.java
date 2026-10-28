@@ -77,6 +77,10 @@ final class KernelOptimizer {
         a.prefs.edit().putBoolean("optimizerRunning",true).commit();
         try {
             report.put("schema",1).put("app_version",BuildConfig.VERSION_NAME).put("runtime",BuildConfig.RUNTIME_REVISION)
+                .put("experimental_ternary_kernels",BuildConfig.FAST_TERNARY)
+                .put("persistent_cpu_pool",BuildConfig.PERSISTENT_CPU_POOL)
+                .put("ptq_recode",BuildConfig.PTQ_RECODE)
+                .put("ptq_planar",BuildConfig.PTQ_PLANAR)
                 .put("device",Build.MANUFACTURER+" "+Build.MODEL).put("android_api",Build.VERSION.SDK_INT)
                 .put("model",a.modelName()).put("model_bytes",a.modelFile().length()).put("model_modified",a.modelFile().lastModified())
                 .put("context",a.context()).put("thermal_before",initialThermal).put("thermal_policy","observe_only").put("timestamp",java.time.Instant.now().toString())

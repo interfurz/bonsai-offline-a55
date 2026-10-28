@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "status": "experimental; 2x target not met",
+  "base_commit": "c8d99884a5de0a8e849b503f1d05690c7c0b9eec",
+  "runtime_commit": "e3de715222b2667c54a267441159a5729f11155e",
+  "requested_branch": "perf/inference-ttft-v6",
+  "requested_branch_available": false,
+  "working_branch": "perf/decode-throughput",
+  "platform": "Windows x86_64; AMD Family 25 Model 117; AVX2/AVX512/VNNI",
+  "a55_measurement": false,
+  "default_enabled": false,
+  "benchmark": {
+    "name": "bonsai-fixed-decode-v1",
+    "threads": 4,
+    "batch_threads": 4,
+    "context": 4096,
+    "micro_batch": 512,
+    "kv_type": "f16",
+    "flash_attention": false,
+    "prompt_tokens": 64,
+    "warmup_steps": 4,
+    "decode_steps_per_trial": 16,
+    "measured_trials": 3,
+    "sampling_in_timer": false,
+    "validation_in_timer": false
+  },
+  "pq2_9b": {
+    "model_sha256": "7a89ab48f5038c704480f60781f9b8d4035351f5f6beb7d11fad80001fde23f9",
+    "baseline_tokens_per_second": 11.973741883393267,
+    "candidate_tokens_per_second": 11.327725542803368,
+    "speedup": 0.9460472468104664,
+    "target_met": false,
+    "full_logits_compared": 3973120,
+    "bitwise_equal": true,
+    "max_abs_logit_error": 0.0,
+    "baseline_report_sha256": "4d08e5c61c625c0753af1d6fc962956996158e39da7e96bbdc9085d60df45df0",
+    "candidate_report_sha256": "43ea27d61ecf7eca37da26e5f51f4273e320c828a412b1822e06e8ede3b1bce0",
+    "note": "The new PQ2 kernel is ARM-only and was not executed by this x86 model run. The timing difference is not evidence about its performance."
+  },
+  "ptq1_9b": {
+    "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+    "baseline_tokens_per_second": 4.194905701272742,
+    "candidate_tokens_per_second": 4.407996193254488,
+    "speedup": 1.0507974450813264,
+    "target_met": false,
+    "full_logits_compared": 3973120,
+    "bitwise_equal": true,
+    "max_abs_logit_error": 0.0,
+    "baseline_report_sha256": "b903176242bbe648aee70d292745afee8c1734caaefb5c1ea3598b8ced56adeb",
+    "candidate_report_sha256": "fa3598bacbbdf3d672194651b4981ecdcc9bba50a8f8ae07730ee1bec470db28",
+    "note": "The AVX2 PTQ1 candidate executed on the host. Three short trials do not establish a robust general speed improvement or an A55 improvement."
+  },
+  "validation": {
+    "aarch64_emulated_test_cases_passed": 8,
+    "comparison_test_cases_passed": 8,
+    "native_cpu_reference_ctest_passed": true,
+    "runtime_backport_check_passed": true,
+    "project_checks_passed": true,
+    "java_syntax_files_passed": 43,
+    "android_build_verified": false
+  }
+}

@@ -1,0 +1,724 @@
+{
+  "schema": 1,
+  "purpose": "Conditional scenarios calculated from existing measured pass times, no new benchmark",
+  "mapping_assumed": "verify_width = one accepted anchor + gamma draft inputs; ideal emission gamma+1",
+  "acceptance_model_assumed": "constant independent per-draft alpha; not measured on this model",
+  "overhead_model_assumed": "zero draft, rollback, sampling and snapshot-baseline differential cost",
+  "source_timing_protocol": "immediate-same-shape-warmup-v2",
+  "source_configuration": {
+    "device": "CPU",
+    "threads": 4,
+    "batch_threads": 4,
+    "context": 4096,
+    "batch": 512,
+    "micro_batch": 512,
+    "n_seq_max": 1,
+    "n_rs_seq_requested": 8,
+    "prefix_tokens": 64,
+    "steps": 16,
+    "trials": 1,
+    "kv_type": "f16",
+    "flash_attention": false,
+    "extra_bufts": true,
+    "ptq_recode": true,
+    "app_cpu_wrappers": false,
+    "persistent_cpu_pool": false,
+    "n_rs_seq_actual": 8
+  },
+  "processes": [
+    {
+      "path": "build/column-warm-a1.json",
+      "column_tile": false,
+      "widths": [
+        {
+          "verify_width": 2,
+          "draft_tokens_assumed": 1,
+          "normalized_verify_cost": 1.805145270903706,
+          "serial_pass_ms": 127.33537500000001,
+          "wide_pass_ms": 229.85885000000002,
+          "break_even_acceptance_assuming_zero_overhead": 0.8051452709037059,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 1.7,
+              "normalized_verify_cost": 1.805145270903706,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.9417524602598508,
+              "ideal_full_acceptance_ceiling": 1.107944070893942,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 1.8,
+              "normalized_verify_cost": 1.805145270903706,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.997149663804548,
+              "ideal_full_acceptance_ceiling": 1.107944070893942,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 1.9,
+              "normalized_verify_cost": 1.805145270903706,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.052546867349245,
+              "ideal_full_acceptance_ceiling": 1.107944070893942,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 2.0,
+              "normalized_verify_cost": 1.805145270903706,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.107944070893942,
+              "ideal_full_acceptance_ceiling": 1.107944070893942,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 4,
+          "draft_tokens_assumed": 3,
+          "normalized_verify_cost": 3.5575683505074687,
+          "serial_pass_ms": 127.33537500000001,
+          "wide_pass_ms": 453.0043,
+          "break_even_acceptance_assuming_zero_overhead": 0.9223163599996409,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 2.533,
+              "normalized_verify_cost": 3.5575683505074687,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.7120031860072852,
+              "ideal_full_acceptance_ceiling": 1.1243634994193212,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 2.9520000000000004,
+              "normalized_verify_cost": 3.5575683505074687,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8297802625714592,
+              "ideal_full_acceptance_ceiling": 1.1243634994193212,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 3.439,
+              "normalized_verify_cost": 3.5575683505074687,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.9666715186257615,
+              "ideal_full_acceptance_ceiling": 1.1243634994193212,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 4.0,
+              "normalized_verify_cost": 3.5575683505074687,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1243634994193212,
+              "ideal_full_acceptance_ceiling": 1.1243634994193212,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 8,
+          "draft_tokens_assumed": 7,
+          "normalized_verify_cost": 6.2192375842141265,
+          "serial_pass_ms": 127.33537500000001,
+          "wide_pass_ms": 791.92895,
+          "break_even_acceptance_assuming_zero_overhead": 0.9265447011356317,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 3.1411732999999997,
+              "normalized_verify_cost": 6.2192375842141265,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.5050736939159599,
+              "ideal_full_acceptance_ceiling": 1.2863313053525827,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 4.161139200000001,
+              "normalized_verify_cost": 6.2192375842141265,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.6690754523612253,
+              "ideal_full_acceptance_ceiling": 1.2863313053525827,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 5.6953279000000006,
+              "normalized_verify_cost": 6.2192375842141265,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.915759821502248,
+              "ideal_full_acceptance_ceiling": 1.2863313053525827,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 8.0,
+              "normalized_verify_cost": 6.2192375842141265,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.2863313053525827,
+              "ideal_full_acceptance_ceiling": 1.2863313053525827,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        }
+      ]
+    },
+    {
+      "path": "build/column-warm-b1.json",
+      "column_tile": true,
+      "widths": [
+        {
+          "verify_width": 2,
+          "draft_tokens_assumed": 1,
+          "normalized_verify_cost": 1.6830252326931117,
+          "serial_pass_ms": 127.11485,
+          "wide_pass_ms": 213.9375,
+          "break_even_acceptance_assuming_zero_overhead": 0.6830252326931116,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 1.7,
+              "normalized_verify_cost": 1.6830252326931117,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0100858661992405,
+              "ideal_full_acceptance_ceiling": 1.188336313175577,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 1.8,
+              "normalized_verify_cost": 1.6830252326931117,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0695026818580193,
+              "ideal_full_acceptance_ceiling": 1.188336313175577,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 1.9,
+              "normalized_verify_cost": 1.6830252326931117,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1289194975167982,
+              "ideal_full_acceptance_ceiling": 1.188336313175577,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 2.0,
+              "normalized_verify_cost": 1.6830252326931117,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.188336313175577,
+              "ideal_full_acceptance_ceiling": 1.188336313175577,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 4,
+          "draft_tokens_assumed": 3,
+          "normalized_verify_cost": 3.1605721125423187,
+          "serial_pass_ms": 127.11485,
+          "wide_pass_ms": 401.75565,
+          "break_even_acceptance_assuming_zero_overhead": 0.8446265568320043,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 2.533,
+              "normalized_verify_cost": 3.1605721125423187,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8014371796638081,
+              "ideal_full_acceptance_ceiling": 1.2655936512653898,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 2.9520000000000004,
+              "normalized_verify_cost": 3.1605721125423187,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.9340081146338579,
+              "ideal_full_acceptance_ceiling": 1.2655936512653898,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 3.439,
+              "normalized_verify_cost": 3.1605721125423187,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.088094141675419,
+              "ideal_full_acceptance_ceiling": 1.2655936512653898,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 4.0,
+              "normalized_verify_cost": 3.1605721125423187,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.2655936512653898,
+              "ideal_full_acceptance_ceiling": 1.2655936512653898,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 8,
+          "draft_tokens_assumed": 7,
+          "normalized_verify_cost": 7.059382519036918,
+          "serial_pass_ms": 127.11485,
+          "wide_pass_ms": 897.35235,
+          "break_even_acceptance_assuming_zero_overhead": 0.9639166203755792,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 3.1411732999999997,
+              "normalized_verify_cost": 7.059382519036918,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.4449643140216939,
+              "ideal_full_acceptance_ceiling": 1.1332435915501866,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 4.161139200000001,
+              "normalized_verify_cost": 7.059382519036918,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.5894480414935339,
+              "ideal_full_acceptance_ceiling": 1.1332435915501866,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 5.6953279000000006,
+              "normalized_verify_cost": 7.059382519036918,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8067742305564978,
+              "ideal_full_acceptance_ceiling": 1.1332435915501866,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 8.0,
+              "normalized_verify_cost": 7.059382519036918,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1332435915501866,
+              "ideal_full_acceptance_ceiling": 1.1332435915501866,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        }
+      ]
+    },
+    {
+      "path": "build/column-warm-b2.json",
+      "column_tile": true,
+      "widths": [
+        {
+          "verify_width": 2,
+          "draft_tokens_assumed": 1,
+          "normalized_verify_cost": 1.8311332730113716,
+          "serial_pass_ms": 106.4289,
+          "wide_pass_ms": 194.88549999999998,
+          "break_even_acceptance_assuming_zero_overhead": 0.8311332730113715,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 1.7,
+              "normalized_verify_cost": 1.8311332730113716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.928386822005742,
+              "ideal_full_acceptance_ceiling": 1.0922197905949906,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 1.8,
+              "normalized_verify_cost": 1.8311332730113716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.9829978115354915,
+              "ideal_full_acceptance_ceiling": 1.0922197905949906,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 1.9,
+              "normalized_verify_cost": 1.8311332730113716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.037608801065241,
+              "ideal_full_acceptance_ceiling": 1.0922197905949906,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 2.0,
+              "normalized_verify_cost": 1.8311332730113716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0922197905949906,
+              "ideal_full_acceptance_ceiling": 1.0922197905949906,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 4,
+          "draft_tokens_assumed": 3,
+          "normalized_verify_cost": 3.4166316667747196,
+          "serial_pass_ms": 106.4289,
+          "wide_pass_ms": 363.62834999999995,
+          "break_even_acceptance_assuming_zero_overhead": 0.8957100674369833,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 2.533,
+              "normalized_verify_cost": 3.4166316667747196,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.7413734481923646,
+              "ideal_full_acceptance_ceiling": 1.1707437002642946,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 2.9520000000000004,
+              "normalized_verify_cost": 3.4166316667747196,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8640088507950496,
+              "ideal_full_acceptance_ceiling": 1.1707437002642946,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 3.439,
+              "normalized_verify_cost": 3.4166316667747196,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0065468963022275,
+              "ideal_full_acceptance_ceiling": 1.1707437002642946,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 4.0,
+              "normalized_verify_cost": 3.4166316667747196,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1707437002642946,
+              "ideal_full_acceptance_ceiling": 1.1707437002642946,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 8,
+          "draft_tokens_assumed": 7,
+          "normalized_verify_cost": 6.999123828208315,
+          "serial_pass_ms": 106.4289,
+          "wide_pass_ms": 744.90905,
+          "break_even_acceptance_assuming_zero_overhead": 0.961416264734853,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 3.1411732999999997,
+              "normalized_verify_cost": 6.999123828208315,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.4487952173871025,
+              "ideal_full_acceptance_ceiling": 1.1430002092201725,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 4.161139200000001,
+              "normalized_verify_cost": 6.999123828208315,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.5945228720242829,
+              "ideal_full_acceptance_ceiling": 1.1430002092201725,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 5.6953279000000006,
+              "normalized_verify_cost": 6.999123828208315,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8137201226596859,
+              "ideal_full_acceptance_ceiling": 1.1430002092201725,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 8.0,
+              "normalized_verify_cost": 6.999123828208315,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1430002092201725,
+              "ideal_full_acceptance_ceiling": 1.1430002092201725,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        }
+      ]
+    },
+    {
+      "path": "build/column-warm-a2.json",
+      "column_tile": false,
+      "widths": [
+        {
+          "verify_width": 2,
+          "draft_tokens_assumed": 1,
+          "normalized_verify_cost": 1.7775442544143432,
+          "serial_pass_ms": 104.74802500000001,
+          "wide_pass_ms": 186.19425,
+          "break_even_acceptance_assuming_zero_overhead": 0.777544254414343,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 1.7,
+              "normalized_verify_cost": 1.7775442544143432,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.9563756265298204,
+              "ideal_full_acceptance_ceiling": 1.1251477959174359,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 1.8,
+              "normalized_verify_cost": 1.7775442544143432,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0126330163256922,
+              "ideal_full_acceptance_ceiling": 1.1251477959174359,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 1.9,
+              "normalized_verify_cost": 1.7775442544143432,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.068890406121564,
+              "ideal_full_acceptance_ceiling": 1.1251477959174359,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 1,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 2.0,
+              "normalized_verify_cost": 1.7775442544143432,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1251477959174359,
+              "ideal_full_acceptance_ceiling": 1.1251477959174359,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 4,
+          "draft_tokens_assumed": 3,
+          "normalized_verify_cost": 3.4255462095824716,
+          "serial_pass_ms": 104.74802500000001,
+          "wide_pass_ms": 358.8192,
+          "break_even_acceptance_assuming_zero_overhead": 0.8974228781908876,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 2.533,
+              "normalized_verify_cost": 3.4255462095824716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.7394441192806851,
+              "ideal_full_acceptance_ceiling": 1.1676969905735257,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 2.9520000000000004,
+              "normalized_verify_cost": 3.4255462095824716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8617603790432621,
+              "ideal_full_acceptance_ceiling": 1.1676969905735257,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 3.439,
+              "normalized_verify_cost": 3.4255462095824716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.0039274876455888,
+              "ideal_full_acceptance_ceiling": 1.1676969905735257,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 3,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 4.0,
+              "normalized_verify_cost": 3.4255462095824716,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1676969905735257,
+              "ideal_full_acceptance_ceiling": 1.1676969905735257,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        },
+        {
+          "verify_width": 8,
+          "draft_tokens_assumed": 7,
+          "normalized_verify_cost": 6.896912376152199,
+          "serial_pass_ms": 104.74802500000001,
+          "wide_pass_ms": 722.43795,
+          "break_even_acceptance_assuming_zero_overhead": 0.9571165713568837,
+          "scenarios": [
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.7,
+              "expected_tokens_assumed": 3.1411732999999997,
+              "normalized_verify_cost": 6.896912376152199,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.45544631114372175,
+              "ideal_full_acceptance_ceiling": 1.1599393415033086,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.8,
+              "expected_tokens_assumed": 4.161139200000001,
+              "normalized_verify_cost": 6.896912376152199,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.6033336329439506,
+              "ideal_full_acceptance_ceiling": 1.1599393415033086,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 0.9,
+              "expected_tokens_assumed": 5.6953279000000006,
+              "normalized_verify_cost": 6.896912376152199,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 0.8257793617464276,
+              "ideal_full_acceptance_ceiling": 1.1599393415033086,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            },
+            {
+              "draft_tokens_assumed": 7,
+              "acceptance_assumed": 1.0,
+              "expected_tokens_assumed": 8.0,
+              "normalized_verify_cost": 6.896912376152199,
+              "overhead_ratio_assumed": 0.0,
+              "hypothetical_speedup": 1.1599393415033086,
+              "ideal_full_acceptance_ceiling": 1.1599393415033086,
+              "hypothetical_not_measured": true,
+              "measured_acceptance": null
+            }
+          ],
+          "measured_accepted_tokens_per_second": null
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "not a universal bound",
+    "No accepted-token throughput or acceptance probabilities were measured",
+    "Width-to-draft/anchor mapping and bonus-token convention require an actual sampler implementation",
+    "Short host runs with snapshots enabled; no snapshot-free serial baseline or A55 timing",
+    "Different column-tile variants are kept separate per process",
+    "Low batch scaling does not prove compute limitation or measured DRAM bandwidth",
+    "A less than 2x extra speedup does not rule out 2x overall relative to original PTQ",
+    "Historical ratios must not be multiplied to claim final target attainment"
+  ]
+}

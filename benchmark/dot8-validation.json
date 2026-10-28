@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "platform": "Windows x86_64; not Galaxy A55",
+  "comparison": "Paired eight-output VNNI plus paired graph scheduling against existing four-output lossless PTQ cache",
+  "order": [
+    "a1",
+    "b1",
+    "b2",
+    "a2"
+  ],
+  "model_sha256": "3561df7ac7d26a71ffa991ac2db740b10841c3a350aa2676ccd3ff5d428b4e8b",
+  "aggregate": {
+    "baseline_median_tokens_per_second": 8.424107375923157,
+    "candidate_median_tokens_per_second": 7.63919771591288,
+    "speedup": 0.9068257769062135,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      8.290889592244204,
+      8.504337172093688
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      6.985377117153201,
+      7.820387976290344
+    ]
+  },
+  "configuration": {
+    "context": 4096,
+    "threads": 4,
+    "batch_threads": 4,
+    "micro_batch": 512,
+    "flash_attention": false,
+    "kv_type": "f16",
+    "repack": true,
+    "decode_tokens": 32,
+    "warmup_steps": 4,
+    "persistent_cpu_pool": false,
+    "app_cpu_wrappers": false,
+    "ptq_planar": false,
+    "ptq_recode_column_tile": false,
+    "ptq_recode_butterfly": false,
+    "ptq_profile_compiled": false,
+    "ptq_profile_enabled": false
+  },
+  "prompt_tokens": 64,
+  "full_logits": {
+    "a1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b1": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "b2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    },
+    "a2": {
+      "compared_values": 7946240,
+      "bitwise_equal": true,
+      "max_abs_error": 0.0
+    }
+  },
+  "raw_reports": [
+    {
+      "report": "build/dot8-a1.json",
+      "report_sha256": "40c4d7a72e5676f65c9114b30245fc5b459fcee895bee1d6442b43a4923997e1",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "rates": [
+        8.339063833761596,
+        8.42913595113672,
+        8.504337172093688
+      ],
+      "dot8_worker_batches": 0,
+      "graph_calls": 20904,
+      "load_ms": 5557.5711,
+      "prefill_ms": [
+        5128.2194,
+        5001.1289,
+        5080.0444
+      ]
+    },
+    {
+      "report": "build/dot8-b1.json",
+      "report_sha256": "8e006f4f71df2196afb253428e669249c6c37e6484f5853a3a2b0e131dfa6123",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "rates": [
+        7.820387976290344,
+        7.662963148594698,
+        7.733123153490292
+      ],
+      "dot8_worker_batches": 83616,
+      "graph_calls": 20904,
+      "load_ms": 3848.9206,
+      "prefill_ms": [
+        5089.9992,
+        4976.1679,
+        5095.5405
+      ]
+    },
+    {
+      "report": "build/dot8-b2.json",
+      "report_sha256": "86add3330e5e63072ccf42f2fc39467c005f2d8c8c829de07fea22b27a4d79c1",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "rates": [
+        7.615432283231063,
+        6.985377117153201,
+        7.5321307753024636
+      ],
+      "dot8_worker_batches": 83616,
+      "graph_calls": 20904,
+      "load_ms": 3296.8028,
+      "prefill_ms": [
+        5299.711,
+        5056.8694,
+        5292.3538
+      ]
+    },
+    {
+      "report": "build/dot8-a2.json",
+      "report_sha256": "923e21a45f6a240b8f2d985ff5f0df848836b8211400abd64333919dfea1b273",
+      "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+      "rates": [
+        8.290889592244204,
+        8.419078800709592,
+        8.450959241974308
+      ],
+      "dot8_worker_batches": 0,
+      "graph_calls": 20904,
+      "load_ms": 2982.2107,
+      "prefill_ms": [
+        5232.1267,
+        5034.3397,
+        5182.3058
+      ]
+    }
+  ],
+  "executables": {
+    "baseline": "124a43b8d80fbfba9d0d0665f14918ed46a65333052c985865f22c9a087df270",
+    "candidate": "2ef58bf1f5cc5f38b71e63dc0c75fcf42985cff8b3240117b8976af68a10feb2"
+  },
+  "decision": "No additional throughput improvement; native-only BONSAI_RECODE_DOT8 stays OFF",
+  "correctness": {
+    "direct_additional_cases_per_layout": 11985,
+    "layouts": [
+      "canonical",
+      "planar"
+    ],
+    "paired_graph_cases": 108,
+    "four_row_tail_and_scalar_fallback_checked": true,
+    "full_model_logits_bitwise_equal_to_original_PTQ_baseline": true
+  },
+  "limitations": [
+    "Full logits saved only for first measured trial per process; signatures and top tokens checked for every trial",
+    "Worker dot8 batch count is execution evidence, not output token count or wall-time attribution",
+    "Graph scheduling and fused eight-output kernel changed together; timings do not isolate their individual costs",
+    "No ARM implementation, Android integration or A55 result",
+    "Do not multiply by historical independent speedup ratios"
+  ]
+}

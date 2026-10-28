@@ -1,0 +1,3 @@
+# AArch64 instruction-level arithmetic tests on a non-ARM host; no timing claims.
+unicorn==2.1.4
+pyelftools==0.33

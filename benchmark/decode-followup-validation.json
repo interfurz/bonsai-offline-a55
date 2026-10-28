@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "platform": "Windows x86_64; no A55 result",
+  "vbmi": {
+    "order": [
+      "a1",
+      "b1",
+      "b2",
+      "a2"
+    ],
+    "comparison": "VBMI unpack against previous VNNI cache (not original PTQ baseline)",
+    "baseline_trials": 6,
+    "candidate_trials": 6,
+    "baseline_median_tokens_per_second": 10.498975051640393,
+    "candidate_median_tokens_per_second": 10.077841010235495,
+    "speedup": 0.9598880805665789,
+    "decision": "No additional speedup established; BONSAI_RECODE_VBMI default OFF",
+    "full_logits": {
+      "values_per_file": 7946240,
+      "all_bit_identical_to_original_baseline": true,
+      "sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4"
+    },
+    "raw_reports": [
+      {
+        "report": "build/vbmi-a1.json",
+        "report_sha256": "539c3b0211e75befecbfbe770424148c8b52ec825444922efb6272f3cb280ed6",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          10.492717693233725,
+          10.290021688793214,
+          10.50523241004706
+        ]
+      },
+      {
+        "report": "build/vbmi-b1.json",
+        "report_sha256": "8c9f9d032dedc9413275d56fcc66ed99924a6cd470e33f796a9b9733e5c214f2",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          5.509638173624505,
+          8.05008339257482,
+          11.957263097565624
+        ]
+      },
+      {
+        "report": "build/vbmi-b2.json",
+        "report_sha256": "3e44263078087676f0f944b4859b094f5de47540500efaaf8bbeec29cd2ed532",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          12.054631287629755,
+          10.494965188036488,
+          9.660716832434504
+        ]
+      },
+      {
+        "report": "build/vbmi-a2.json",
+        "report_sha256": "d266891e192685ca4354dec7421b32e07cef13f6adcefbb10505b9351df8288a",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          10.366898467276739,
+          10.76474388941836,
+          10.763745967925988
+        ]
+      }
+    ]
+  },
+  "dispatch": {
+    "order": [
+      "a1",
+      "b1",
+      "b2",
+      "a2"
+    ],
+    "comparison": "Per-graph SIMD selection and incremental task coordinates against previous VNNI cache",
+    "baseline_median_tokens_per_second": 9.9895631886161,
+    "candidate_median_tokens_per_second": 9.201964983269562,
+    "speedup": 0.9211578934458248,
+    "minimum_speedup": 2.0,
+    "target_met": false,
+    "top_tokens_match": true,
+    "max_signature_error": 0.0,
+    "note": "Signature checks are not a full-logit comparison. Host measurements are not A55 results.",
+    "baseline_processes": 2,
+    "candidate_processes": 2,
+    "baseline_trials": 6,
+    "baseline_tokens_per_second_range": [
+      6.165947299725503,
+      10.33570565770714
+    ],
+    "candidate_trials": 6,
+    "candidate_tokens_per_second_range": [
+      6.596145896688112,
+      9.889779947760328
+    ],
+    "decision": "No additional speedup established; BONSAI_RECODE_GRAPH_DISPATCH default OFF",
+    "full_logits": {
+      "values_per_file": 7946240,
+      "all_bit_identical_to_original_baseline": true,
+      "sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4"
+    },
+    "raw_reports": [
+      {
+        "report": "build/dispatch-a1.json",
+        "report_sha256": "a20fa007d04e482404248683b7aa887708baf1c6f7bba52758d1ae67bcf68742",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          10.33570565770714,
+          9.900014800522126,
+          10.079111576710071
+        ]
+      },
+      {
+        "report": "build/dispatch-b1.json",
+        "report_sha256": "a2683c24ec664a1ccede9bc4105d8b9edc205b93ca645c8f55d78b503c4ed1ea",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          9.317862304183304,
+          9.08606766235582,
+          9.344934134567985
+        ]
+      },
+      {
+        "report": "build/dispatch-b2.json",
+        "report_sha256": "9d80cc90666a550584c962037ddf913f1b698cca0189a6aa779ed0c52bad7136",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          9.889779947760328,
+          7.326094205970667,
+          6.596145896688112
+        ]
+      },
+      {
+        "report": "build/dispatch-a2.json",
+        "report_sha256": "323eac201b9ce03cb270c6475c596af275ba9deac8c0d7264a298690e192a549",
+        "logits_sha256": "a5bef5263e283447030a541a7f6537c75dd92ca655750385a697b9f2e830a3f4",
+        "rates": [
+          6.165947299725503,
+          8.958044745489492,
+          10.153205525628277
+        ]
+      }
+    ]
+  }
+}

@@ -118,7 +118,7 @@ public final class BonsaiApp extends Application {
         return profileIdentity(gpu,threads,batchThreads,microBatch,prefs.getBoolean("flashAttention",false),prefs.getBoolean("kvQ8",false));
     }
     String profileIdentity(boolean gpu,int threads,int batchThreads,int microBatch,boolean flash,boolean q8) {
-        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":repack-v1";
+        return modelFile().length()+":"+modelFile().lastModified()+":"+context()+":"+gpu+":"+threads+":"+batchThreads+":"+microBatch+":"+flash+":"+q8+":"+cpuCompatibility+":"+Build.FINGERPRINT+":"+BuildConfig.VERSION_CODE+":"+BuildConfig.RUNTIME_REVISION+":repack-v1"+(BuildConfig.PERSISTENT_CPU_POOL?":cpu-pool-v1":"")+(BuildConfig.FAST_TERNARY?":fast-ternary-v1":"")+(BuildConfig.PTQ_RECODE?":ptq-recode-v1":"")+(BuildConfig.PTQ_PLANAR?":ptq-planar-v1":"");
     }
     boolean optimized() { return profileIdentity().equals(prefs.getString("optimizedFor","")); }
     JSONObject readReport(String name) {
@@ -526,6 +526,10 @@ public final class BonsaiApp extends Application {
                 report.put("schema",2).put("benchmark","bonsai-offline-v1").put("timestamp_utc",java.time.Instant.now().toString())
                     .put("device",Build.MANUFACTURER+" "+Build.MODEL).put("hardware",Build.HARDWARE).put("android_api",Build.VERSION.SDK_INT)
                     .put("app_version",BuildConfig.VERSION_NAME).put("runtime_commit",BuildConfig.RUNTIME_REVISION)
+                    .put("experimental_ternary_kernels",BuildConfig.FAST_TERNARY)
+                    .put("persistent_cpu_pool",BuildConfig.PERSISTENT_CPU_POOL)
+                    .put("ptq_recode",BuildConfig.PTQ_RECODE)
+                    .put("ptq_planar",BuildConfig.PTQ_PLANAR)
                     .put("model",name).put("model_bytes",modelFile().length()).put("backend",actualBackend)
                     .put("model_metadata",readReport("model-metadata.json"))
                     .put("scalar_ternary_cpu",!gpu() && cpuCompatibility)

@@ -12,6 +12,11 @@ chaquopy {
 }
 
 def enableVulkan = providers.gradleProperty('bonsaiVulkan').orElse('false').get().toBoolean()
+def enableFastTernary = providers.gradleProperty('bonsaiFastTernary').orElse('false').get().toBoolean()
+def persistentCpuPool = providers.gradleProperty('bonsaiPersistentCpuPool').orElse('false').get().toBoolean()
+def ptqRecode = providers.gradleProperty('bonsaiPtqRecode').orElse('false').get().toBoolean()
+def ptqPlanar = providers.gradleProperty('bonsaiPtqPlanar').orElse('false').get().toBoolean()
+if (ptqPlanar && !ptqRecode) throw new GradleException('bonsaiPtqPlanar requires bonsaiPtqRecode=true')
 
 android {
     namespace 'de.bonsai.offline'
@@ -27,7 +32,11 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared', '-DCMAKE_BUILD_TYPE=Release',
-                          "-DBONSAI_VULKAN=${enableVulkan ? 'ON' : 'OFF'}"
+                          "-DBONSAI_VULKAN=${enableVulkan ? 'ON' : 'OFF'}",
+                          "-DBONSAI_FAST_TERNARY=${enableFastTernary ? 'ON' : 'OFF'}",
+                          "-DBONSAI_PERSISTENT_CPU_POOL=${persistentCpuPool ? 'ON' : 'OFF'}",
+                          "-DBONSAI_PTQ_RECODE=${ptqRecode ? 'ON' : 'OFF'}",
+                          "-DBONSAI_PTQ_PLANAR=${ptqPlanar ? 'ON' : 'OFF'}"
                 cppFlags '-std=c++17'
                 targets 'bonsai-jni'
                 if (enableVulkan) {
@@ -42,6 +51,10 @@ android {
             }
         }
         buildConfigField 'boolean', 'VULKAN_BUILD', enableVulkan.toString()
+        buildConfigField 'boolean', 'FAST_TERNARY', enableFastTernary.toString()
+        buildConfigField 'boolean', 'PERSISTENT_CPU_POOL', persistentCpuPool.toString()
+        buildConfigField 'boolean', 'PTQ_RECODE', ptqRecode.toString()
+        buildConfigField 'boolean', 'PTQ_PLANAR', ptqPlanar.toString()
         buildConfigField 'String', 'RUNTIME_REVISION', '"e3de715222b2667c54a267441159a5729f11155e"'
     }
     testOptions {
